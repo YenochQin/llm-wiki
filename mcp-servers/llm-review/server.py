@@ -9,7 +9,8 @@ Provides three tools:
 Works with any OpenAI-compatible API provider:
   - DeepSeek, Qwen (DashScope), OpenRouter, SiliconFlow, OpenAI, etc.
 
-Configuration: set LLM_* variables in the project root .env file.
+Configuration: set LLM_* variables in ~/.config/llm-wiki/.env
+  (or $XDG_CONFIG_HOME/llm-wiki/.env).
   LLM_API_KEY         - API key (required)
   LLM_BASE_URL        - API base URL, e.g. https://api.deepseek.com/v1
   LLM_MODEL           - Primary model name, e.g. deepseek-chat
@@ -23,25 +24,40 @@ import sys
 import tempfile
 import httpx
 import uuid
+from pathlib import Path
 
 sys.stdout = os.fdopen(sys.stdout.fileno(), 'wb', buffering=0)
 sys.stdin = os.fdopen(sys.stdin.fileno(), 'rb', buffering=0)
 
-# --- Auto-load .env from project root ---
-# Walk up from this script's directory to find the project root .env
+# --- Auto-load llm-wiki user config ---
+def _config_env_path() -> Path:
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    base = Path(xdg).expanduser() if xdg else Path.home() / ".config"
+    return base / "llm-wiki" / ".env"
+
+
+def _load_env_file(path: Path) -> None:
+    if not path.is_file():
+        return
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-for _parent in [_script_dir, os.path.join(_script_dir, '..', '..'), os.getcwd()]:
-    _env_path = os.path.join(os.path.realpath(_parent), '.env')
-    if os.path.isfile(_env_path):
-        with open(_env_path) as _f:
-            for _line in _f:
-                _line = _line.strip()
-                if _line and not _line.startswith('#') and '=' in _line:
-                    _key, _, _val = _line.partition('=')
-                    _key, _val = _key.strip(), _val.strip()
-                    if _key and _key not in os.environ:  # env vars take precedence
-                        os.environ[_key] = _val
-        break
+for _env_path in [
+    _config_env_path(),
+    Path.home() / ".env",
+    Path(os.path.realpath(os.path.join(_script_dir, "..", ".."))) / ".env",
+    Path(os.getcwd()).resolve() / ".env",
+]:
+    _load_env_file(_env_path)
 
 API_KEY = os.environ.get("LLM_API_KEY", "")
 BASE_URL = os.environ.get("LLM_BASE_URL", "")
@@ -96,9 +112,9 @@ def send_response(response):
 def call_llm(messages, model=None):
     """Call OpenAI-compatible Chat Completions API with retry and fallback."""
     if not API_KEY:
-        return None, "LLM_API_KEY not set. Configure LLM_API_KEY, LLM_BASE_URL, LLM_MODEL in .env"
+        return None, f"LLM_API_KEY not set. Configure LLM_API_KEY, LLM_BASE_URL, LLM_MODEL in {_config_env_path()}"
     if not BASE_URL:
-        return None, "LLM_BASE_URL not set. Configure LLM_BASE_URL in .env (e.g. https://api.deepseek.com/v1)"
+        return None, f"LLM_BASE_URL not set. Configure LLM_BASE_URL in {_config_env_path()} (e.g. https://api.deepseek.com/v1)"
 
     use_model = model or DEFAULT_MODEL
     url = f"{BASE_URL.rstrip('/')}/chat/completions"
@@ -186,7 +202,7 @@ def handle_request(request):
                             "type": "object",
                             "properties": {
                                 "prompt": {"type": "string", "description": "The prompt to send"},
-                                "model": {"type": "string", "description": f"Model to use (default: {DEFAULT_MODEL or 'configured in .env'})"},
+                                "model": {"type": "string", "description": f"Model to use (default: {DEFAULT_MODEL or 'configured in llm-wiki user config'})"},
                                 "system": {"type": "string", "description": "Optional system prompt"}
                             },
                             "required": ["prompt"]
@@ -290,7 +306,7 @@ def handle_request(request):
             # For providers without built-in web search, this tool will return an error.
             if not API_KEY or not BASE_URL:
                 return {"jsonrpc": "2.0", "id": request_id, "result": {
-                    "content": [{"type": "text", "text": "Error: LLM_API_KEY or LLM_BASE_URL not set. Configure in .env"}], "isError": True
+                    "content": [{"type": "text", "text": f"Error: LLM_API_KEY or LLM_BASE_URL not set. Configure in {_config_env_path()}"}], "isError": True
                 }}
 
             url = f"{BASE_URL.rstrip('/')}/chat/completions"

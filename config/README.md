@@ -6,13 +6,15 @@ This directory contains configuration templates. Copy them to the correct locati
 
 ### `.env.example`
 
-Environment variables for API keys. Copy to project root:
+Environment variables for API keys. Copy to the llm-wiki user config directory:
 
 ```bash
-cp config/.env.example .env
+mkdir -p ~/.config/llm-wiki
+cp config/.env.example ~/.config/llm-wiki/.env
+chmod 600 ~/.config/llm-wiki/.env
 ```
 
-Then edit `.env` to add your API keys. See comments in the file for detailed instructions on each key.
+Then edit `~/.config/llm-wiki/.env` to add your API keys. See comments in the file for detailed instructions on each key.
 
 ### `settings.local.json.example`
 
@@ -28,7 +30,7 @@ cp config/settings.local.json.example .claude/settings.local.json
 | Permission | Why it's needed |
 |-----------|-----------------|
 | `Bash(pip install:*)` | Install Python packages (e.g., during setup) |
-| `Bash(python:*)` | Run Python tools (fetch_arxiv, fetch_s2, lint, etc.) |
+| `Bash(python:*)` | Run Python tools (fetch_s2, lint, etc.) |
 | `Bash(python3:*)` | Same as above, for systems where `python3` is the command |
 | `Bash(cp:*)` | Copy files (e.g., templates during /init) |
 | `Bash(mkdir:*)` | Create directories (e.g., wiki subdirectories) |
@@ -64,4 +66,4 @@ Then edit `config/server.yaml` with your server's SSH details, GPU info, conda e
 
 ## All Done by `setup.sh`
 
-If you ran `setup.sh`, both files are already copied to the right locations. You only need to edit `.env` if you want to add optional API keys.
+If you ran `setup.sh`, these files are already copied to the right locations. You only need to edit `~/.config/llm-wiki/.env` if you want to add API keys.

@@ -89,7 +89,7 @@ Or for topic / wiki modes:
 "$PYTHON_BIN" tools/discover.py from-wiki --wiki-root wiki --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Anchor (and wiki) mode run three S2 channels per anchor by default — `recommend` + `references` + `citations`. This is what makes `/discover` meaningfully different from a recency-only arXiv RSS scan: references surface older canonical work the anchor built on, citations surface high-impact follow-ups. Pass `--no-citation-expand` only if API cost forces the narrower recommend-only path; the quality regression is sharp.
+Anchor (and wiki) mode run three S2 channels per anchor by default — `recommend` + `references` + `citations`. References surface older canonical work the anchor built on, while citations surface high-impact follow-ups. Pass `--no-citation-expand` only if API cost forces the narrower recommend-only path; the quality regression is sharp.
 
 The tool handles candidate gathering, wiki dedup, ranking, and writes the checkpoint. Always pass `--wiki-root wiki` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
 
@@ -136,7 +136,7 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 - **No writes to `raw/`**: `/discover` does not download papers. The user runs `/ingest <arxiv-url>` afterwards if they want a candidate.
 - **Always dedupe against the wiki**: pass `--wiki-root wiki` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
-- **Three-channel anchor gather**: by default, anchor mode pulls from S2 `recommend` + `references` + `citations` per anchor. Removing the citation channels (via `--no-citation-expand`) collapses the result into a recency-biased semantic cluster — essentially a topical RSS feed. Keep all three on unless API cost is a hard constraint. See `references/ranking-signals.md`.
+- **Three-channel anchor gather**: by default, anchor mode pulls from S2 `recommend` + `references` + `citations` per anchor. Removing the citation channels (via `--no-citation-expand`) collapses the result into a recency-biased semantic cluster. Keep all three on unless API cost is a hard constraint. See `references/ranking-signals.md`.
 - **Some S2 endpoints have a flatter field set**: `/citations`, `/references`, and `/recommendations/*` reject nested selectors — no `authors.hIndex`, no `tldr`. `/paper/{id}` and `/paper/search` do accept them, so topic-mode candidates carry full enrichment; anchor-mode candidates that entered only via citations/references/recommend do not. That is a real API constraint, not a bug.
 - **Rate limits apply**: each anchor in anchor mode costs up to three S2 calls (recommend + references + citations). Default per-anchor limit is 50 for recs and 30 each for references/citations. Multi-anchor runs multiply accordingly; with an API key (1 req/sec) a 3-anchor run takes ~10 seconds.
 

@@ -8,17 +8,16 @@
 
 ## How Configuration Works
 
-Most API keys live in the project-root `.env` file (created by `setup.sh` from `.env.example`).
-Python tools load this file automatically on startup via `tools/_env.py` — no manual `export` needed.
-Claude Code itself does not read `.env`; only the Python tools do.
+All llm-wiki API keys live in the user config file `~/.config/llm-wiki/.env`
+(or `$XDG_CONFIG_HOME/llm-wiki/.env` when `XDG_CONFIG_HOME` is set). `setup.sh`
+creates this file from `config/.env.example`.
 
-MinerU is the exception: its cloud backend reads `MINERU_API_TOKEN` from the process
-environment or from `~/.config/MinerU/mineru.env` (or `$XDG_CONFIG_HOME/MinerU/mineru.env`
-when `XDG_CONFIG_HOME` is set). `setup.sh` creates that file from `config/mineru.env.example`,
-and `/setup` writes the MinerU token there.
+Python tools load this file automatically on startup via `tools/_env.py` — no manual
+`export` needed. The Review LLM MCP server reads the same file on startup. Real
+environment variables still take precedence over file values.
 
 The `/setup` skill checks which keys are currently set, explains each one, and writes values
-directly into the appropriate config file using the Edit tool.
+directly into the user config file using the Edit tool.
 
 ---
 
@@ -26,7 +25,7 @@ directly into the appropriate config file using the Edit tool.
 
 | Field | Value |
 |-------|-------|
-| Config variable | `MINERU_API_TOKEN` in `~/.config/MinerU/mineru.env` or `$XDG_CONFIG_HOME/MinerU/mineru.env` |
+| Config variable | `MINERU_API_TOKEN` in `~/.config/llm-wiki/.env` or `$XDG_CONFIG_HOME/llm-wiki/.env` |
 | Required? | **Yes** for any PDF ingest path |
 | Free? | Yes (free tier on mineru.net) |
 
@@ -39,14 +38,14 @@ structured markdown that `/ingest` consumes.
 - `/init` — bulk PDF preparation routes through the same prep tool
 
 **Without this token**: PDF ingest fails. The escape hatch is the local MinerU backend
-(`uv pip install -e .[local]`), which downloads several GB of models on first use and runs
+(`uv sync --extra local`), which downloads several GB of models on first use and runs
 fully on-device — no token required, but heavy.
 
 **How to get it**:
 1. Go to https://mineru.net/
 2. Sign up (free)
 3. Create an API token in your account settings
-4. Paste the token into `MINERU_API_TOKEN` in MinerU's `mineru.env`
+4. Paste the token into `MINERU_API_TOKEN` in llm-wiki's `.env`
 
 **Optional override**: `MINERU_API_BASE` lets you point at a non-default API host (rarely
 needed). Leave commented unless MinerU publishes a new endpoint.
@@ -59,7 +58,7 @@ needed). Leave commented unless MinerU publishes a new endpoint.
 
 | Field | Value |
 |-------|-------|
-| `.env` variable | `SEMANTIC_SCHOLAR_API_KEY` |
+| Config variable | `SEMANTIC_SCHOLAR_API_KEY` |
 | Required? | No (optional, strongly recommended) |
 | Free? | Yes — instant approval, no credit card |
 
@@ -89,7 +88,7 @@ many papers, this can add 10–20 minutes.
 
 | Field | Value |
 |-------|-------|
-| `.env` variables | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` |
+| Config variables | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` |
 | Required? | No (optional) |
 | Free? | Depends on provider |
 
@@ -126,34 +125,14 @@ The `/review` skill will note that cross-model review is unavailable.
 **How to set up**:
 1. Choose a provider and get an API key from them
 2. Note the base URL and model name from the table above
-3. Set all three variables in `.env`
-4. Restart Claude Code (the MCP server re-reads `.env` on startup)
+3. Set all three variables in the llm-wiki user config file
+4. Restart Claude Code (the MCP server re-reads the config file on startup)
 
 **Optional**: `LLM_FALLBACK_MODEL` — fallback model if the primary fails (defaults to `LLM_MODEL`)
 
 **Reviewer independence principle** (from `shared-references/cross-model-review.md`):
 Never share Claude's analysis with the Review LLM before it gives its independent assessment.
 The value of cross-model review comes from genuine independence.
-
----
-
-## Key 4: arXiv Categories (optional)
-
-| Field | Value |
-|-------|-------|
-| `.env` variable | `ARXIV_CATEGORIES` |
-| Required? | No |
-| Default | `cs.LG,cs.CV,cs.CL,cs.AI,stat.ML` |
-
-**What it does**: Controls which arXiv subject categories paper-discovery skills
-(`/init`, `/novelty`, `/ideate`) prioritize when scanning for related work.
-
-**Format**: Comma-separated category codes. Full list: https://arxiv.org/category_taxonomy
-
-**Examples**:
-- ML/AI focus: `cs.LG,cs.CV,cs.CL,cs.AI,stat.ML`
-- Systems focus: `cs.DC,cs.AR,cs.PF,cs.OS`
-- Theory focus: `cs.CC,cs.DS,cs.LO,math.CO`
 
 ---
 

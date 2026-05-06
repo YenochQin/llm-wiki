@@ -145,9 +145,8 @@ export PYTHON_BIN
    "$PYTHON_BIN" tools/research_wiki.py init wiki/
    ```
 
-2. **Search for relevant papers** (use Agent tool for parallel searches):
+2. **Search for relevant papers**:
    - Semantic Scholar: `"$PYTHON_BIN" tools/fetch_s2.py search "{direction}" --limit 20`
-   - arXiv: `"$PYTHON_BIN" tools/fetch_arxiv.py` (using direction keywords)
 
 3. **Merge, rank, and select top 5**:
    - Deduplicate by arxiv_id
@@ -434,7 +433,6 @@ Update pipeline-progress: status: completed.
 - `"$PYTHON_BIN" tools/research_wiki.py maturity wiki/ --json` — wiki maturity (Stage 0 trigger + Growth Report)
 - `"$PYTHON_BIN" tools/research_wiki.py init wiki/` — initialize wiki structure (Stage 0)
 - `"$PYTHON_BIN" tools/fetch_s2.py search "{query}" --limit 20` — Semantic Scholar search (Stage 0)
-- `"$PYTHON_BIN" tools/fetch_arxiv.py` — arXiv RSS search (Stage 0)
 
 ### Claude Code Native
 - `Read` — read pipeline-progress, wiki pages, RESEARCH_BRIEF

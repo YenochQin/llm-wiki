@@ -43,6 +43,8 @@ PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 [[ "$LANG_CODE" == "en" ]] || { fail "Unknown lang: $LANG_CODE (only 'en' is shipped)"; exit 1; }
 I18N_DIR="$PROJECT_ROOT/i18n/$LANG_CODE"
 [ -d "$I18N_DIR" ] || { fail "i18n/$LANG_CODE not found — run from the project root"; exit 1; }
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/llm-wiki"
+ENV_FILE="$CONFIG_DIR/.env"
 cd "$PROJECT_ROOT"
 
 echo ""
@@ -92,12 +94,9 @@ if [ -n "$VIRTUAL_ENV" ] || { [ -n "$CONDA_DEFAULT_ENV" ] && [ "$CONDA_DEFAULT_E
     warn "Active environment detected; setup always installs llm-wiki into .venv"
 fi
 
-if [ -d ".venv" ]; then
-    warn ".venv already exists, using it"
-else
-    uv venv .venv --python ">=3.10"
-    ok "Created .venv (uv-managed)"
-fi
+info "Syncing dependencies from pyproject.toml..."
+uv sync --python ">=3.10"
+ok "Dependencies synced into .venv"
 
 VENV_PYTHON="$PROJECT_ROOT/.venv/bin/python"
 if [ ! -x "$VENV_PYTHON" ]; then
@@ -106,32 +105,22 @@ if [ ! -x "$VENV_PYTHON" ]; then
 fi
 ok "Using $VENV_PYTHON"
 
-info "Installing dependencies into .venv via uv..."
-uv pip install -e . --python "$VENV_PYTHON" -q
-ok "Dependencies installed into .venv"
-
 # ── Step 3: Configuration files ─────────────────────────────────────────
 
 echo ""
 info "Setting up configuration..."
 
-# .env
-if [ -f ".env" ]; then
-    warn ".env already exists, not overwriting"
+# llm-wiki user config
+mkdir -p "$CONFIG_DIR"
+if [ -f "$ENV_FILE" ]; then
+    warn "$ENV_FILE already exists, not overwriting"
 else
-    cp .env.example .env
-    ok "Created .env from template"
+    cp config/.env.example "$ENV_FILE"
+    chmod 600 "$ENV_FILE" 2>/dev/null || true
+    ok "Created $ENV_FILE from config/.env.example"
 fi
-
-# MinerU user config
-MINERU_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/MinerU"
-MINERU_ENV_FILE="$MINERU_CONFIG_DIR/mineru.env"
-mkdir -p "$MINERU_CONFIG_DIR"
-if [ -f "$MINERU_ENV_FILE" ]; then
-    warn "$MINERU_ENV_FILE already exists, not overwriting"
-else
-    cp config/mineru.env.example "$MINERU_ENV_FILE"
-    ok "Created $MINERU_ENV_FILE from template"
+if [ -f ".env" ]; then
+    warn "Legacy project .env detected; tools prefer $ENV_FILE"
 fi
 
 # Claude Code settings
@@ -189,27 +178,24 @@ check_tool_import() {
 }
 
 # Real runtime dependencies
-check_python_snippet "PyMuPDF (fitz)" "import fitz"
 check_python_snippet "requests" "import requests"
-check_python_snippet "feedparser" "import feedparser"
 
 # Tools
 check_tool_import "tools/_mineru.py" "from _mineru import extract"
 check_tool_import "tools/prepare_paper_source.py" "from prepare_paper_source import main"
 check_tool_import "tools/init_discovery.py" "from init_discovery import prepare_inputs"
 check_tool_import "tools/fetch_s2.py" "from fetch_s2 import search"
-check_tool_import "tools/fetch_arxiv.py" "from fetch_arxiv import fetch_recent"
 check_tool_import "tools/research_wiki.py" "from research_wiki import slugify"
 check_tool_import "tools/lint.py" "from lint import check_missing_fields"
 
 # MinerU API token diagnostic (warn-only). The api backend reads process env or
-# ~/.config/MinerU/mineru.env; /setup writes the token there.
-if { [ -f "$MINERU_ENV_FILE" ] && grep -E '^MINERU_API_TOKEN=.+' "$MINERU_ENV_FILE" >/dev/null 2>&1; } \
+# the unified llm-wiki user config.
+if { [ -f "$ENV_FILE" ] && grep -E '^MINERU_API_TOKEN=.+' "$ENV_FILE" >/dev/null 2>&1; } \
    || [ -n "${MINERU_API_TOKEN:-}" ]; then
     ok "MINERU_API_TOKEN is configured for MinerU"
 else
     warn "MINERU_API_TOKEN not set — PDF ingest will fail until you add it"
-    echo "        Get a token at https://mineru.net/ and put it in $MINERU_ENV_FILE"
+    echo "        Get a token at https://mineru.net/ and put it in $ENV_FILE"
     WARNINGS=$((WARNINGS+1))
 fi
 
@@ -217,7 +203,7 @@ fi
 if uv run --python "$VENV_PYTHON" python -c "import mineru" >/dev/null 2>&1; then
     ok "MinerU local backend available (optional)"
 else
-    info "MinerU local backend not installed (optional). Enable with: uv pip install -e .[local]"
+    info "MinerU local backend not installed (optional). Enable with: uv sync --extra local"
 fi
 
 # ── Done ────────────────────────────────────────────────────────────────
@@ -238,8 +224,8 @@ echo ""
 echo "  1. Authenticate Claude Code (if not already):"
 echo "     claude login"
 echo ""
-echo "  2. Set MINERU_API_TOKEN in $MINERU_ENV_FILE (required for PDF ingest):"
-echo "     https://mineru.net/  →  create token  →  paste into mineru.env"
+echo "  2. Set MINERU_API_TOKEN in $ENV_FILE (required for PDF ingest):"
+echo "     https://mineru.net/  →  create token  →  paste into .env"
 echo ""
 echo "  3. Run Python tools through uv (no need to activate the venv):"
 echo "     uv run python tools/research_wiki.py --help"
@@ -249,8 +235,8 @@ echo "     claude"
 echo ""
 echo "  5. Complete API key configuration (guided):"
 echo "     /setup"
-echo "     Claude Code will walk you through Semantic Scholar, MinerU,"
-echo "     and Review LLM — skip any you don't have yet."
+echo "     Claude Code will walk you through llm-wiki API keys —"
+echo "     skip any you don't have yet."
 echo ""
 echo "  6. Then initialize your wiki:"
 echo "     /init [your-research-topic]"

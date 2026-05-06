@@ -14,10 +14,11 @@ so the caller can hand the same paths it used to receive from the old
 Backends:
 
 - ``"api"``   — cloud client against ``mineru.net/api/v4`` using ``requests``.
-                Token resolution: env ``MINERU_API_TOKEN`` >
-                ``$XDG_CONFIG_HOME/MinerU/mineru.env`` (falling back to
-                ``~/.config/MinerU/mineru.env``). Endpoint base overridable via
-                ``MINERU_API_BASE``.
+                Token resolution is handled by ``tools/_env.py``:
+                real environment variables first, then
+                ``$XDG_CONFIG_HOME/llm-wiki/.env`` or
+                ``~/.config/llm-wiki/.env``. Endpoint base overridable via
+                ``MINERU_API_BASE`` in the same config file.
 - ``"local"`` — calls ``mineru.cli.common.do_parse`` directly. Imports happen
                 lazily so users on the api-only path don't need ``mineru[all]``.
 """
@@ -33,46 +34,17 @@ import time
 import zipfile
 from pathlib import Path
 
+import _env  # noqa: F401 — load llm-wiki user config for MinerU keys
 
-def _resolve_env_file() -> Path:
-    """User-level config path. Honors $XDG_CONFIG_HOME, else ``~/.config``."""
-    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
-    base = Path(xdg).expanduser() if xdg else Path.home() / ".config"
-    return base / "MinerU" / "mineru.env"
-
-
-ENV_FILE = _resolve_env_file()
 DEFAULT_API_BASE = "https://mineru.net/api/v4"
 DEFAULT_MODEL_VERSION = "vlm"
 POLL_INTERVAL_SEC = 3
 POLL_TIMEOUT_SEC = 30 * 60  # 30 minutes per PDF
 
 
-def _load_env_file(path: Path) -> dict[str, str]:
-    """Parse a tiny KEY=VALUE config file. Comments starting with `#` ignored."""
-    if not path.exists():
-        return {}
-    out: dict[str, str] = {}
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key:
-            out[key] = value
-    return out
-
-
 def _config(name: str, default: str = "") -> str:
-    """Resolve a setting: real env > mineru.env > default."""
-    if name in os.environ and os.environ[name]:
-        return os.environ[name]
-    file_values = _load_env_file(ENV_FILE)
-    return file_values.get(name, default)
+    """Resolve a setting after ``_env`` has loaded llm-wiki config."""
+    return os.environ.get(name, "").strip() or default
 
 
 def _existing_outputs(cache_dir: Path) -> tuple[Path, Path] | None:
@@ -133,7 +105,7 @@ def _extract_via_api(pdf: Path, cache_dir: Path, language: str) -> None:
     if not token:
         raise RuntimeError(
             "MINERU_API_TOKEN is not set. Put it in the environment or in "
-            f"{ENV_FILE} (see mineru.env.example)."
+            f"{_env.config_env_path()} (created from config/.env.example)."
         )
     api_base = _config("MINERU_API_BASE", DEFAULT_API_BASE).rstrip("/")
     model_version = _config("MINERU_MODEL_VERSION", DEFAULT_MODEL_VERSION)

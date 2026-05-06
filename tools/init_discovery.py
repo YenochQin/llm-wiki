@@ -34,14 +34,6 @@ from fetch_s2 import references as s2_references
 from fetch_s2 import search as s2_search
 from research_wiki import slugify
 
-try:
-    import fitz
-
-    HAS_PYMUPDF = True
-except ImportError:
-    fitz = None
-    HAS_PYMUPDF = False
-
 STOP_WORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
     "has", "have", "in", "into", "is", "it", "of", "on", "or", "that",
@@ -306,24 +298,6 @@ def _download_arxiv_source(arxiv_id: str, dest_dir: Path) -> dict[str, Any]:
     return {"success": False, "format": "", "error": "empty response"}
 
 
-def _extract_arxiv_id_from_pdf_metadata(path: Path) -> str:
-    """Try to extract an arXiv ID from the PDF document info dict (metadata)."""
-    if not HAS_PYMUPDF:
-        return ""
-    try:
-        doc = fitz.open(path)
-        meta = doc.metadata or {}
-        doc.close()
-        for key in ("subject", "keywords", "title"):
-            text = str(meta.get(key) or "")
-            arxiv_id = _extract_arxiv_id(text)
-            if arxiv_id:
-                return arxiv_id
-    except Exception:
-        pass
-    return ""
-
-
 def _extract_arxiv_source_metadata(source_dir: Path) -> dict[str, str]:
     """Extract title/abstract metadata from a fetched arXiv source dir."""
     tex_files = sorted(source_dir.rglob("*.tex"))
@@ -555,47 +529,6 @@ def _extract_archive_to_tmp(source_path: Path, dest_dir: Path) -> list[str]:
         shutil.rmtree(dest_dir, ignore_errors=True)
         warnings.append(f"archive extraction failed: {exc}")
     return warnings
-
-
-def _extract_pdf_text(path: Path) -> tuple[str, list[str]]:
-    warnings: list[str] = []
-    if not HAS_PYMUPDF:
-        warnings.append("PyMuPDF unavailable; cannot decode PDF during prepare")
-        return "", warnings
-    try:
-        doc = fitz.open(path)
-        try:
-            text_parts = [page.get_text("text") for page in doc]
-        finally:
-            doc.close()
-        text = "\n".join(part.strip() for part in text_parts if part.strip()).strip()
-        if not text:
-            warnings.append("PDF decode produced empty text")
-        return text[:120000], warnings
-    except Exception as exc:
-        warnings.append(f"PDF decode failed: {exc}")
-        return "", warnings
-
-
-def _build_synthetic_tex(title: str, text: str) -> str:
-    abstract = _extract_abstract_excerpt(text, limit=1500)
-    body = re.sub(r"\s+\n", "\n", text).strip()
-    if not body:
-        body = title
-    title_line = _latex_escape(title or "Untitled")
-    abstract_block = _latex_escape(abstract or body[:800])
-    body_block = _latex_escape(body[:60000])
-    return (
-        "\\title{" + title_line + "}\n"
-        "\\begin{document}\n"
-        "\\maketitle\n\n"
-        "\\begin{abstract}\n"
-        + abstract_block
-        + "\n\\end{abstract}\n\n"
-        "\\section{Recovered Text}\n"
-        + body_block
-        + "\n\\end{document}\n"
-    )
 
 
 def _ingest_format_from_path(path_str: str) -> str:

@@ -110,7 +110,7 @@ From this point on, treat the prepared `.md` as the canonical source for the res
 
 ## Failure modes
 
-- **`MINERU_API_TOKEN is not set`**: surface this clearly to the user. Either ask them to add the token to `.env`, or fall back to the local MinerU backend if installed (`uv pip install -e ".[local]"`).
+- **`MINERU_API_TOKEN is not set`**: surface this clearly to the user. Either ask them to add the token to `~/.config/llm-wiki/.env`, or fall back to the local MinerU backend if installed (`uv sync --extra local`).
 - **MinerU API outage / rate limit**: same fallback — try the local backend if available, otherwise hand off to the user with a clear message.
 - **Manifest reports `usable: false`**: do not proceed. Surface the `warnings` array to the user; common causes are scanned PDFs without OCR, encrypted PDFs, or pages-only image dumps.
 - **No figures extracted on a paper that clearly has them**: not blocking. Note in the report; the user may want to switch to the local backend for that paper.

@@ -6,7 +6,7 @@ The deterministic ranking lives in `tools/discover.py` — this file documents w
 
 Anchor mode gathers from **three** S2 channels per anchor, because any single channel has a characteristic bias:
 
-- **`recommend`** (S2 semantic recommendations endpoint) — surfaces semantically similar papers, but the endpoint is heavily skewed toward recent work. On its own this collapses into "recent papers near the topic" — essentially a topical RSS feed without the historical canon.
+- **`recommend`** (S2 semantic recommendations endpoint) — surfaces semantically similar papers, but the endpoint is heavily skewed toward recent work. On its own this collapses into recent papers near the topic without the historical canon.
 - **`references`** (papers the anchor cites) — surfaces the **older canonical** work the anchor built on. This is the literature-review channel.
 - **`citations`** (papers that cite the anchor) — surfaces **high-impact follow-ups** and subsequent work built on the anchor.
 

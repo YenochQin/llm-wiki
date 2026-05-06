@@ -176,7 +176,7 @@ Synthesize Step 2 + Step 3 results into a structured Review Report:
 - **Artifact type**: {idea / experiment / claim / paper-draft / proposal}
 - **Difficulty**: {standard / hard / adversarial}
 - **Focus**: {method / evidence / writing / completeness / comprehensive}
-- **Reviewer**: Review LLM (configured in `.env`)
+- **Reviewer**: Review LLM (configured in `~/.config/llm-wiki/.env`)
 - **Rounds**: {1 for standard, N for hard/adversarial}
 
 ## Score: {final score}/10 — {verdict}

@@ -37,7 +37,7 @@ Keep this mental map in immediate context:
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
 - `raw/discovered/` stores externally fetched papers from `/init`
 - `raw/tmp/papers/` stores MinerU-prepared markdown (`<slug>.md` + `assets/<slug>/*`) for `/init` and direct local `/ingest`
-- `config/` holds environment templates (`.env.example`, `mineru.env.example`, `settings.local.json.example`)
+- `config/` holds environment templates (`.env.example`, `settings.local.json.example`)
 
 ---
 
@@ -104,12 +104,12 @@ Standard log line:
 
 ## Python Environment
 
-- this project is **uv-managed**: `setup.sh` creates `.venv` via `uv venv` and installs from `pyproject.toml` via `uv pip install -e .`
+- this project is **uv-managed**: `setup.sh` creates/updates `.venv` from `pyproject.toml` via `uv sync`
 - prefer `.venv/bin/python` (Unix/macOS) or `.venv/Scripts/python.exe` (Windows) when `.venv/` exists
 - otherwise fall back to `python3` (Unix/macOS) or `python` (Windows)
 - skills typically run tools as `"$PYTHON_BIN" tools/<name>.py …`; equivalently, `uv run --python .venv/bin/python python tools/<name>.py …`
-- Python tools auto-load most API keys from `~/.env` and project-root `.env` via `tools/_env.py`; MinerU cloud reads `MINERU_API_TOKEN` from the process environment or `~/.config/MinerU/mineru.env` / `$XDG_CONFIG_HOME/MinerU/mineru.env`
-- the optional MinerU local backend is opt-in: `uv pip install -e ".[local]"` (downloads several GB of model weights)
+- Python tools auto-load API keys from process env first, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`) via `tools/_env.py`; project-root `.env` and `~/.env` are legacy fallbacks only
+- the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
 
 ---
 
@@ -128,7 +128,7 @@ Standard log line:
 - **Failed ideas must record reason**: `failure_reason` is anti-repetition memory — prevents re-exploring known dead ends.
 - **Claim confidence range**: 0.0-1.0; re-evaluate every time evidence changes.
 - **Experiments must link to a claim**: every experiment requires `target_claim`; results are written back to the claim's evidence after the user runs the experiment externally and reports results to `/exp-eval`.
-- **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv pip install -e ".[local]"`) for offline operation.
+- **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
 - **Semantic Scholar key**: `SEMANTIC_SCHOLAR_API_KEY` is recommended (free). Without it, `/init` runs ~3x slower and citation backfill is skipped per-paper.
 
 ---

@@ -34,8 +34,8 @@ raw/papers/<file>.pdf
 ## Prerequisites
 
 - Python 3.10+ (managed by uv via `.venv`).
-- For `api` backend (default): `MINERU_API_TOKEN` set in project-root `.env` or in `~/.config/MinerU/mineru.env`. Optional override: `MINERU_API_BASE` (default `https://mineru.net/api/v4`).
-- For `local` backend: `uv pip install -e ".[local]"`. First run downloads several GB of model weights; afterward extraction runs offline. No token needed.
+- For `api` backend (default): `MINERU_API_TOKEN` set in `~/.config/llm-wiki/.env` or `$XDG_CONFIG_HOME/llm-wiki/.env`. Optional override: `MINERU_API_BASE` (default `https://mineru.net/api/v4`).
+- For `local` backend: `uv sync --extra local`. First run downloads several GB of model weights; afterward extraction runs offline. No token needed.
 
 ## Single-PDF usage (CLI)
 
@@ -93,9 +93,9 @@ MinerU's raw markdown is flat and noisy. The adapter applies seven passes (mirro
 
 ## Troubleshooting
 
-- **`MINERU_API_TOKEN is not set`**: the `api` backend couldn't find a token. Add `MINERU_API_TOKEN=…` to `.env`, or export it in the shell, or write it to `~/.config/MinerU/mineru.env`.
+- **`MINERU_API_TOKEN is not set`**: the `api` backend couldn't find a token. Add `MINERU_API_TOKEN=...` to `~/.config/llm-wiki/.env`, or export it in the shell.
 - **`401`/`403` from the cloud API**: token invalid or expired. Regenerate at <https://mineru.net/apiManage/account/api>.
-- **`backend='local' requires the mineru library`**: install with `uv pip install -e ".[local]"`. First run downloads several GB of model weights.
+- **`backend='local' requires the mineru library`**: install with `uv sync --extra local`. First run downloads several GB of model weights.
 - **MinerU API down / rate-limited**: switch to local backend by installing the `local` extra and re-running. The CLI accepts the same flags.
 - **Title is split or missing**: cover-block sequence broke normalization. Inspect `.mineru-cache/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
 - **Reference dump leaks into body**: the cutoff heading didn't match any `CUTOFF_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`).

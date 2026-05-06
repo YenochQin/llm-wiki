@@ -39,5 +39,5 @@ claims:
 ```markdown
 ## [2026-04-07] ingest | added papers/lora-low-rank-adaptation | updated: concepts/parameter-efficient-fine-tuning
 ## [2026-04-07] lint | report: 0 🔴, 2 🟡, 1 🔵
-## [2026-04-08] daily-arxiv | 3 papers ingested from RSS
+## [2026-04-08] check | report: 0 critical, 2 warnings, 1 suggestion
 ```

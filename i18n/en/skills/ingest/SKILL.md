@@ -74,7 +74,7 @@ paper-to-concept or paper-to-paper types on new writes.
 # Find the project root via git so worktree subagents can still locate .venv.
 # .venv is gitignored, so a subagent whose cwd is ../.worktrees/<branch>/
 # doesn't have one — without this lookup it falls back to system python3 and
-# misses the .env-loaded API keys plus the installed deps (PyMuPDF, requests for MinerU, etc.).
+# misses the .env-loaded API keys plus the installed deps (requests for MinerU, etc.).
 # git rev-parse --git-common-dir returns the main repo's .git regardless of
 # which worktree the shell is in; its parent is the project root.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
@@ -95,7 +95,7 @@ export PYTHON_BIN
 ### Step 1: Resolve the source
 
 1. If `/init` passed a `canonical_ingest_path`, enter **INIT MODE** and consume that path verbatim. Do not rescan `raw/`. See `references/init-mode.md`.
-2. If the source is an arXiv URL, extract the arXiv ID, use `"$PYTHON_BIN" tools/fetch_s2.py paper <arxiv-id>` to recover the title when possible, then run `"$PYTHON_BIN" tools/init_discovery.py download --raw-root raw --arxiv-id <arxiv-id> --title "<title-or-arxiv-id>"`. Continue from the returned `canonical_ingest_path`. The helper tries arXiv source first and falls back to PDF; do not call `fetch_arxiv.py` for a single paper because it is RSS-only.
+2. If the source is an arXiv URL, extract the arXiv ID, use `"$PYTHON_BIN" tools/fetch_s2.py paper <arxiv-id>` to recover the title when possible, then run `"$PYTHON_BIN" tools/init_discovery.py download --raw-root raw --arxiv-id <arxiv-id> --title "<title-or-arxiv-id>"`. Continue from the returned `canonical_ingest_path`. The helper tries arXiv source first and falls back to PDF.
 3. If the source is a local `.md` already under `raw/tmp/papers/` (or otherwise marked as prepared `mineru-md`), use it directly.
 4. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `raw/tmp/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
 

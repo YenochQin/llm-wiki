@@ -304,9 +304,9 @@ def _gather_from_anchors(
       - references: what the anchor cites — surfaces older canonical work
       - citations:  what cites the anchor — surfaces high-impact follow-ups
 
-    Without references/citations, anchor mode collapses into "recent papers
-    near the topic", which overlaps with /daily-arxiv. With them, anchor mode
-    becomes a genuine literature-graph walk from the anchor.
+    Without references/citations, anchor mode collapses into recent papers near
+    the topic. With them, anchor mode becomes a genuine literature-graph walk
+    from the anchor.
     """
     candidates: list[dict[str, Any]] = []
     # One call-set per anchor preserves which anchor surfaced which candidate;

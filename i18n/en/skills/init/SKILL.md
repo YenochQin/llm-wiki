@@ -225,7 +225,7 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 - **MinerU prep fails (token unset, API outage, manifest `usable: false`)**: skip that paper, record the warning in `.checkpoints/init-prepare.json`, and continue. Do not silently substitute the raw PDF — `mineru-md` is the contract
 - **No confident PDF title is recovered**: omit `--title`, allow filename/path arXiv-ID recovery only; any metadata-or-filename title is display-only
 - **Chinese content is detected in `raw/notes/` or `raw/web/`**: keep going, but preserve a planner warning that note/web extraction and ranking may be less reliable and treat rankings plus provisional pages as lower-confidence
-- **S2 unavailable**: planner falls back to arXiv RSS + local sources; preserve the warning in the checkpointed plan and note degraded discovery in the report
+- **S2 unavailable**: planner continues with local sources and any other responding channels; preserve the warning in the checkpointed plan and note degraded discovery in the report
 - **External fetch fails for one paper**: keep the remaining final set and report the failed download
 - **Single paper ingest fails**: record it via checkpoint, skip it, continue the rest, and list it in the report
 - **Current checkout is detached HEAD**: stop before worktree fan-out and ask the user to switch to or create a named branch first

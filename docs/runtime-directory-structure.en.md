@@ -39,7 +39,7 @@ tools/                 ← Python tooling (run via uv)
 config/
 ├── server.yaml        ← remote GPU server config (optional)
 ├── server.yaml.example
-├── mineru.env.example ← MINERU_API_TOKEN, MINERU_API_BASE
+├── .env.example       ← template for ~/.config/llm-wiki/.env
 └── settings.local.json.example
 
 i18n/en/               ← canonical English skills + shared references (synced into .claude/ by setup.sh)

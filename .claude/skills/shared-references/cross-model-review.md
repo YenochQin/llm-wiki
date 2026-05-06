@@ -65,7 +65,7 @@ Before calling `mcp__llm-review__chat`, every skill must check availability and 
 
 A call to `mcp__llm-review__chat` will fail if:
 - The MCP server is not configured (missing `.mcp.json` or `enableAllProjectMcpServers` not set)
-- `LLM_API_KEY` or `LLM_BASE_URL` is not set in `.env`
+- `LLM_API_KEY` or `LLM_BASE_URL` is not set in `~/.config/llm-wiki/.env`
 - The API endpoint is unreachable
 
 ### Fallback Protocol
@@ -77,9 +77,9 @@ When the review MCP server is **unavailable**:
 
 2. **If the user wants to configure**, guide them interactively:
    - Ask which OpenAI-compatible API provider they have (DeepSeek, OpenAI, Qwen, OpenRouter, etc.)
-   - Help them edit `.env` to set `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`
+   - Help them edit `~/.config/llm-wiki/.env` to set `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`
    - Tell them to restart Claude Code so the MCP server picks up the new config
-   - Reference `.env.example` for the full provider table
+   - Reference `config/.env.example` for the full provider table
 
 3. **If the user wants to proceed without review**, continue with Claude-only mode:
    - Skip the `mcp__llm-review__chat` call

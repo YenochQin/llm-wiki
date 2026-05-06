@@ -11,7 +11,7 @@ See [`../llm-wiki.md`](../llm-wiki.md) for the underlying pattern (Karpathy).
 # 2. From the project root:
 bash setup.sh
 
-# 3. Set MINERU_API_TOKEN in ~/.config/MinerU/mineru.env (required for PDF ingest)
+# 3. Set MINERU_API_TOKEN in ~/.config/llm-wiki/.env (required for PDF ingest)
 #    Get a free token at https://mineru.net/
 
 # 4. Start Claude Code:
@@ -58,5 +58,5 @@ uv run python tools/prepare_paper_source.py --raw-root raw --source raw/papers/<
 The optional local MinerU backend (downloads several GB of models on first run) is opt-in:
 
 ```bash
-uv pip install -e ".[local]"
+uv sync --extra local
 ```
