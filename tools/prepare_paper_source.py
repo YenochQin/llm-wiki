@@ -1,0 +1,759 @@
+#!/usr/bin/env python3
+"""Prepare one local paper source for `/ingest`.
+
+Drop-in replacement for OmegaWiki's tex-fetching prep step. This version routes
+every local PDF through the MinerU pipeline (lifted from `pdf-source-scripts/`)
+and emits a structured markdown file that `/ingest` consumes directly.
+
+Pipeline:
+
+    PDF
+      -> _mineru.extract(...)                    # cache by sha16(PDF)
+      -> _normalize_cache(...)                   # synthesize Zotero-style manifest
+      -> _convert_to_markdown(...)               # adapter: cleans cover/headings/figures
+      -> raw/tmp/papers/<slug>.md                # canonical_ingest_path
+      -> raw/tmp/papers/assets/<slug>/*.jpg      # extracted figure crops
+
+Cache layout (kept across runs for cheap re-prep):
+
+    .mineru-cache/<sha16>/
+        <stem>.md               raw MinerU markdown
+        <stem>.json             MinerU content_list block list
+        full.md                 adapter-canonical copy of <stem>.md
+        manifest.json           synthesized from the block list
+        images/                 figure/table crops referenced by the .md
+
+CLI (preserves OmegaWiki's contract — `/ingest` invocations are unchanged):
+
+    python3 tools/prepare_paper_source.py \\
+        --raw-root raw \\
+        --source raw/papers/example.pdf \\
+        [--title "Recovered Paper Title"] \\
+        [--arxiv-id 2401.00001]
+
+stdout: a single JSON object (one line) with the manifest shape `/ingest`
+expects. `canonical_ingest_path` is the file `/ingest` should read; for this
+build it is always a `.md` produced by MinerU + adapter (`ingest_format = "mineru-md"`).
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import shutil
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import _mineru
+from research_wiki import slugify
+
+# ---------------------------------------------------------------------------
+# Adapter constants (lifted verbatim from pdf-source-scripts/pdf_to_source_mineru.py)
+# ---------------------------------------------------------------------------
+
+CUTOFF_PATTERNS = [
+    r"^\s*(?:literature\s*cited|references?|bibliography)\s*$",
+    r"^\s*acknowledg(?:e?ments?)\s*$",
+    r"^\s*disclosure\s*statement\s*$",
+    r"^\s*supplementary\s*(?:material|information)\s*$",
+    r"^\s*supporting\s*information\s*$",
+    r"^\s*appendix(?:\s+\w+)?\s*$",
+    r"^\s*funding\s*$",
+    r"^\s*author\s*contributions?\s*$",
+    r"^\s*competing\s*interests?\s*$",
+    r"^\s*data\s*availability\s*$",
+]
+
+JUNK_PATTERNS = [
+    r"^\s*www\..*$",
+    r"^\s*https?://.*$",
+    r"^\s*downloaded\s+from.*$",
+    r"^\s*ANWENS\s*CONNECT\s*$",
+    r"^\s*contents\s*$",
+    r"^\s*table\s*of\s*contents\s*$",
+]
+
+JOURNAL_NAME_HINTS = (
+    "annual review",
+    "journal of",
+    "proceedings of",
+    "nature ",
+    "science ",
+    "physical review",
+    "monthly notices",
+    "astrophysical journal",
+    "astronomy and astrophysics",
+)
+
+KEEP_UNNUMBERED = {
+    "abstract", "keywords", "summary", "introduction",
+    "background", "main", "methods", "method", "materials and methods",
+    "results", "results and discussion", "discussion",
+    "conclusion", "conclusions", "highlights",
+}
+
+NUMBERED_HEADING_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s*[A-Za-z]")
+IMG_RE = re.compile(r"!\[([^\]]*)\]\(images/([^)]+)\)")
+ARXIV_NEW = re.compile(r"(?<!\d)(\d{4}\.\d{4,5})(?:v\d+)?(?!\d)")
+ARXIV_OLD = re.compile(
+    r"(?<![A-Za-z0-9])([a-z\-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?(?!\d)",
+    re.IGNORECASE,
+)
+FIGURE_LABEL_RE = re.compile(r"\b(Figure|Fig\.?|Table)\s*\d+\b", re.IGNORECASE)
+AUTHOR_INITIAL_RE = re.compile(r"\b[A-Z]\.\s*[A-Z]")
+
+
+# ---------------------------------------------------------------------------
+# YAML rendering for the markdown frontmatter
+# ---------------------------------------------------------------------------
+
+def _yaml_scalar(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _render_yaml(items: dict) -> str:
+    lines = ["---"]
+    for key, value in items.items():
+        if isinstance(value, bool):
+            lines.append(f"{key}: {'true' if value else 'false'}")
+        elif isinstance(value, int):
+            lines.append(f"{key}: {value}")
+        elif isinstance(value, list):
+            if not value:
+                lines.append(f"{key}: []")
+            elif all(isinstance(x, str) for x in value):
+                lines.append(f"{key}:")
+                for x in value:
+                    lines.append(f"  - {_yaml_scalar(x)}")
+            else:
+                lines.append(f"{key}:")
+                for x in value:
+                    first = True
+                    for k2, v2 in x.items():
+                        prefix = "  - " if first else "    "
+                        first = False
+                        if isinstance(v2, int):
+                            lines.append(f"{prefix}{k2}: {v2}")
+                        else:
+                            lines.append(f"{prefix}{k2}: {_yaml_scalar(str(v2))}")
+        else:
+            lines.append(f"{key}: {_yaml_scalar(str(value))}")
+    lines.append("---")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Heading classifiers
+# ---------------------------------------------------------------------------
+
+def _matches_any(text: str, patterns: list[str]) -> bool:
+    return any(re.match(p, text, re.IGNORECASE) for p in patterns)
+
+
+def _heading_is_cutoff(text: str) -> bool:
+    return _matches_any(text.strip(), CUTOFF_PATTERNS)
+
+
+def _heading_is_junk(text: str) -> bool:
+    h = text.strip()
+    if _matches_any(h, JUNK_PATTERNS):
+        return True
+    if h.endswith(":") and not NUMBERED_HEADING_RE.match(h):
+        return True
+    return False
+
+
+def _is_journal_name(text: str) -> bool:
+    h = text.strip().lower()
+    return any(h.startswith(prefix) for prefix in JOURNAL_NAME_HINTS)
+
+
+def _is_numbered(text: str) -> bool:
+    return bool(NUMBERED_HEADING_RE.match(text.strip()))
+
+
+def _heading_depth(text: str) -> int:
+    m = NUMBERED_HEADING_RE.match(text.strip())
+    if not m:
+        return 1
+    return m.group(1).count(".") + 1
+
+
+def _is_allowed_unnumbered(text: str) -> bool:
+    return text.strip().lower().rstrip(":") in KEEP_UNNUMBERED
+
+
+def _looks_like_author(text: str) -> bool:
+    return bool(AUTHOR_INITIAL_RE.search(text))
+
+
+def _looks_like_furniture(text: str) -> bool:
+    words = [w for w in text.split() if any(c.isalpha() for c in w)]
+    if not words or len(words) > 4:
+        return False
+    return all(w == w.upper() for w in words)
+
+
+def _is_real_heading(text: str) -> bool:
+    return bool(
+        NUMBERED_HEADING_RE.match(text)
+        or _is_allowed_unnumbered(text)
+        or _heading_is_junk(text)
+        or _heading_is_cutoff(text)
+    )
+
+
+def _normalize_heading_text(heading: str) -> str:
+    return re.sub(r"^(\d+(?:\.\d+)*\.)([A-Za-z])", r"\1 \2", heading.strip())
+
+
+# ---------------------------------------------------------------------------
+# Manifest synthesis (from MinerU content_list block list)
+# ---------------------------------------------------------------------------
+
+def _normalize_cover_blocks(blocks: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    i = 0
+    n = len(blocks)
+    title_emitted = False
+
+    while i < n:
+        b = blocks[i]
+        is_cover_l1 = b.get("text_level") == 1 and (b.get("page_idx") or 0) == 0
+        if not is_cover_l1:
+            out.append(b)
+            i += 1
+            continue
+
+        text = (b.get("text") or "").strip()
+
+        if _is_journal_name(text):
+            out.append(b)
+            i += 1
+            continue
+
+        if _is_real_heading(text):
+            out.append(b)
+            i += 1
+            continue
+
+        if not title_emitted:
+            fragments = [text]
+            j = i + 1
+            while j < n:
+                bj = blocks[j]
+                if not (bj.get("text_level") == 1 and (bj.get("page_idx") or 0) == 0):
+                    break
+                tj = (bj.get("text") or "").strip()
+                if (_is_journal_name(tj)
+                        or _is_real_heading(tj)
+                        or _looks_like_author(tj)
+                        or _looks_like_furniture(tj)):
+                    break
+                fragments.append(tj)
+                j += 1
+            merged = dict(b)
+            merged["text"] = " ".join(fragments)
+            out.append(merged)
+            title_emitted = True
+            i = j
+            continue
+
+        i += 1
+
+    return out
+
+
+def _synthesize_manifest(md_path: Path, json_path: Path) -> dict:
+    raw_blocks = json.loads(json_path.read_text(encoding="utf-8"))
+    full_md = md_path.read_text(encoding="utf-8")
+    blocks = _normalize_cover_blocks(raw_blocks)
+
+    total_pages = (max((b.get("page_idx", 0) or 0) for b in blocks) + 1) if blocks else 0
+
+    sections: list[dict] = []
+    all_figures: list[dict] = []
+    cur_section_heading = ""
+
+    auto_fig_n = 0
+    for block in blocks:
+        if block.get("text_level") == 1:
+            heading = (block.get("text") or "").strip()
+            if not heading:
+                continue
+            cur_section_heading = heading
+            sections.append({
+                "heading": heading,
+                "page": int(block.get("page_idx", 0) or 0),
+                "figures": [],
+                "tables": [],
+            })
+        elif block.get("type") == "image":
+            img_path = block.get("img_path") or ""
+            if not img_path:
+                continue
+            cap_list = block.get("img_caption") or block.get("image_caption") or []
+            caption = " ".join(cap_list).strip() if isinstance(cap_list, list) else str(cap_list)
+            m = FIGURE_LABEL_RE.search(caption)
+            if m:
+                label = m.group(0)
+            else:
+                auto_fig_n += 1
+                label = f"Image {auto_fig_n}"
+            page = int(block.get("page_idx", 0) or 0)
+            entry = {
+                "label": label,
+                "path": img_path,
+                "caption": caption,
+                "page": page,
+                "section": cur_section_heading,
+            }
+            all_figures.append(entry)
+            if sections:
+                sections[-1]["figures"].append({
+                    "label": label,
+                    "path": img_path,
+                    "caption": caption,
+                    "page": page,
+                })
+
+    return {
+        "sections": sections,
+        "allFigures": all_figures,
+        "allTables": [],
+        "totalPages": total_pages,
+        "totalChars": len(full_md),
+    }
+
+
+def _normalize_cache(cache_dir: Path, md_path: Path, json_path: Path) -> None:
+    full_md = cache_dir / "full.md"
+    manifest = cache_dir / "manifest.json"
+
+    if not full_md.exists() or full_md.stat().st_mtime < md_path.stat().st_mtime:
+        full_md.write_text(md_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    if not manifest.exists() or manifest.stat().st_mtime < json_path.stat().st_mtime:
+        data = _synthesize_manifest(md_path, json_path)
+        manifest.write_text(json.dumps(data, ensure_ascii=False, indent=None), encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Markdown adapter: full.md + manifest -> structured wiki source
+# ---------------------------------------------------------------------------
+
+def _detect_title(manifest: dict) -> str:
+    for sec in manifest.get("sections", [])[:8]:
+        h = (sec.get("heading", "") or "").strip()
+        if not h:
+            continue
+        if _heading_is_junk(h) or _heading_is_cutoff(h) or _is_journal_name(h):
+            continue
+        if h.lower() in KEEP_UNNUMBERED:
+            continue
+        if _is_numbered(h):
+            continue
+        if len(h.split()) < 2:
+            continue
+        return h
+    return ""
+
+
+def _extract_arxiv_id(text: str) -> str:
+    for pat in (ARXIV_NEW, ARXIV_OLD):
+        m = pat.search(text)
+        if m:
+            return re.sub(r"v\d+$", "", m.group(1), flags=re.IGNORECASE)
+    return ""
+
+
+def _transform_markdown(
+    full_md: str,
+    slug: str,
+    detected_title: str,
+) -> tuple[str, list[str], str | None]:
+    out: list[str] = []
+    dropped: list[str] = []
+    cutoff: str | None = None
+    skip_body = False
+    title_norm = detected_title.strip().lower()
+    image_root = f"assets/{slug}"
+    in_cover = True
+    title_emitted = False
+
+    for raw in full_md.splitlines():
+        if raw.lstrip().startswith("#"):
+            heading_text = _normalize_heading_text(raw.lstrip("#").strip())
+
+            if _heading_is_cutoff(heading_text):
+                cutoff = heading_text
+                break
+
+            if _heading_is_junk(heading_text) or _is_journal_name(heading_text):
+                dropped.append(heading_text)
+                skip_body = True
+                continue
+
+            is_content = _is_numbered(heading_text) or _is_allowed_unnumbered(heading_text)
+
+            if in_cover and not is_content:
+                skip_body = True
+                continue
+
+            if in_cover and is_content:
+                in_cover = False
+                if detected_title and not title_emitted:
+                    out.append(f"# {detected_title}")
+                    out.append("")
+                    title_emitted = True
+
+            if title_norm and heading_text.lower() == title_norm:
+                if not title_emitted:
+                    out.append(f"# {heading_text}")
+                    title_emitted = True
+                skip_body = True
+                continue
+
+            if not _is_numbered(heading_text) and not _is_allowed_unnumbered(heading_text):
+                out.append("")
+                out.append(f"**{heading_text}**")
+                out.append("")
+                skip_body = False
+                continue
+
+            depth = max(1, min(_heading_depth(heading_text), 4))
+            out.append(f"{'#' * depth} {heading_text}")
+            skip_body = False
+            continue
+
+        if in_cover or skip_body:
+            continue
+
+        rewritten = IMG_RE.sub(
+            lambda m: f"![{m.group(1)}]({image_root}/{m.group(2)})",
+            raw,
+        )
+        out.append(rewritten)
+
+    body = "\n".join(out).strip() + "\n"
+    body = re.sub(r"\n{3,}", "\n\n", body)
+    return body, dropped, cutoff
+
+
+def _collect_used_images(body: str, slug: str) -> set[str]:
+    rx = re.compile(rf"!\[[^\]]*\]\(assets/{re.escape(slug)}/([^)]+)\)")
+    return set(rx.findall(body))
+
+
+def _build_section_index(manifest: dict) -> list[dict]:
+    out: list[dict] = []
+    for sec in manifest.get("sections", []) or []:
+        h = (sec.get("heading", "") or "").strip()
+        if not h or _heading_is_junk(h) or _heading_is_cutoff(h) or _is_journal_name(h):
+            continue
+        out.append({
+            "heading": _normalize_heading_text(h),
+            "page": int(sec.get("page", 0) or 0),
+            "figures": len(sec.get("figures", []) or []),
+        })
+    return out
+
+
+def _build_figures_index(manifest: dict, used_images: set[str], slug: str) -> list[dict]:
+    figures: list[dict] = []
+    for fig in manifest.get("allFigures", []) or []:
+        path = fig.get("path", "") or ""
+        name = path.rsplit("/", 1)[-1] if path else ""
+        if not name or name not in used_images:
+            continue
+        caption = re.sub(r"\s+", " ", (fig.get("caption", "") or "").strip())
+        figures.append({
+            "label": fig.get("label", ""),
+            "page": int(fig.get("page", 0) or 0),
+            "section": fig.get("section", ""),
+            "path": f"assets/{slug}/{name}",
+            "caption": caption[:500],
+        })
+    return figures
+
+
+def _build_abstract_excerpt(body: str, limit: int = 800) -> str:
+    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", body)
+    text = re.sub(r"^#.*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit]
+
+
+def _same_source(existing_source: str, pdf: Path) -> bool:
+    if not existing_source:
+        return False
+    existing = Path(existing_source).expanduser()
+    current = pdf.expanduser()
+    try:
+        return existing.resolve() == current.resolve()
+    except OSError:
+        return str(existing) == str(current)
+
+
+def _read_existing_frontmatter(path: Path) -> dict[str, str]:
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return {}
+    match = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    if not match:
+        return {}
+    fields: dict[str, str] = {}
+    for line in match.group(1).splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or ":" not in stripped:
+            continue
+        key, _, value = stripped.partition(":")
+        fields[key.strip()] = value.strip().strip('"').strip("'")
+    return fields
+
+
+# ---------------------------------------------------------------------------
+# Top-level pipeline
+# ---------------------------------------------------------------------------
+
+def _sha16_of_file(path: Path, max_bytes: int = 4 * 1024 * 1024) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        h.update(f.read(max_bytes))
+    return h.hexdigest()[:16]
+
+
+def prepare(
+    pdf: Path,
+    raw_root: Path,
+    title_override: str = "",
+    arxiv_id_override: str = "",
+    cache_root: Path | None = None,
+    language: str = "en",
+    backend: str = "api",
+    overwrite: bool = False,
+) -> dict:
+    """Run MinerU on a PDF and write a structured markdown source to raw/tmp/papers/.
+
+    Returns the manifest `/ingest` consumes.
+    """
+    warnings: list[str] = []
+
+    if not pdf.exists():
+        return {
+            "canonical_ingest_path": str(pdf),
+            "prepared_path": None,
+            "ingest_format": "pdf",
+            "title": title_override,
+            "abstract_excerpt": "",
+            "arxiv_id": arxiv_id_override,
+            "warnings": [f"PDF not found: {pdf}"],
+            "usable": False,
+        }
+
+    cache_root = cache_root or Path(".mineru-cache")
+    cache_dir = cache_root / _sha16_of_file(pdf)
+
+    try:
+        md_path, json_path = _mineru.extract(pdf, cache_dir, language, backend)
+    except Exception as exc:
+        return {
+            "canonical_ingest_path": str(pdf),
+            "prepared_path": None,
+            "ingest_format": "pdf",
+            "title": title_override,
+            "abstract_excerpt": "",
+            "arxiv_id": arxiv_id_override,
+            "warnings": [f"mineru extraction failed: {exc}"],
+            "usable": False,
+        }
+
+    _normalize_cache(cache_dir, md_path, json_path)
+
+    full_md = (cache_dir / "full.md").read_text(encoding="utf-8")
+    manifest = json.loads((cache_dir / "manifest.json").read_text(encoding="utf-8"))
+
+    title = (
+        title_override.strip()
+        or _detect_title(manifest)
+        or pdf.stem.replace("-", " ").replace("_", " ")
+        or "Untitled"
+    )
+    slug = slugify(title)
+
+    body, dropped, cutoff = _transform_markdown(full_md, slug, title)
+    arxiv_haystack = pdf.name + " " + full_md[:5000]
+    arxiv_id = arxiv_id_override.strip() or _extract_arxiv_id(arxiv_haystack)
+
+    if not body.strip():
+        return {
+            "canonical_ingest_path": str(raw_root / "tmp" / "papers" / f"{slug}.md"),
+            "prepared_path": None,
+            "ingest_format": "mineru-md",
+            "title": title,
+            "abstract_excerpt": "",
+            "arxiv_id": arxiv_id,
+            "warnings": ["MinerU produced an empty body after filtering"],
+            "usable": False,
+        }
+
+    used_images = _collect_used_images(body, slug)
+    output_dir = raw_root / "tmp" / "papers"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if used_images:
+        images_dir = cache_dir / "images"
+        if images_dir.exists():
+            assets_dir = output_dir / "assets" / slug
+            assets_dir.mkdir(parents=True, exist_ok=True)
+            for name in used_images:
+                src = images_dir / name
+                if src.exists():
+                    shutil.copy2(src, assets_dir / name)
+
+    front: dict = {
+        "title": title,
+        "source": str(pdf),
+        "ingestedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "sourceType": "pdf",
+        "pipeline": "mineru",
+        "totalPages": int(manifest.get("totalPages", 0) or 0),
+        "totalChars": int(manifest.get("totalChars", 0) or 0),
+    }
+    if arxiv_id:
+        front["arxivId"] = arxiv_id
+    if cutoff:
+        front["cutoffHeading"] = cutoff
+    if dropped:
+        front["droppedHeadings"] = dropped
+    sections = _build_section_index(manifest)
+    if sections:
+        front["sections"] = sections
+    figures = _build_figures_index(manifest, used_images, slug)
+    if figures:
+        front["figures"] = figures
+
+    out_path = output_dir / f"{slug}.md"
+    if out_path.exists() and not overwrite:
+        existing_front = _read_existing_frontmatter(out_path)
+        existing_source = existing_front.get("source", "")
+        reason = "prepared source already exists"
+        if not _same_source(existing_source, pdf):
+            reason = "prepared source collision: another source already uses this title/slug"
+        return {
+            "canonical_ingest_path": str(out_path),
+            "prepared_path": str(out_path),
+            "ingest_format": "mineru-md",
+            "title": title,
+            "abstract_excerpt": _build_abstract_excerpt(body),
+            "arxiv_id": arxiv_id,
+            "warnings": [
+                f"{reason}: {out_path}",
+                "Rerun with --overwrite only after confirming replacement with the user.",
+            ],
+            "usable": False,
+        }
+
+    document = _render_yaml(front) + "\n\n" + body
+    out_path.write_text(document, encoding="utf-8")
+
+    print(
+        f"prepare_paper_source: wrote {out_path} "
+        f"(sections={len(sections)}, figures={len(figures)}, "
+        f"droppedHeadings={len(dropped)}, cutoff={cutoff or 'none'})",
+        file=sys.stderr,
+    )
+
+    return {
+        "canonical_ingest_path": str(out_path),
+        "prepared_path": str(out_path),
+        "ingest_format": "mineru-md",
+        "title": title,
+        "abstract_excerpt": _build_abstract_excerpt(body),
+        "arxiv_id": arxiv_id,
+        "warnings": warnings,
+        "usable": True,
+    }
+
+
+def prepare_paper_source(
+    path: Path,
+    raw_root: Path,
+    title: str = "",
+    arxiv_id: str = "",
+    overwrite: bool = False,
+) -> dict:
+    """Compatibility wrapper used by init_discovery.py."""
+    result = prepare(
+        pdf=path,
+        raw_root=raw_root,
+        title_override=title,
+        arxiv_id_override=arxiv_id,
+        overwrite=overwrite,
+    )
+    result.setdefault("candidate_id", _local_candidate_id(path, raw_root))
+    result.setdefault("source_kind", "paper")
+    result.setdefault("source_path", _project_relative(path, raw_root))
+    result.setdefault("resolved_source_path", _project_relative(path, raw_root))
+    result.setdefault("canonical_read_path", result.get("canonical_ingest_path", ""))
+    result.setdefault("original_format", path.suffix.lower().lstrip(".") or "file")
+    return result
+
+
+def _local_candidate_id(path: Path, raw_root: Path) -> str:
+    try:
+        rel = path.resolve().relative_to(raw_root.resolve())
+    except ValueError:
+        rel = path
+    slug = re.sub(r"[^a-z0-9]+", "-", str(rel).lower()).strip("-")
+    return f"local:{slug or path.stem.lower()}"
+
+
+def _project_relative(path: Path, raw_root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(raw_root.resolve().parent))
+    except ValueError:
+        return str(path)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Prepare a local PDF for /ingest via the MinerU pipeline.",
+    )
+    parser.add_argument("--raw-root", required=True, type=Path,
+                        help="Wiki raw root (e.g. 'raw'). Output goes under <raw-root>/tmp/papers/.")
+    parser.add_argument("--source", required=True, type=Path,
+                        help="Path to a local PDF to prepare.")
+    parser.add_argument("--title", default="",
+                        help="Confident agent-recovered title. Used verbatim when set.")
+    parser.add_argument("--arxiv-id", default="",
+                        help="Confident agent-recovered arXiv ID. Used verbatim when set.")
+    parser.add_argument("--cache-root", default=None, type=Path,
+                        help="MinerU cache root (default: .mineru-cache at CWD).")
+    parser.add_argument("--language", default="en", help="Document language for MinerU.")
+    parser.add_argument("--backend", default="api", choices=("api", "local"),
+                        help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="Replace an existing raw/tmp/papers/<slug>.md after user confirmation.")
+    args = parser.parse_args()
+
+    result = prepare(
+        pdf=args.source,
+        raw_root=args.raw_root,
+        title_override=args.title,
+        arxiv_id_override=args.arxiv_id,
+        cache_root=args.cache_root,
+        language=args.language,
+        backend=args.backend,
+        overwrite=args.overwrite,
+    )
+    print(json.dumps(result, ensure_ascii=False))
+    if not result.get("usable"):
+        raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    main()

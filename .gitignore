@@ -1,0 +1,17 @@
+.DS_Store
+.env
+.claude/settings.local.json
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mineru-cache/
+.checkpoints/
+raw/discovered/*
+!raw/discovered/.gitkeep
+raw/tmp/papers/*
+!raw/tmp/papers/.gitkeep
+!raw/tmp/papers/assets/
+raw/tmp/papers/assets/*
+wiki/graph/*
+!wiki/graph/.gitkeep

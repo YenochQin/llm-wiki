@@ -1,0 +1,367 @@
+"""MinerU extraction backends used by `process_pdf.py`.
+
+Two backends, both normalized to the same on-disk shape inside `cache_dir`:
+
+    cache_dir/
+        <stem>.md     # raw MinerU markdown
+        <stem>.json   # MinerU content_list.json (renamed from <stem>_content_list.json)
+        images/       # extracted figure/table crops referenced by the .md / .json
+
+`extract(pdf, cache_dir, language, backend)` returns `(<stem>.md, <stem>.json)`
+so the caller can hand the same paths it used to receive from the old
+`mineru-open-api` CLI to `process_pdf.normalize_cache(...)` unchanged.
+
+Backends:
+
+- ``"api"``   — cloud client against ``mineru.net/api/v4`` using ``requests``.
+                Token resolution: env ``MINERU_API_TOKEN`` >
+                ``$XDG_CONFIG_HOME/MinerU/mineru.env`` (falling back to
+                ``~/.config/MinerU/mineru.env``). Endpoint base overridable via
+                ``MINERU_API_BASE``.
+- ``"local"`` — calls ``mineru.cli.common.do_parse`` directly. Imports happen
+                lazily so users on the api-only path don't need ``mineru[all]``.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import sys
+import tempfile
+import time
+import zipfile
+from pathlib import Path
+
+
+def _resolve_env_file() -> Path:
+    """User-level config path. Honors $XDG_CONFIG_HOME, else ``~/.config``."""
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    base = Path(xdg).expanduser() if xdg else Path.home() / ".config"
+    return base / "MinerU" / "mineru.env"
+
+
+ENV_FILE = _resolve_env_file()
+DEFAULT_API_BASE = "https://mineru.net/api/v4"
+DEFAULT_MODEL_VERSION = "vlm"
+POLL_INTERVAL_SEC = 3
+POLL_TIMEOUT_SEC = 30 * 60  # 30 minutes per PDF
+
+
+def _load_env_file(path: Path) -> dict[str, str]:
+    """Parse a tiny KEY=VALUE config file. Comments starting with `#` ignored."""
+    if not path.exists():
+        return {}
+    out: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            out[key] = value
+    return out
+
+
+def _config(name: str, default: str = "") -> str:
+    """Resolve a setting: real env > mineru.env > default."""
+    if name in os.environ and os.environ[name]:
+        return os.environ[name]
+    file_values = _load_env_file(ENV_FILE)
+    return file_values.get(name, default)
+
+
+def _existing_outputs(cache_dir: Path) -> tuple[Path, Path] | None:
+    md_candidates = sorted(p for p in cache_dir.glob("*.md") if p.name != "full.md")
+    json_candidates = sorted(p for p in cache_dir.glob("*.json") if p.name != "manifest.json")
+    if md_candidates and json_candidates:
+        return md_candidates[0], json_candidates[0]
+    return None
+
+
+def extract(
+    pdf: Path,
+    cache_dir: Path,
+    language: str,
+    backend: str,
+) -> tuple[Path, Path]:
+    """Populate ``cache_dir`` with ``<stem>.md`` and ``<stem>.json`` (+ images/).
+
+    Returns the two paths so the caller can run its existing manifest
+    synthesis step. If both files are already present, returns them without
+    calling either backend (cache hit).
+    """
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cached = _existing_outputs(cache_dir)
+    if cached is not None:
+        print(f"cache hit: {cache_dir}", file=sys.stderr)
+        return cached
+
+    if backend == "api":
+        _extract_via_api(pdf, cache_dir, language)
+    elif backend == "local":
+        _extract_via_local(pdf, cache_dir, language)
+    else:
+        raise ValueError(f"unknown backend: {backend!r} (expected 'api' or 'local')")
+
+    found = _existing_outputs(cache_dir)
+    if found is None:
+        raise RuntimeError(
+            f"backend={backend} produced no <stem>.md / <stem>.json in {cache_dir}"
+        )
+    return found
+
+
+# ---------------------------------------------------------------------------
+# api backend
+# ---------------------------------------------------------------------------
+
+def _extract_via_api(pdf: Path, cache_dir: Path, language: str) -> None:
+    try:
+        import requests
+    except ImportError as exc:
+        raise RuntimeError(
+            "backend='api' requires `requests`. Install it with: "
+            "uv pip install -e \".[api]\""
+        ) from exc
+
+    token = _config("MINERU_API_TOKEN")
+    if not token:
+        raise RuntimeError(
+            "MINERU_API_TOKEN is not set. Put it in the environment or in "
+            f"{ENV_FILE} (see mineru.env.example)."
+        )
+    api_base = _config("MINERU_API_BASE", DEFAULT_API_BASE).rstrip("/")
+    model_version = _config("MINERU_MODEL_VERSION", DEFAULT_MODEL_VERSION)
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    print(f"mineru api: requesting upload URL for {pdf.name}", file=sys.stderr)
+    submit = requests.post(
+        f"{api_base}/file-urls/batch",
+        headers=headers,
+        json={
+            "files": [{"name": pdf.name, "data_id": pdf.stem}],
+            "model_version": model_version,
+            "language": language,
+        },
+        timeout=60,
+    )
+    submit.raise_for_status()
+    body = submit.json()
+    if body.get("code") != 0:
+        raise RuntimeError(f"mineru api submit failed: {body}")
+    data = body["data"]
+    batch_id = data["batch_id"]
+    file_urls = data["file_urls"]
+    if not file_urls:
+        raise RuntimeError(f"mineru api returned no upload URLs: {body}")
+
+    print(f"mineru api: uploading PDF (batch_id={batch_id})", file=sys.stderr)
+    with pdf.open("rb") as fh:
+        put = requests.put(file_urls[0], data=fh, timeout=300)
+    put.raise_for_status()
+
+    print(f"mineru api: polling extraction (batch_id={batch_id})", file=sys.stderr)
+    full_zip_url = _poll_batch_until_done(requests, api_base, headers, batch_id, pdf.stem)
+
+    print(f"mineru api: downloading result zip", file=sys.stderr)
+    _download_and_extract_zip(requests, full_zip_url, cache_dir, pdf.stem)
+
+
+def _poll_batch_until_done(
+    requests_module,
+    api_base: str,
+    headers: dict,
+    batch_id: str,
+    data_id: str,
+) -> str:
+    deadline = time.monotonic() + POLL_TIMEOUT_SEC
+    last_progress = ""
+    while time.monotonic() < deadline:
+        resp = requests_module.get(
+            f"{api_base}/extract-results/batch/{batch_id}",
+            headers=headers,
+            timeout=60,
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        if body.get("code") != 0:
+            raise RuntimeError(f"mineru api poll failed: {body}")
+
+        files = (body.get("data") or {}).get("extract_result") or []
+        target = next(
+            (f for f in files if f.get("data_id") == data_id or f.get("file_name", "").startswith(data_id)),
+            files[0] if files else None,
+        )
+        if target is None:
+            time.sleep(POLL_INTERVAL_SEC)
+            continue
+
+        state = target.get("state")
+        if state == "done":
+            url = target.get("full_zip_url")
+            if not url:
+                raise RuntimeError(f"mineru api: state=done but no full_zip_url: {target}")
+            return url
+        if state in {"failed", "error"}:
+            raise RuntimeError(f"mineru api extraction failed: {target}")
+
+        progress = target.get("extract_progress") or {}
+        msg = (
+            f"  state={state} "
+            f"pages={progress.get('extracted_pages', '?')}/{progress.get('total_pages', '?')}"
+        )
+        if msg != last_progress:
+            print(msg, file=sys.stderr)
+            last_progress = msg
+        time.sleep(POLL_INTERVAL_SEC)
+
+    raise RuntimeError(f"mineru api timed out after {POLL_TIMEOUT_SEC}s (batch_id={batch_id})")
+
+
+def _download_and_extract_zip(
+    requests_module,
+    url: str,
+    cache_dir: Path,
+    stem: str,
+) -> None:
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+    try:
+        with requests_module.get(url, stream=True, timeout=300) as resp:
+            resp.raise_for_status()
+            with tmp_path.open("wb") as fh:
+                for chunk in resp.iter_content(chunk_size=1 << 20):
+                    if chunk:
+                        fh.write(chunk)
+        with zipfile.ZipFile(tmp_path) as zf:
+            zf.extractall(cache_dir)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    _normalize_library_layout(cache_dir, stem)
+
+
+# ---------------------------------------------------------------------------
+# local backend
+# ---------------------------------------------------------------------------
+
+def _extract_via_local(pdf: Path, cache_dir: Path, language: str) -> None:
+    try:
+        from mineru.cli.common import do_parse, read_fn
+    except ImportError as exc:
+        raise RuntimeError(
+            "backend='local' requires the mineru library. Install it with: "
+            "uv pip install -e \".[local]\""
+        ) from exc
+
+    with tempfile.TemporaryDirectory(prefix="mineru-out-") as tmp_root:
+        tmp_dir = Path(tmp_root)
+        print(f"mineru local: parsing {pdf.name} (this may take a while)", file=sys.stderr)
+        do_parse(
+            output_dir=str(tmp_dir),
+            pdf_file_names=[pdf.stem],
+            pdf_bytes_list=[read_fn(pdf)],
+            p_lang_list=[language],
+            backend="pipeline",
+            parse_method="auto",
+        )
+        produced = _find_library_output(tmp_dir, pdf.stem)
+        for entry in produced.iterdir():
+            dest = cache_dir / entry.name
+            if dest.exists():
+                if dest.is_dir():
+                    shutil.rmtree(dest)
+                else:
+                    dest.unlink()
+            shutil.move(str(entry), dest)
+
+    _normalize_library_layout(cache_dir, pdf.stem)
+
+
+def _find_library_output(tmp_dir: Path, stem: str) -> Path:
+    """MinerU 2.x writes to <tmp>/<stem>/<method>/. Locate that subdir."""
+    stem_dir = tmp_dir / stem
+    if not stem_dir.is_dir():
+        raise RuntimeError(f"mineru produced no output for stem={stem!r} in {tmp_dir}")
+    for method in ("auto", "ocr", "txt"):
+        candidate = stem_dir / method
+        if candidate.is_dir():
+            return candidate
+    subdirs = [p for p in stem_dir.iterdir() if p.is_dir()]
+    if len(subdirs) == 1:
+        return subdirs[0]
+    raise RuntimeError(f"could not locate mineru output method dir under {stem_dir}")
+
+
+def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
+    """Coerce MinerU output (any backend) into the canonical cache shape.
+
+    The downstream ``synthesize_manifest`` looks for exactly one ``<stem>.md``
+    plus one non-manifest ``.json``. The various MinerU sources name those
+    files differently:
+
+    - ``mineru.cli.common.do_parse`` (local)  → ``<stem>.md`` + ``<stem>_content_list.json``
+    - ``mineru.net`` cloud ZIP                → ``full.md`` + ``<task-uuid>_content_list.json``
+
+    Either way, after this function runs the cache contains exactly one
+    ``<stem>.md`` and one ``<stem>.json`` that the manifest synthesizer can
+    pick up. Debug artifacts (``<*>_middle.json``, ``<*>_model.json``,
+    ``layout.json``, ``content_list_v2.json``, ``<*>_origin.pdf``,
+    ``layout.pdf``, ``spans.pdf``) are removed so they don't confuse the
+    cache-discovery glob.
+    """
+    canonical_md = cache_dir / f"{stem}.md"
+    canonical_json = cache_dir / f"{stem}.json"
+
+    if not canonical_md.exists():
+        full_md = cache_dir / "full.md"
+        if full_md.exists():
+            shutil.copy2(full_md, canonical_md)
+        else:
+            stem_md = next(
+                (p for p in cache_dir.glob("*.md") if p.name not in {"full.md", canonical_md.name}),
+                None,
+            )
+            if stem_md is not None:
+                stem_md.rename(canonical_md)
+
+    if not canonical_json.exists():
+        candidates = sorted(cache_dir.glob("*_content_list.json"))
+        if len(candidates) == 1:
+            candidates[0].rename(canonical_json)
+        elif len(candidates) > 1:
+            stem_match = cache_dir / f"{stem}_content_list.json"
+            if stem_match in candidates:
+                stem_match.rename(canonical_json)
+            else:
+                names = ", ".join(p.name for p in candidates)
+                raise RuntimeError(
+                    f"ambiguous *_content_list.json files in {cache_dir} ({names}); "
+                    "delete the cache directory and re-run, or rename the correct one to "
+                    f"{canonical_json.name}"
+                )
+
+    debug_globs = [
+        "*_middle.json",
+        "*_model.json",
+        "*_origin.pdf",
+        "layout.json",
+        "layout.pdf",
+        "spans.pdf",
+        "content_list_v2.json",
+    ]
+    for pattern in debug_globs:
+        for path in cache_dir.glob(pattern):
+            try:
+                path.unlink()
+            except OSError:
+                pass

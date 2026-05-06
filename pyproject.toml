@@ -1,0 +1,32 @@
+[project]
+name = "llm-wiki"
+version = "0.1.0"
+description = "Personal LLM-maintained research wiki — OmegaWiki workflow with MinerU PDF preprocessing."
+requires-python = ">=3.10"
+dependencies = [
+    # Core wiki tooling (lifted from OmegaWiki)
+    "PyMuPDF>=1.23.0",
+    "feedparser>=6.0.0",
+    "requests>=2.31.0",
+    "markdownify>=0.11.0",
+    "chardet>=5.0.0",
+]
+
+[project.optional-dependencies]
+# MinerU local backend — downloads several GB of models on first run.
+# Cloud (api) backend is the default and only needs `requests`, already in core deps.
+local = ["mineru[all]>=2.0"]
+
+[tool.uv]
+package = false
+
+# llm-wiki ships scripts under tools/, not an importable Python package.
+# Tell setuptools not to auto-discover any top-level dirs (raw/, wiki/, i18n/, ...)
+# so `uv pip install -e .` installs only the dependencies above.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
+
