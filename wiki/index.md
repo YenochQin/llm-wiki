@@ -1,6 +1,8 @@
-papers: []
+papers:
+  - slug: star-planet-composition-connection
 
-concepts: []
+concepts:
+  - slug: giant-planet-metallicity-correlation
 
 topics: []
 
@@ -10,7 +12,8 @@ ideas: []
 
 experiments: []
 
-claims: []
+claims:
+  - slug: small-planet-density-host-metallicity-correlation
 
 foundations: []
 
