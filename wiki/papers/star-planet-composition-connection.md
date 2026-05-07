@@ -10,6 +10,37 @@ tags:
   - planet-formation
   - host-stars
   - planet-composition
+research_modes:
+  - theory
+  - computation
+  - experiment
+theory_tags:
+  - core-accretion
+  - gravitational-instability
+  - galactic-chemical-evolution
+  - star-planet-composition-assumption
+  - planet-engulfment
+computation_tags:
+  - occurrence-rate-statistics
+  - stellar-abundance-trend-analysis
+  - mesa-engulfment-modelling
+  - planet-interior-composition-inference
+  - population-synthesis-comparison
+experiment_tags:
+  - high-resolution-stellar-spectroscopy
+  - radial-velocity-surveys
+  - transit-surveys
+  - white-dwarf-pollution-abundance-analysis
+  - exoplanet-atmosphere-spectroscopy
+research_object_tags:
+  - exoplanet-host-stars
+  - fgk-dwarfs
+  - m-dwarfs
+  - giant-planets
+  - small-rocky-planets
+  - polluted-white-dwarfs
+  - binary-stars
+  - solar-twins
 importance: 3
 date_added: 2026-05-07
 source_type: pdf
@@ -39,6 +70,13 @@ The review organizes the star-planet composition connection along two axes:
 2. **Stellar composition as an indicator of planet formation and composition** — once a planet exists, can host-star abundances be used as a proxy for the bulk or atmospheric composition of the planet (the so-called "star ≡ planet" assumption for rocky planets, or the C/O / refractory ratio comparisons for giants)?
 
 A third detour treats anomalous abundance signatures — solar twins, binary pairs, and lithium — as natural laboratories for isolating planet-related processes (engulfment, depletion) from GCE and stellar mixing.
+
+## Research classification
+
+- **Theory**: compares core accretion, gravitational instability, Galactic chemical evolution, planet engulfment, and the rocky-planet "star ≡ planet" composition assumption.
+- **Computation**: synthesizes occurrence-rate statistics, abundance-trend corrections, MESA engulfment detectability modelling, planet interior/composition inference, and population-synthesis comparisons.
+- **Experiment**: reviews high-resolution stellar spectroscopy, radial-velocity and transit planet surveys, polluted white dwarf abundance measurements, and exoplanet atmosphere spectroscopy.
+- **Research objects**: exoplanet host stars, FGK dwarfs, M dwarfs, giant planets, sub-Neptunes, small rocky planets, solar twins, binary stars, and polluted white dwarfs.
 
 ## Method
 

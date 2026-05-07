@@ -14,6 +14,11 @@ arxiv: ""
 venue: ""
 year:
 tags: []
+research_modes: []      # theory | computation | experiment; choose all that apply
+theory_tags: []         # named theories/frameworks/models used or evaluated
+computation_tags: []    # simulation / numerical / statistical / ML / data-analysis schemes
+experiment_tags: []     # observation / lab / field / sample-return / instrument / protocol tags
+research_object_tags: [] # material/system/object under study
 importance: 3           # 1-5
 date_added: YYYY-MM-DD
 source_type: tex         # tex | pdf
@@ -25,7 +30,9 @@ cited_by: []
 ---
 ```
 
-Body sections: `## Problem` / `## Key idea` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## Related`
+Body sections: `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## Related`
+
+`## Research classification` should first classify the paper into theory, computation, and/or experiment. For each active direction, name the specific theory, computational scheme, or experimental/observational process used. Always include the research object(s) being studied.
 
 ### concepts/{concept-name}.md
 

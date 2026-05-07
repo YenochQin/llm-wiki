@@ -1841,6 +1841,14 @@ def rebuild_index(wiki_root: str) -> None:
                 line_parts.append(f"    status: {fm['status']}")
             if "importance" in fm:
                 line_parts.append(f"    importance: {fm['importance']}")
+            if "research_modes" in fm and fm["research_modes"]:
+                modes = fm["research_modes"]
+                if isinstance(modes, list):
+                    line_parts.append(f"    research_modes: [{', '.join(str(m) for m in modes)}]")
+            if "research_object_tags" in fm and fm["research_object_tags"]:
+                objects = fm["research_object_tags"]
+                if isinstance(objects, list):
+                    line_parts.append(f"    research_object_tags: [{', '.join(str(o) for o in objects)}]")
             if "confidence" in fm:
                 line_parts.append(f"    confidence: {fm['confidence']}")
             if "domain" in fm:

@@ -119,6 +119,13 @@ Raw persistence rule: never copy or duplicate a file already under `raw/tmp/` or
 
    Use the result for `venue`, `year`, `external_ids`, citation count when available, and the evidence behind the `importance` score (1-5). If citation counts are unavailable, default `importance` to 3 and mark it provisional.
 4. Use the `mineru-md` frontmatter (`sections`, `figures`, `abstract_excerpt`) as your structural anchor when summarizing. The frontmatter already gives you a clean section list and figure inventory; do not re-parse the body to recover them.
+5. Before drafting the paper page, classify the paper by research direction and object:
+   - `research_modes`: choose one or more of `theory`, `computation`, `experiment`. For review papers, classify by the evidence types being synthesized, not by `review`.
+   - `theory_tags`: concrete theory/model/mechanism/framework names used, compared, or tested.
+   - `computation_tags`: concrete calculation, simulation, statistical, ML, or data-analysis schemes used; `[]` if none.
+   - `experiment_tags`: concrete observation, laboratory, sample-analysis, instrument, mission, protocol, or field process; `[]` if none.
+   - `research_object_tags`: non-empty list of research objects (materials, celestial bodies, systems, samples, datasets, populations, model objects).
+   If the source is unclear, write `unclear` in the relevant tag list or prose rather than inventing details.
 
 ### Step 3: Write the paper page
 
@@ -126,13 +133,21 @@ Open `docs/runtime-page-templates.en.md` for the paper template. Fill every requ
 
 Before writing, run a **shape check** on the frontmatter you are about to emit — no more than this:
 
-- every required key is present and non-empty
+- every required key is present and non-empty, including `research_modes` and `research_object_tags`
 - `importance` ∈ {1,2,3,4,5}; `status` on claims ∈ the documented set; `maturity` on concepts ∈ the documented set; claim `confidence` ∈ [0,1]
+- every value in `research_modes` is one of `theory`, `computation`, `experiment`; for each mode present, the corresponding `theory_tags` / `computation_tags` / `experiment_tags` is non-empty
 - YAML parses
 
 The shape check is intentionally narrow. Backlink symmetry, dangling-node detection, and cross-entity consistency are `/check`'s job, not this skill's.
 
-Body sections to populate: Problem, Key idea, Method, Results, Limitations, Open questions, My take, Related.
+Body sections to populate: Problem, Key idea, Research classification, Method, Results, Limitations, Open questions, My take, Related.
+
+`## Research classification` must explicitly describe:
+
+- **Theory**: which theory/model/framework is used or evaluated, if any.
+- **Computation**: which numerical, simulation, statistical, ML, or data-analysis scheme is used, if any.
+- **Experiment**: which observational, laboratory, sample-analysis, instrument, mission, or protocol process is used, if any.
+- **Research objects**: what materials/systems/samples/datasets/celestial bodies/populations are studied.
 
 ### Step 4: Concepts, claims, people
 

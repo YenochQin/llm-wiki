@@ -46,6 +46,18 @@
 
 页面模板见 `docs/runtime-page-templates.en.md`；graph、index、log 参考见 `docs/runtime-support-files.en.md`。
 
+### 论文分析分类规范
+
+每个 `papers/{slug}.md` 必须先完成研究类型和研究对象分类：
+
+- `research_modes`：从 `theory`、`computation`、`experiment` 中选择一个或多个。综述论文按其分析/综合的证据类型选择，不要只写 `review`。
+- `theory_tags`：列出使用、比较或检验的具体理论、模型、机制或分析框架。
+- `computation_tags`：列出采用的计算/模拟/统计/机器学习/数据分析方案；没有则为空列表。
+- `experiment_tags`：列出观测、实验、样品分析、仪器、任务或实验流程；没有则为空列表。
+- `research_object_tags`：列出研究对象，例如材料、天体、系统、样品、人群、模型对象或数据集。
+
+论文正文必须包含 `## Research classification`，分别说明：属于理论/计算/实验中的哪些方向；每个方向具体用了什么理论、计算方案或实验流程；研究对象是什么。无法从文献中确定时写 `unclear`，不要编造。
+
 ---
 
 ## 链接语法

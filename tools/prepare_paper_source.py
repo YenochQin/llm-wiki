@@ -54,8 +54,11 @@ from research_wiki import slugify
 # Adapter constants (lifted verbatim from pdf-source-scripts/pdf_to_source_mineru.py)
 # ---------------------------------------------------------------------------
 
-CUTOFF_PATTERNS = [
+REFERENCE_HEADING_PATTERNS = [
     r"^\s*(?:literature\s*cited|references?|bibliography)\s*$",
+]
+
+SKIP_SECTION_PATTERNS = [
     r"^\s*acknowledg(?:e?ments?)\s*$",
     r"^\s*disclosure\s*statement\s*$",
     r"^\s*supplementary\s*(?:material|information)\s*$",
@@ -65,6 +68,7 @@ CUTOFF_PATTERNS = [
     r"^\s*author\s*contributions?\s*$",
     r"^\s*competing\s*interests?\s*$",
     r"^\s*data\s*availability\s*$",
+    r"^\s*additional\s*information\s*$",
 ]
 
 JUNK_PATTERNS = [
@@ -93,6 +97,7 @@ KEEP_UNNUMBERED = {
     "background", "main", "methods", "method", "materials and methods",
     "results", "results and discussion", "discussion",
     "conclusion", "conclusions", "highlights",
+    "references", "reference", "bibliography", "literature cited",
 }
 
 NUMBERED_HEADING_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s*[A-Za-z]")
@@ -154,7 +159,11 @@ def _matches_any(text: str, patterns: list[str]) -> bool:
 
 
 def _heading_is_cutoff(text: str) -> bool:
-    return _matches_any(text.strip(), CUTOFF_PATTERNS)
+    return _matches_any(text.strip(), SKIP_SECTION_PATTERNS)
+
+
+def _heading_is_reference(text: str) -> bool:
+    return _matches_any(text.strip(), REFERENCE_HEADING_PATTERNS)
 
 
 def _heading_is_junk(text: str) -> bool:
@@ -374,10 +383,10 @@ def _transform_markdown(
     full_md: str,
     slug: str,
     detected_title: str,
-) -> tuple[str, list[str], str | None]:
+) -> tuple[str, list[str], list[str]]:
     out: list[str] = []
     dropped: list[str] = []
-    cutoff: str | None = None
+    skipped_sections: list[str] = []
     skip_body = False
     title_norm = detected_title.strip().lower()
     image_root = f"assets/{slug}"
@@ -389,8 +398,10 @@ def _transform_markdown(
             heading_text = _normalize_heading_text(raw.lstrip("#").strip())
 
             if _heading_is_cutoff(heading_text):
-                cutoff = heading_text
-                break
+                skipped_sections.append(heading_text)
+                dropped.append(heading_text)
+                skip_body = True
+                continue
 
             if _heading_is_junk(heading_text) or _is_journal_name(heading_text):
                 dropped.append(heading_text)
@@ -440,7 +451,7 @@ def _transform_markdown(
 
     body = "\n".join(out).strip() + "\n"
     body = re.sub(r"\n{3,}", "\n\n", body)
-    return body, dropped, cutoff
+    return body, dropped, skipped_sections
 
 
 def _collect_used_images(body: str, slug: str) -> set[str]:
@@ -620,7 +631,7 @@ def prepare(
             "usable": False,
         }
 
-    body, dropped, cutoff = _transform_markdown(full_md, slug, title)
+    body, dropped, skipped_sections = _transform_markdown(full_md, slug, title)
     arxiv_haystack = pdf.name + " " + full_md[:5000]
     arxiv_id = arxiv_id_override.strip() or _extract_arxiv_id(arxiv_haystack)
 
@@ -658,8 +669,8 @@ def prepare(
     }
     if arxiv_id:
         front["arxivId"] = arxiv_id
-    if cutoff:
-        front["cutoffHeading"] = cutoff
+    if skipped_sections:
+        front["skippedSectionHeadings"] = skipped_sections
     if dropped:
         front["droppedHeadings"] = dropped
     sections = _build_section_index(manifest)
@@ -675,7 +686,7 @@ def prepare(
     print(
         f"prepare_paper_source: wrote {out_path} "
         f"(sections={len(sections)}, figures={len(figures)}, "
-        f"droppedHeadings={len(dropped)}, cutoff={cutoff or 'none'})",
+        f"droppedHeadings={len(dropped)}, skippedSections={len(skipped_sections)})",
         file=sys.stderr,
     )
 

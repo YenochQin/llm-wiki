@@ -11,6 +11,7 @@ Checks performed:
   7. Idea checks: failure_reason required when status=failed
   8. Experiment checks: target_claim required, outcome values
   9. Graph edge and citation consistency: from/to nodes exist as wiki pages
+ 10. Paper classification checks: research_modes/object tags and matching detail fields
 
 Usage:
     python3 tools/lint.py                      # lint wiki/ in current dir
@@ -100,14 +101,15 @@ def extract_frontmatter(content: str) -> dict:
         return {}
     fm = {}
     current_key = None
-    in_list = False
+    current_list_key = None
     for line in m.group(1).split("\n"):
         stripped = line.strip()
         # Skip comments and empty lines
         if not stripped or stripped.startswith("#"):
             continue
         # Detect list continuation (indented "- item")
-        if in_list and stripped.startswith("- "):
+        if current_list_key and stripped.startswith("- "):
+            fm.setdefault(current_list_key, []).append(stripped[2:].strip().strip('"').strip("'"))
             continue
         # Detect nested key (indented key: value under a parent)
         if line.startswith("  ") and ":" in stripped and current_key:
@@ -115,11 +117,19 @@ def extract_frontmatter(content: str) -> dict:
         if ":" in stripped:
             key = stripped.split(":")[0].strip()
             value = ":".join(stripped.split(":")[1:]).strip()
-            fm[key] = value
+            if value == "":
+                fm[key] = []
+                current_list_key = key
+            elif value.startswith("[") and value.endswith("]"):
+                inner = value[1:-1].strip()
+                fm[key] = [x.strip().strip('"').strip("'") for x in inner.split(",") if x.strip()]
+                current_list_key = None
+            else:
+                fm[key] = value
+                current_list_key = None
             current_key = key
-            in_list = value == "" or value.startswith("[")
         else:
-            in_list = False
+            current_list_key = None
     return fm
 
 
@@ -167,6 +177,53 @@ def check_missing_fields(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
                 issues.append(LintIssue("🔴", "missing-field", rel,
                                         f"Missing required field: {field}",
                                         fixable=fixable, suggestion=suggestion))
+    return issues
+
+
+def check_paper_classification(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]:
+    """Check paper-specific theory/computation/experiment classification fields."""
+    issues = []
+    valid_modes = {"theory", "computation", "experiment"}
+    detail_fields = {
+        "theory": "theory_tags",
+        "computation": "computation_tags",
+        "experiment": "experiment_tags",
+    }
+
+    for slug, fpath in pages.items():
+        if fpath.parent.name != "papers":
+            continue
+        content = fpath.read_text(encoding="utf-8")
+        rel = str(fpath.relative_to(wiki_dir))
+        fm = extract_frontmatter(content)
+        modes = fm.get("research_modes", [])
+        if not isinstance(modes, list):
+            issues.append(LintIssue("🔴", "paper-classification", rel,
+                                    "research_modes must be a YAML list containing theory, computation, and/or experiment"))
+            continue
+        unknown = [m for m in modes if str(m) not in valid_modes]
+        if unknown:
+            issues.append(LintIssue("🔴", "paper-classification", rel,
+                                    f"research_modes has invalid values: {unknown}; valid: theory, computation, experiment"))
+        if not modes:
+            issues.append(LintIssue("🔴", "paper-classification", rel,
+                                    "research_modes is empty; classify as theory, computation, and/or experiment"))
+        objects = fm.get("research_object_tags", [])
+        if not isinstance(objects, list) or not objects:
+            issues.append(LintIssue("🔴", "paper-classification", rel,
+                                    "research_object_tags must be a non-empty YAML list"))
+        for mode in modes:
+            field = detail_fields.get(str(mode))
+            if not field:
+                continue
+            detail = fm.get(field, [])
+            if not isinstance(detail, list) or not detail:
+                issues.append(LintIssue("🔴", "paper-classification", rel,
+                                        f"{field} must be a non-empty YAML list because research_modes includes {mode}"))
+        if "## Research classification" not in content:
+            issues.append(LintIssue("🔴", "paper-classification", rel,
+                                    "Missing body section: ## Research classification"))
+
     return issues
 
 
@@ -619,6 +676,7 @@ def lint(wiki_dir: Path) -> list[LintIssue]:
     issues = []
 
     issues.extend(check_missing_fields(wiki_dir, pages))
+    issues.extend(check_paper_classification(wiki_dir, pages))
     link_issues, incoming = check_broken_links(wiki_dir, pages)
     issues.extend(link_issues)
     issues.extend(check_orphan_pages(wiki_dir, pages, incoming))

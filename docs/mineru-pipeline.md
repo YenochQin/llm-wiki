@@ -73,7 +73,7 @@ raw/tmp/papers/
     assets/<slug>/<hash>.jpg         # only images that survive the adapter cut
 ```
 
-Frontmatter on `<slug>.md` includes `title`, `source`, `ingestedAt`, `totalPages`, `totalChars`, optional `arxivId`, `cutoffHeading`, `droppedHeadings`, plus structured `sections` and `figures` arrays. `/ingest` mines this for paper-level metadata, concept candidates, and figure cross-references.
+Frontmatter on `<slug>.md` includes `title`, `source`, `ingestedAt`, `totalPages`, `totalChars`, optional `arxivId`, `skippedSectionHeadings`, `droppedHeadings`, plus structured `sections` and `figures` arrays. `/ingest` mines this for paper-level metadata, concept candidates, figure cross-references, and bibliography-backed citation expansion.
 
 ## What the adapter cleans up
 
@@ -83,9 +83,10 @@ MinerU's raw markdown is flat and noisy. The adapter applies seven passes (mirro
 2. **Cover-page normalization.** MinerU emits each visual line on the cover as a separate level-1 block. The adapter merges title fragments and drops author bylines / journal furniture, then emits a single synthetic `# <title>` before the first real section.
 3. **Heading hierarchy.** Counts dot-separated section numbers (`1.` → `#`, `2.1.` → `##`, `2.1.1.` → `###`). Inserts a missing space between the number and the title when MinerU OCR-glued them.
 4. **Junk filtering.** Drops URL-like headings, "Contents", margin glossaries ending in `:`, and journal-name covers. Unnumbered headings are demoted to bold unless they are in the `KEEP_UNNUMBERED` allowlist (Abstract, Keywords, Introduction, Methods, Results, Discussion, Conclusion, …).
-5. **Truncation.** Stops at the first `CUTOFF_PATTERNS` match — References, Bibliography, Acknowledgments, Disclosure Statement, Supplementary Information, Appendix, Funding, Author Contributions, Competing Interests, Data Availability.
-6. **Image relocation.** Rewrites `images/<hash>` references to `assets/<slug>/<hash>` and copies only the images that survive the cut.
-7. **Frontmatter emission.** Writes the YAML described above.
+5. **Reference preservation.** Keeps References, Bibliography, and Literature Cited sections in the canonical markdown so inline `(Author, year)` citations remain resolvable during later discovery and graph expansion.
+6. **Administrative-section skipping.** Skips acknowledgement, disclosure, funding, author-contribution, competing-interest, data-availability, appendix, and supplementary-material sections when they are parsed as standalone headings, without truncating the rest of the document.
+7. **Image relocation.** Rewrites `images/<hash>` references to `assets/<slug>/<hash>` and copies only the images that survive the filtering passes.
+8. **Frontmatter emission.** Writes the YAML described above.
 
 ## Troubleshooting
 
@@ -94,7 +95,7 @@ MinerU's raw markdown is flat and noisy. The adapter applies seven passes (mirro
 - **`backend='local' requires the mineru library`**: install with `uv sync --extra local`. First run downloads several GB of model weights.
 - **MinerU API down / rate-limited**: switch to local backend by installing the `local` extra and re-running. The CLI accepts the same flags.
 - **Title is split or missing**: cover-block sequence broke normalization. Inspect `.mineru-cache/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
-- **Reference dump leaks into body**: the cutoff heading didn't match any `CUTOFF_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`).
+- **Administrative material leaks into body**: the skip heading didn't match any `SKIP_SECTION_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`). Do not add References/Bibliography/Literature Cited to the skip list.
 - **Stale output after editing the adapter**: delete only `manifest.json` inside the per-PDF cache (or the whole `<sha16>/` directory) and re-run; the cached `<stem>.md` / `<stem>.json` from MinerU are reused.
 
 ## Why MinerU instead of the OmegaWiki tex-priority chain?

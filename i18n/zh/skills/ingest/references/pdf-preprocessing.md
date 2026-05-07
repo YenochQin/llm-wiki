@@ -89,15 +89,18 @@ sections:
 figures:
   - {id: "fig-1", path: "assets/<slug>/abc123.jpg", caption: "..."}
   - ...
-cutoffHeading: "References"     # body truncated here
+skippedSectionHeadings: ["Acknowledgments", "Disclosure Statement"]  # optional
 droppedHeadings: ["URL stub", "Contents"]
 ---
 
 # Introduction
 ...
+
+# References
+...
 ```
 
-Use the frontmatter as your structural anchor when extracting concepts, claims, and figure references. Do not re-derive section structure from the body; the adapter already did it.
+Use the frontmatter as your structural anchor when extracting concepts, claims, and figure references. Do not re-derive section structure from the body; the adapter already did it. The bibliography is intentionally retained: use it to resolve inline `(Author, year)` references and to expand citation/discovery paths.
 
 ## Output
 
