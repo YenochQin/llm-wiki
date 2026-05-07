@@ -7,8 +7,6 @@ __pycache__/
 *.egg-info/
 .mineru-cache/
 .checkpoints/
-raw/discovered/*
-!raw/discovered/.gitkeep
 raw/tmp/papers/*
 !raw/tmp/papers/.gitkeep
 !raw/tmp/papers/assets/

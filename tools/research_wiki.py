@@ -19,7 +19,7 @@ Commands:
 
     # Graph operations
     add-edge <wiki_root> --from <id> --to <id> --type <type> [--evidence "..."] [--confidence high|medium|low]
-    add-citation <wiki_root> --from papers/a --to papers/b [--source semantic_scholar]
+    add-citation <wiki_root> --from papers/a --to papers/b [--source literature_api]
     batch-edges <wiki_root>                          # reads JSON array from stdin
     dedup-edges <wiki_root>
     dedup-citations <wiki_root>
@@ -379,7 +379,7 @@ def load_citations(wiki_root: str) -> list[dict]:
 
 
 def add_citation(wiki_root: str, from_id: str, to_id: str,
-                 source: str = "semantic_scholar") -> None:
+                 source: str = "literature_api") -> None:
     """Append a deterministic bibliographic paper citation to graph/citations.jsonl."""
     if source not in CITATION_SOURCES:
         print(json.dumps({
@@ -2591,7 +2591,7 @@ def main():
     p.add_argument("wiki_root")
     p.add_argument("--from", dest="from_id", required=True)
     p.add_argument("--to", dest="to_id", required=True)
-    p.add_argument("--source", default="semantic_scholar",
+    p.add_argument("--source", default="literature_api",
                    choices=sorted(CITATION_SOURCES))
 
     # rebuild-context-brief

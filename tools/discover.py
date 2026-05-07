@@ -10,8 +10,8 @@ recommendation shortlist from one of three seed modes:
 
 Output is a JSON shortlist on stdout (and optionally a checkpoint file).
 Dedupes against papers already in wiki/. Ranking is *not* the same as
-init_discovery.py — discovery does not favor surveys; it weights anchor
-similarity, influential citations, author h-index, and freshness.
+init_discovery.py — discovery does not favor surveys; it weights related-paper
+matches, citation counts when available, and freshness.
 
 Usage:
     python3 tools/discover.py from-anchors --id 2106.09685 [--id 2305.14314] \\
@@ -34,13 +34,7 @@ from typing import Any
 
 import _env  # noqa: F401 — load .env files
 
-import fetch_s2
-
-# DeepXiv is optional; degrade silently if unavailable.
-try:
-    import fetch_deepxiv  # type: ignore
-except Exception:  # pragma: no cover — defensive
-    fetch_deepxiv = None  # type: ignore
+import fetch_literature
 
 
 # ---------- candidate normalization ----------------------------------------
@@ -55,7 +49,7 @@ def _arxiv_id_from_external(external_ids: dict[str, Any] | None) -> str:
 
 
 def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") -> dict[str, Any]:
-    """Flatten an S2/DeepXiv paper record into the discover shortlist schema."""
+    """Flatten a literature provider record into the discover shortlist schema."""
     if not raw:
         return {}
     external_ids = raw.get("externalIds") or {}
@@ -65,7 +59,7 @@ def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") 
     tldr = raw.get("tldr")
     tldr_text = tldr.get("text") if isinstance(tldr, dict) else (tldr or "")
     return {
-        "paperId": raw.get("paperId") or raw.get("s2_id") or "",
+        "paperId": raw.get("paperId") or "",
         "arxiv_id": arxiv_id,
         "title": raw.get("title") or "",
         "abstract": raw.get("abstract") or "",
@@ -79,10 +73,7 @@ def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") 
         "fields_of_study": raw.get("fieldsOfStudy") or [],
         "publication_types": raw.get("publicationTypes") or [],
         "url": raw.get("url") or "",
-        # True when S2's per-edge `isInfluential` flag fired on the anchor↔candidate
-        # citation/reference. Stronger signal than the aggregate `influentialCitationCount`:
-        # it means the candidate specifically matters to (or was built on by) the anchor,
-        # not just that it has many influential citers in general.
+        # True when a provider exposes a per-edge influential-citation flag.
         "is_influential_edge": bool(raw.get("_is_influential_edge")),
         "_sources": [source],
         "_anchors": [anchor] if anchor else [],
@@ -90,11 +81,11 @@ def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") 
 
 
 def _candidate_key(c: dict[str, Any]) -> str:
-    """Stable dedup key — prefer arxiv_id, fall back to S2 paperId, then title."""
+    """Stable dedup key — prefer arxiv_id, fall back to provider ID, then title."""
     if c.get("arxiv_id"):
         return f"arxiv:{c['arxiv_id']}"
     if c.get("paperId"):
-        return f"s2:{c['paperId']}"
+        return f"provider:{c['paperId']}"
     title = re.sub(r"\s+", " ", (c.get("title") or "").strip().lower())
     return f"title:{title}" if title else ""
 
@@ -114,7 +105,7 @@ def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> None
         existing["authors"] = incoming["authors"]
     if not existing.get("fields_of_study") and incoming.get("fields_of_study"):
         existing["fields_of_study"] = incoming["fields_of_study"]
-    # Numeric fields: prefer the larger reading (S2 is authoritative; DeepXiv often lacks them).
+    # Numeric fields: prefer the larger reading.
     for key in ("max_h_index", "citation_count", "influential_citation_count"):
         existing[key] = max(existing.get(key) or 0, incoming.get(key) or 0)
     # Influential-edge is a union: if any anchor↔candidate edge was flagged influential,
@@ -231,14 +222,7 @@ def _channel_diversity_score(c: dict[str, Any]) -> float:
 
 
 def _anchor_influence_edge_score(c: dict[str, Any]) -> float:
-    """S2's per-edge `isInfluential` flag for this anchor↔candidate citation.
-
-    When True, S2's citation-analysis model judged that the anchor substantively
-    built on this candidate (references channel) or this candidate substantively
-    built on the anchor (citations channel). That is a much sharper "this matters
-    to the anchor" signal than the aggregate `influential_citation_count`, which
-    reflects the candidate's influence in general.
-    """
+    """Provider-specific per-edge importance signal, when available."""
     return 1.0 if c.get("is_influential_edge") else 0.0
 
 
@@ -248,7 +232,7 @@ def _score(c: dict[str, Any], *, anchor_mode: bool) -> float:
     fresh = _freshness_score(c.get("year"))
     diversity = _channel_diversity_score(c)
     if anchor_mode:
-        # With three channels plus the per-edge isInfluential flag:
+        # With related-paper search plus optional citation/reference channels:
         #   - influence: aggregate prestige (candidate's general importance)
         #   - anchor_influence_edge: specific anchor↔candidate significance (sharp, often 0)
         #   - anchor overlap: how many anchors surfaced the candidate
@@ -297,29 +281,19 @@ def _gather_from_anchors(
     citation_expand: bool = True,
     citation_limit: int = 30,
 ) -> list[dict[str, Any]]:
-    """Three-channel anchor gather: recommend + references + citations.
-
-    Each channel fills a different gap:
-      - recommend:  semantic neighbors (S2 tends toward recent work)
-      - references: what the anchor cites — surfaces older canonical work
-      - citations:  what cites the anchor — surfaces high-impact follow-ups
-
-    Without references/citations, anchor mode collapses into recent papers near
-    the topic. With them, anchor mode becomes a genuine literature-graph walk
-    from the anchor.
-    """
+    """Anchor gather: no-key related search plus optional citation/reference channels."""
     candidates: list[dict[str, Any]] = []
     # One call-set per anchor preserves which anchor surfaced which candidate;
     # this matters for the anchor-overlap signal in ranking.
     for anchor in positive:
-        # Channel 1: semantic recommendations
+        # Channel 1: related-paper lookup
         try:
-            recs = fetch_s2.recommend([anchor], negative_ids=negative, limit=per_anchor_limit)
+            recs = fetch_literature.recommend([anchor], negative_ids=negative, limit=per_anchor_limit)
         except Exception as exc:
-            print(f"warn: S2 recommend failed for {anchor}: {exc}", file=sys.stderr)
+            print(f"warn: related-paper lookup failed for {anchor}: {exc}", file=sys.stderr)
             recs = []
         for raw in recs:
-            norm = _normalize_candidate(raw, source="s2_recommend", anchor=anchor)
+            norm = _normalize_candidate(raw, source="literature_recommend", anchor=anchor)
             if norm:
                 candidates.append(norm)
 
@@ -328,25 +302,23 @@ def _gather_from_anchors(
 
         # Channel 2: what the anchor cites (older canonical work)
         try:
-            refs = fetch_s2.references(anchor, limit=citation_limit)
+            refs = fetch_literature.references(anchor, limit=citation_limit)
         except Exception as exc:
-            print(f"warn: S2 references failed for {anchor}: {exc}", file=sys.stderr)
+            print(f"warn: reference lookup failed for {anchor}: {exc}", file=sys.stderr)
             refs = []
         for raw in refs:
-            norm = _normalize_candidate(raw, source="s2_reference", anchor=anchor)
+            norm = _normalize_candidate(raw, source="literature_reference", anchor=anchor)
             if norm:
                 candidates.append(norm)
 
-        # Channel 3: what cites the anchor (high-impact follow-ups). S2 returns
-        # citations in reverse-chronological order, so capping at citation_limit
-        # keeps costs bounded without losing the most recent impactful work.
+        # Channel 3: what cites the anchor, when a no-key provider supports it.
         try:
-            cits = fetch_s2.citations(anchor, limit=citation_limit)
+            cits = fetch_literature.citations(anchor, limit=citation_limit)
         except Exception as exc:
-            print(f"warn: S2 citations failed for {anchor}: {exc}", file=sys.stderr)
+            print(f"warn: citation lookup failed for {anchor}: {exc}", file=sys.stderr)
             cits = []
         for raw in cits:
-            norm = _normalize_candidate(raw, source="s2_citation", anchor=anchor)
+            norm = _normalize_candidate(raw, source="literature_citation", anchor=anchor)
             if norm:
                 candidates.append(norm)
     return candidates
@@ -355,24 +327,15 @@ def _gather_from_anchors(
 def _gather_from_topic(topic: str, limit: int) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     try:
-        s2_results = fetch_s2.search(topic, limit=limit)
+        literature_results = fetch_literature.search(topic, limit=limit)
     except Exception as exc:
-        print(f"warn: S2 search failed for {topic!r}: {exc}", file=sys.stderr)
-        s2_results = []
-    for raw in s2_results:
-        norm = _normalize_candidate(raw, source="s2_search")
+        print(f"warn: literature search failed for {topic!r}: {exc}", file=sys.stderr)
+        literature_results = []
+    for raw in literature_results:
+        norm = _normalize_candidate(raw, source="literature_search")
         if norm:
             candidates.append(norm)
 
-    if fetch_deepxiv is not None:
-        try:
-            dx_results = fetch_deepxiv.search(topic, limit=limit)
-        except Exception:
-            dx_results = []
-        for raw in dx_results or []:
-            norm = _normalize_candidate(raw, source="deepxiv_search")
-            if norm:
-                candidates.append(norm)
     return candidates
 
 
@@ -530,7 +493,7 @@ def _resolve_output_checkpoint_path(raw_path: str | Path, seed_slug: str) -> Pat
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="OmegaWiki discovery shortlist builder")
+    parser = argparse.ArgumentParser(description="llm-wiki discovery shortlist builder")
     sub = parser.add_subparsers(dest="command", required=True)
 
     common_args: list[tuple[str, dict[str, Any]]] = [

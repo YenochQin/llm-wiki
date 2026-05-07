@@ -23,7 +23,7 @@ ENTITY_DIRS = [
 EDGE_CONFIDENCE_VALUES = {"high", "medium", "low"}
 
 CITATION_EDGE_TYPES = {"cites"}
-CITATION_SOURCES = {"semantic_scholar", "parsed_bib", "manual"}
+CITATION_SOURCES = {"literature_api", "parsed_bib", "manual"}
 
 ANY_ENDPOINT = "*"
 DIRECTION_DIRECTED = "directed"

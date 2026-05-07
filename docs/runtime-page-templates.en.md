@@ -17,7 +17,7 @@ tags: []
 importance: 3           # 1-5
 date_added: YYYY-MM-DD
 source_type: tex         # tex | pdf
-s2_id: ""
+external_ids: {}
 keywords: []
 domain: ""               # NLP / CV / ML Systems / Robotics
 code_url: ""

@@ -516,6 +516,10 @@ def _read_existing_frontmatter(path: Path) -> dict[str, str]:
     return fields
 
 
+def _strip_frontmatter(text: str) -> str:
+    return re.sub(r"^---\s*\n.*?\n---\s*", "", text, count=1, flags=re.DOTALL)
+
+
 # ---------------------------------------------------------------------------
 # Top-level pipeline
 # ---------------------------------------------------------------------------
@@ -542,6 +546,8 @@ def prepare(
     Returns the manifest `/ingest` consumes.
     """
     warnings: list[str] = []
+    output_dir = raw_root / "tmp" / "papers"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     if not pdf.exists():
         return {
@@ -584,6 +590,35 @@ def prepare(
         or "Untitled"
     )
     slug = slugify(title)
+    out_path = output_dir / f"{slug}.md"
+    if out_path.exists() and not overwrite:
+        existing_front = _read_existing_frontmatter(out_path)
+        existing_source = existing_front.get("source", "")
+        existing_text = out_path.read_text(encoding="utf-8", errors="ignore")
+        if _same_source(existing_source, pdf):
+            return {
+                "canonical_ingest_path": str(out_path),
+                "prepared_path": str(out_path),
+                "ingest_format": "mineru-md",
+                "title": existing_front.get("title") or title,
+                "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
+                "arxiv_id": existing_front.get("arxivId") or arxiv_id_override.strip() or _extract_arxiv_id(full_md[:5000]),
+                "warnings": [f"prepared source already exists; reusing: {out_path}"],
+                "usable": True,
+            }
+        return {
+            "canonical_ingest_path": str(out_path),
+            "prepared_path": str(out_path),
+            "ingest_format": "mineru-md",
+            "title": title,
+            "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
+            "arxiv_id": arxiv_id_override.strip() or _extract_arxiv_id(full_md[:5000]),
+            "warnings": [
+                f"prepared source collision: another source already uses this title/slug: {out_path}",
+                "Rerun with --overwrite only after confirming replacement with the user.",
+            ],
+            "usable": False,
+        }
 
     body, dropped, cutoff = _transform_markdown(full_md, slug, title)
     arxiv_haystack = pdf.name + " " + full_md[:5000]
@@ -602,8 +637,6 @@ def prepare(
         }
 
     used_images = _collect_used_images(body, slug)
-    output_dir = raw_root / "tmp" / "papers"
-    output_dir.mkdir(parents=True, exist_ok=True)
     if used_images:
         images_dir = cache_dir / "images"
         if images_dir.exists():
@@ -635,27 +668,6 @@ def prepare(
     figures = _build_figures_index(manifest, used_images, slug)
     if figures:
         front["figures"] = figures
-
-    out_path = output_dir / f"{slug}.md"
-    if out_path.exists() and not overwrite:
-        existing_front = _read_existing_frontmatter(out_path)
-        existing_source = existing_front.get("source", "")
-        reason = "prepared source already exists"
-        if not _same_source(existing_source, pdf):
-            reason = "prepared source collision: another source already uses this title/slug"
-        return {
-            "canonical_ingest_path": str(out_path),
-            "prepared_path": str(out_path),
-            "ingest_format": "mineru-md",
-            "title": title,
-            "abstract_excerpt": _build_abstract_excerpt(body),
-            "arxiv_id": arxiv_id,
-            "warnings": [
-                f"{reason}: {out_path}",
-                "Rerun with --overwrite only after confirming replacement with the user.",
-            ],
-            "usable": False,
-        }
 
     document = _render_yaml(front) + "\n\n" + body
     out_path.write_text(document, encoding="utf-8")

@@ -87,10 +87,6 @@ MinerU's raw markdown is flat and noisy. The adapter applies seven passes (mirro
 6. **Image relocation.** Rewrites `images/<hash>` references to `assets/<slug>/<hash>` and copies only the images that survive the cut.
 7. **Frontmatter emission.** Writes the YAML described above.
 
-## arXiv URL flow
-
-`/ingest <arxiv-url>` first calls `tools/init_discovery.py download` to fetch the PDF into `raw/discovered/`, then routes through this same MinerU pipeline. No special-case logic — the prep tool just sees a PDF.
-
 ## Troubleshooting
 
 - **`MINERU_API_TOKEN is not set`**: the `api` backend couldn't find a token. Add `MINERU_API_TOKEN=...` to `~/.config/llm-wiki/.env`, or export it in the shell.

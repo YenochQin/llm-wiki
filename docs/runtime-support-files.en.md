@@ -13,7 +13,7 @@
 
 Semantic edge format: `{"from": "node_id", "to": "node_id", "type": "edge_type", "evidence": "...", "confidence": "high|medium|low", "date": "..."}`
 
-Citation format: `{"from": "papers/citing", "to": "papers/cited", "type": "cites", "source": "semantic_scholar|parsed_bib|manual", "date": "..."}`
+Citation format: `{"from": "papers/citing", "to": "papers/cited", "type": "cites", "source": "literature_api|parsed_bib|manual", "date": "..."}`
 
 ## index.md Format
 
