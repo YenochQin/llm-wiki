@@ -129,7 +129,7 @@ Following `shared-references/academic-writing.md`:
 If output format is LaTeX, following `shared-references/citation-verification.md`:
 
 1. Collect all `\cite{key}` citations
-2. For each key, attempt to fetch BibTeX: DBLP → CrossRef → S2
+2. For each key, attempt to fetch BibTeX: DBLP → CrossRef → arXiv/Crossref wrapper
 3. Verified: record BibTeX
 4. Unverified: mark `[UNCONFIRMED]`
 5. Output list of BibTeX entries (can be appended to paper/references.bib)
@@ -197,7 +197,7 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 - `python3 tools/research_wiki.py slug "<title>"` — generate slug
 - `python3 tools/research_wiki.py add-edge wiki/ ...` — add graph edge
 - `python3 tools/research_wiki.py log wiki/ "<message>"` — append log
-- `python3 tools/fetch_s2.py search "<title>"` — BibTeX fallback (S2 search)
+- `python3 tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
 
 ### MCP Servers
 - None (survey does not require Review LLM; use /review --focus writing for separate review)

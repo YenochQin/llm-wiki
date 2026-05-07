@@ -3,7 +3,8 @@
 # llm-wiki — One-Click Setup (uv-based)
 # ============================================================================
 # Usage:
-#   chmod +x setup.sh && ./setup.sh            # English (default; only lang for now)
+#   chmod +x setup.sh && ./setup.sh            # English (default)
+#   ./setup.sh --lang zh                       # Chinese runtime files
 #
 # What it does:
 #   1. Checks prerequisites (uv, Python via uv, Claude Code)
@@ -11,7 +12,7 @@
 #   3. Copies configuration templates and activates language files
 #   4. Verifies the installation
 #
-# API key configuration (Semantic Scholar, MinerU, Review LLM) is handled
+# API key configuration (MinerU, Review LLM) is handled
 # interactively by Claude Code — run /setup after starting Claude Code.
 # ============================================================================
 
@@ -39,8 +40,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
-# Only `en` is shipped today; the lang flag stays in place for future i18n/zh.
-[[ "$LANG_CODE" == "en" ]] || { fail "Unknown lang: $LANG_CODE (only 'en' is shipped)"; exit 1; }
+case "$LANG_CODE" in
+    en|zh) ;;
+    *) fail "Unknown lang: $LANG_CODE (supported: en, zh)"; exit 1 ;;
+esac
 I18N_DIR="$PROJECT_ROOT/i18n/$LANG_CODE"
 [ -d "$I18N_DIR" ] || { fail "i18n/$LANG_CODE not found — run from the project root"; exit 1; }
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/llm-wiki"
@@ -136,15 +139,43 @@ fi
 echo ""
 info "Activating language: $LANG_CODE"
 cp "$I18N_DIR/CLAUDE.md" CLAUDE.md
-for src in "$I18N_DIR/skills"/*/SKILL.md; do
-    skill_dir=$(dirname "$src")
-    name=$(basename "$skill_dir")
-    mkdir -p ".claude/skills/$name"
-    cp -R "$skill_dir"/. ".claude/skills/$name/"
-done
-mkdir -p ".claude/skills/shared-references"
-cp "$I18N_DIR/shared-references"/*.md ".claude/skills/shared-references/"
+cp "$I18N_DIR/AGENTS.md" AGENTS.md
+
+sync_tree() {
+    local src_dir="$1"
+    local dst_dir="$2"
+    mkdir -p "$dst_dir"
+    if command -v rsync &>/dev/null; then
+        rsync -rt --delete "$src_dir"/ "$dst_dir"/
+    else
+        find "$dst_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+        cp -R "$src_dir"/. "$dst_dir"/
+    fi
+}
+
+if [ -L "skills" ]; then
+    rm "skills"
+else
+    rm -rf "skills"
+fi
+ln -sfn "$I18N_DIR/skills" "skills"
+ln -sfn "../shared-references" "$I18N_DIR/skills/shared-references"
+
+if [ -L ".claude/skills" ]; then
+    rm ".claude/skills"
+else
+    rm -rf ".claude/skills"
+fi
+if [ -L ".agents/skills" ]; then
+    rm ".agents/skills"
+else
+    rm -rf ".agents/skills"
+fi
+ln -sfn "../skills" ".claude/skills"
+ln -sfn "../skills" ".agents/skills"
+
 echo "$LANG_CODE" > .claude/.current-lang
+echo "$LANG_CODE" > .agents/.current-lang
 ok "Language files activated ($LANG_CODE)"
 
 # ── Step 4: Verify installation ─────────────────────────────────────────
@@ -184,7 +215,7 @@ check_python_snippet "requests" "import requests"
 check_tool_import "tools/_mineru.py" "from _mineru import extract"
 check_tool_import "tools/prepare_paper_source.py" "from prepare_paper_source import main"
 check_tool_import "tools/init_discovery.py" "from init_discovery import prepare_inputs"
-check_tool_import "tools/fetch_s2.py" "from fetch_s2 import search"
+check_tool_import "tools/fetch_literature.py" "from fetch_literature import search"
 check_tool_import "tools/research_wiki.py" "from research_wiki import slugify"
 check_tool_import "tools/lint.py" "from lint import check_missing_fields"
 

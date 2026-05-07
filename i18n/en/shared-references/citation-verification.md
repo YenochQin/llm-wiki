@@ -14,7 +14,7 @@ The only acceptable sources for BibTeX are:
 
 1. **DBLP** (`https://dblp.org/`) — primary source for CS venues
 2. **CrossRef** (`https://api.crossref.org/`) — primary source for DOI-bearing publications
-3. **Semantic Scholar** (`https://api.semanticscholar.org/`) — fallback for preprints
+3. **arXiv/Crossref wrapper** (`tools/fetch_literature.py`) — fallback for preprints and DOI metadata
 4. **The paper's own .bib file** — if available in `raw/papers/`
 
 ## The [UNCONFIRMED] Protocol
@@ -48,11 +48,11 @@ WebFetch: https://api.crossref.org/works?query.bibliographic={url-encoded-title}
 # Construct BibTeX from structured data
 ```
 
-### Semantic Scholar (fallback for arXiv preprints)
+### arXiv/Crossref wrapper (fallback for arXiv preprints)
 
 ```bash
-# Use tools/fetch_s2.py which is already in the project
-python3 tools/fetch_s2.py search "<title>"
+# Uses no-key arXiv + Crossref APIs
+python3 tools/fetch_literature.py search "<title>"
 # Returns paperId, title, authors, year, venue, externalIds
 ```
 
@@ -70,7 +70,7 @@ Examples:
 
 ### /paper-draft
 1. After drafting each section, collect all `\cite{}` references
-2. For each citation: attempt DBLP → CrossRef → S2 in order
+2. For each citation: attempt DBLP → CrossRef → arXiv/Crossref wrapper in order
 3. Only include entries that are actually cited (`\nocite{*}` is forbidden)
 4. Write `references.bib` with fetched entries + [UNCONFIRMED] entries separated at bottom
 

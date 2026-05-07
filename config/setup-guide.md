@@ -54,37 +54,7 @@ needed). Leave commented unless MinerU publishes a new endpoint.
 
 ---
 
-## Key 2: Semantic Scholar API Key
-
-| Field | Value |
-|-------|-------|
-| Config variable | `SEMANTIC_SCHOLAR_API_KEY` |
-| Required? | No (optional, strongly recommended) |
-| Free? | Yes — instant approval, no credit card |
-
-**What it does**: Gives access to Semantic Scholar's paper database — citation counts,
-reference graphs, author metadata, and keyword search.
-
-**Which skills use it**:
-- `/ingest` — citation count, importance scoring for ingested papers
-- `/init` — discover related papers by topic and citation chain
-- `/novelty` — keyword search to find prior work
-- `/ideate` — find high-citation papers in a research area
-
-**Without this key**: All skills still work, but S2 API calls are rate-limited to
-1 request per 3 seconds (vs. 1 per second with a key). For large `/init` runs with
-many papers, this can add 10–20 minutes.
-
-**How to get it**:
-1. Go to https://www.semanticscholar.org/product/api
-2. Click "Get API Key" (free, instant approval, no credit card)
-3. Copy the key (format: a long alphanumeric string)
-
-**Format**: Long alphanumeric string, e.g. `abc123def456...`
-
----
-
-## Key 3: Review LLM (three variables)
+## Key 2: Review LLM (three variables)
 
 | Field | Value |
 |-------|-------|
@@ -144,7 +114,7 @@ After setting keys, verify they are loaded correctly (uv-based, no venv activati
 uv run --python .venv/bin/python python -c "
 import sys; sys.path.insert(0, 'tools')
 import _env, os
-keys = ['MINERU_API_TOKEN', 'SEMANTIC_SCHOLAR_API_KEY', 'LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL']
+keys = ['MINERU_API_TOKEN', 'LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL']
 for k in keys:
     v = os.environ.get(k, '')
     status = '✓ set' if v else '✗ not set'

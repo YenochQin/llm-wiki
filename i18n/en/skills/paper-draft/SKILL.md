@@ -282,7 +282,7 @@ Make final adjustments based on Review LLM feedback.
 ## Constraints
 
 - **Each section draws from wiki**: do not generate content from nothing; every technical claim must trace back to a wiki page
-- **BibTeX follows citation-verification.md**: fetch from DBLP/CrossRef/S2; do not generate from LLM memory
+- **BibTeX follows citation-verification.md**: fetch from DBLP/CrossRef/arXiv-Crossref wrapper; do not generate from LLM memory
 - **De-AI polish is mandatory**: each section must receive a polish pass after writing; cannot be skipped
 - **Figures follow academic-writing.md**: colorblind-safe, font size >= 8pt, vector format preferred
 - **Anonymous submission**: do not write author names, institutions, or acknowledgements (per venue anonymity requirements)
@@ -307,7 +307,7 @@ Make final adjustments based on Review LLM feedback.
 
 ### Tools（via Bash）
 - `python3 tools/research_wiki.py log wiki/ "<message>"` — append log
-- `python3 tools/fetch_s2.py search "<title>"` — BibTeX fallback (S2 search)
+- `python3 tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
 - `python3` — execute matplotlib figure scripts
 
 ### MCP Servers

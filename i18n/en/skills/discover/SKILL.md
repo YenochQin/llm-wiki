@@ -15,8 +15,8 @@ Use these local references on demand:
 
 ## Inputs
 
-- `--anchor <id>` (repeatable): one or more anchor paper IDs (arXiv IDs preferred; S2 paperIds also accepted). Drives the **anchor mode** — the primary use case, including the post-`/ingest` "what to read next" flow.
-- `--negative <id>` (repeatable, optional): IDs to push recommendations away from. Only meaningful with `--anchor`.
+- `--anchor <id>` (repeatable): one or more anchor paper IDs (arXiv IDs or DOIs preferred). Drives the **anchor mode** — the primary use case, including the post-`/ingest` "what to read next" flow.
+- `--negative <id>` (repeatable, optional): IDs to exclude from recommendations. Only meaningful with `--anchor`.
 - `--topic "<str>"`: a topic / query string. Drives the **topic mode** — lighter alternative to `/init`'s planner.
 - `--from-wiki`: derive seeds automatically from the wiki's most recently modified papers. Drives the **wiki mode**.
 - `--limit N` (optional, default 10): max shortlist size.
@@ -89,24 +89,24 @@ Or for topic / wiki modes:
 "$PYTHON_BIN" tools/discover.py from-wiki --wiki-root wiki --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Anchor (and wiki) mode run three S2 channels per anchor by default — `recommend` + `references` + `citations`. References surface older canonical work the anchor built on, while citations surface high-impact follow-ups. Pass `--no-citation-expand` only if API cost forces the narrower recommend-only path; the quality regression is sharp.
+Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key providers used here do not expose a full citing-works graph.
 
 The tool handles candidate gathering, wiki dedup, ranking, and writes the checkpoint. Always pass `--wiki-root wiki` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
 
-If S2 is unavailable in topic mode, the tool will continue with whatever sources responded; check the output and report degraded discovery to the user. If every channel fails, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
+If arXiv or Crossref is unavailable in topic mode, the tool will continue with whatever source responded; check the output and report degraded discovery to the user. If every channel fails, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
 
 ### Step 3: Present the shortlist
 
 Show the markdown output to the user. For each candidate, the user needs enough to decide whether to ingest:
 
-- title and arXiv ID (or S2 paperId fallback)
-- one-line rationale (already produced by the tool: anchor count, influential citations, year)
-- TLDR if the tool surfaced one (topic-mode candidates often have it; anchor-mode usually does not — the recommendations endpoint does not return TLDRs)
+- title and arXiv ID or DOI
+- one-line rationale (already produced by the tool: anchor count, citation count when available, year)
+- abstract excerpt if the tool surfaced one
 
 Append a short "next step" hint:
 
 ```
-To ingest a candidate: /ingest https://arxiv.org/abs/<arxiv-id>
+To ingest a candidate: obtain the PDF (e.g. via Zotero), place it under raw/papers/, then run /ingest raw/papers/<file>.pdf
 ```
 
 Do not ingest anything yourself. The user picks.
@@ -127,26 +127,24 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 
 ### From `/init`
 
-`/init` does not call `/discover`. `/init`'s planner (`tools/init_discovery.py plan`) has its own scoring that favors surveys, broad coverage, and seed anchors — appropriate for bootstrapping a wiki. `/discover`'s ranking is intentionally different (no survey preference; weights anchor similarity and influential citations) and would dilute `/init`'s shortlist if substituted in. Keep them separate.
+`/init` does not call `/discover`. `/init` ingests only local user-owned papers from `raw/papers/`; it does not propose or download external candidates. `/discover` is the right tool for follow-up reading suggestions after `/init` finishes.
 
 ## Constraints
 
 - **Never auto-ingest**: `/discover` returns a shortlist and stops. Even when called by `/ingest --discover`, the caller surfaces results and the user decides what to ingest.
 - **No writes to `wiki/` other than `log.md`**: paper pages, concepts, claims, graph edges all belong to `/ingest`.
-- **No writes to `raw/`**: `/discover` does not download papers. The user runs `/ingest <arxiv-url>` afterwards if they want a candidate.
+- **No writes to `raw/`**: `/discover` does not download papers. The user obtains the PDF (e.g. via Zotero), places it under `raw/papers/`, then runs `/ingest raw/papers/<file>.pdf` afterwards if they want a candidate.
 - **Always dedupe against the wiki**: pass `--wiki-root wiki` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
-- **Three-channel anchor gather**: by default, anchor mode pulls from S2 `recommend` + `references` + `citations` per anchor. Removing the citation channels (via `--no-citation-expand`) collapses the result into a recency-biased semantic cluster. Keep all three on unless API cost is a hard constraint. See `references/ranking-signals.md`.
-- **Some S2 endpoints have a flatter field set**: `/citations`, `/references`, and `/recommendations/*` reject nested selectors — no `authors.hIndex`, no `tldr`. `/paper/{id}` and `/paper/search` do accept them, so topic-mode candidates carry full enrichment; anchor-mode candidates that entered only via citations/references/recommend do not. That is a real API constraint, not a bug.
-- **Rate limits apply**: each anchor in anchor mode costs up to three S2 calls (recommend + references + citations). Default per-anchor limit is 50 for recs and 30 each for references/citations. Multi-anchor runs multiply accordingly; with an API key (1 req/sec) a 3-anchor run takes ~10 seconds.
+- **No-key provider coverage**: anchor mode uses arXiv/Crossref related lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
+- **Rate limits apply**: arXiv requests are intentionally paced; large multi-anchor discovery can be slow.
 
 ## Error Handling
 
 - **All seed channels fail**: report the failure, write no shortlist, and do not log a successful run.
-- **S2 unavailable, DeepXiv available (topic mode)**: continue with DeepXiv only; note the degradation in the report.
-- **S2 returns zero recommendations for an anchor**: keep going with the remaining anchors; if all anchors return zero, treat as total failure.
+- **No provider returns recommendations for an anchor**: keep going with the remaining anchors; if all anchors return zero, treat as total failure.
 - **`--from-wiki` finds no anchorable papers** (`wiki/papers/` empty or all missing `arxiv_id`): tell the user the wiki is too sparse for wiki-mode discovery and suggest topic mode.
-- **Anchor ID is malformed or unknown**: S2 will return 404; surface the bad ID in the report and continue with any remaining anchors.
+- **Anchor ID is malformed or unknown**: surface the bad ID in the report and continue with any remaining anchors.
 
 ## Dependencies
 
@@ -164,5 +162,4 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 
 ### External APIs
 
-- Semantic Scholar — recommendations (`/recommendations/v1/papers/forpaper/{id}`, `POST /recommendations/v1/papers/`), search, paper detail (via `tools/fetch_s2.py`)
-- DeepXiv — search fallback in topic mode (via `tools/fetch_deepxiv.py`, optional; graceful fallback when unavailable)
+- arXiv + Crossref — no-key search, paper metadata, and best-effort reference lookup via `tools/fetch_literature.py`

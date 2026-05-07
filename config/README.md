@@ -30,7 +30,7 @@ cp config/settings.local.json.example .claude/settings.local.json
 | Permission | Why it's needed |
 |-----------|-----------------|
 | `Bash(pip install:*)` | Install Python packages (e.g., during setup) |
-| `Bash(python:*)` | Run Python tools (fetch_s2, lint, etc.) |
+| `Bash(python:*)` | Run Python tools (fetch_literature, lint, etc.) |
 | `Bash(python3:*)` | Same as above, for systems where `python3` is the command |
 | `Bash(cp:*)` | Copy files (e.g., templates during /init) |
 | `Bash(mkdir:*)` | Create directories (e.g., wiki subdirectories) |
@@ -42,10 +42,11 @@ These are the **minimum permissions** for ΩmegaWiki skills to function. Claude 
 
 ### `server.yaml.example`
 
-Remote GPU server configuration for `/exp-run --env remote`. Copy to `config/`:
+Remote GPU server configuration for the optional Omega spillover in `omega/tools/remote.py`.
+Copy it to `config/server.yaml` if you still use the remote helper:
 
 ```bash
-cp config/server.yaml.example config/server.yaml
+cp omega/config/server.yaml.example config/server.yaml
 ```
 
 Then edit `config/server.yaml` with your server's SSH details, GPU info, conda environment, and work directory. See comments in the file for each field.

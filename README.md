@@ -32,14 +32,15 @@ raw/tmp/     — MinerU-prepared structured markdown (canonical_ingest_path live
 wiki/        — LLM-maintained markdown: papers, concepts, topics, people, ideas, experiments, claims, Summary, foundations, outputs.
 wiki/graph/  — auto-derived graph state (edges, citations, context_brief). Never hand-edit.
 tools/       — Python tooling (run via `uv run python tools/<name>.py`).
-i18n/en/     — canonical skills + shared references (synced into .claude/ by setup.sh).
+skills/      — canonical skills entrypoint for the active language; `.claude/skills` and `.agents/skills` point here.
+omega/       — optional OmegaWiki spillover (remote experiment helpers, compatibility config).
 ```
 
 ## Skills (20)
 
 `setup, reset, init, prefill, ingest, discover, ask, edit, check, novelty, review, ideate, exp-design, exp-eval, refine, paper-plan, paper-draft, survey, research, rebuttal`.
 
-Dropped from upstream OmegaWiki: `daily-arxiv, paper-compile, exp-run, exp-status` (and `/research` is design-only — user runs experiments externally and reports results back to `/exp-eval`).
+Dropped from upstream OmegaWiki: `daily-arxiv, paper-compile, exp-run, exp-status`. `/research` stays design-only: the user runs experiments externally and reports results back to `/exp-eval`.
 
 ## PDF preprocessing
 

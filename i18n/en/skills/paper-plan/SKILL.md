@@ -237,12 +237,12 @@ Following `shared-references/citation-verification.md`:
 
 1. List all wiki papers referenced via `[[slug]]` in the outline
 2. For each paper, pre-fetch BibTeX:
-   - DBLP first, then CrossRef, then S2
+   - DBLP first, then CrossRef, then arXiv/Crossref wrapper
    - Success: record BibTeX key + source
    - Failure: mark `[UNCONFIRMED]`
 3. Generate citation coverage report:
    ```
-   Citations: 15 total, 12 verified (DBLP: 8, CrossRef: 3, S2: 1), 3 [UNCONFIRMED]
+   Citations: 15 total, 12 verified (DBLP: 8, CrossRef: 3, literature API: 1), 3 [UNCONFIRMED]
    ```
 4. For [UNCONFIRMED] entries, provide suggested URLs for manual verification
 
@@ -383,7 +383,7 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
 - `python3 tools/research_wiki.py add-edge wiki/ ...` — add graph edge
 - `python3 tools/research_wiki.py rebuild-context-brief wiki/` — rebuild query_pack
 - `python3 tools/research_wiki.py log wiki/ "<message>"` — append log
-- `python3 tools/fetch_s2.py search "<title>"` — Semantic Scholar search (citation plan fallback)
+- `python3 tools/fetch_literature.py search "<title>"` — no-key literature search (citation plan fallback)
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 7 outline review (mandatory)

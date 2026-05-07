@@ -24,7 +24,6 @@ wiki/
 
 raw/
 ├── papers/            ← user-owned .tex / .pdf sources
-├── discovered/        ← externally fetched papers from /init
 ├── tmp/papers/        ← MinerU-generated prepared markdown for /init and direct local /ingest
 ├── notes/             ← user-owned .md notes
 └── web/               ← user-owned HTML / Markdown
@@ -34,7 +33,12 @@ tools/                 ← Python tooling (run via uv)
 ├── prepare_paper_source.py  ← PDF → MinerU markdown adapter
 ├── research_wiki.py   ← graph CLI (add-edge, add-citation, rebuilds)
 ├── lint.py            ← link / field health checks
-└── …                  ← discover, init, fetch_*, reset_wiki, remote
+└── …                  ← discover, init, fetch_*, reset_wiki
+
+omega/
+├── tools/remote.py    ← optional remote experiment helper (moved out of main wiki path)
+└── config/server.yaml.example ← optional remote GPU config template
+└── mcp-servers/llm-review/ ← Review LLM cross-model server
 
 config/
 ├── server.yaml        ← remote GPU server config (optional)
@@ -42,15 +46,14 @@ config/
 ├── .env.example       ← template for ~/.config/llm-wiki/.env
 └── settings.local.json.example
 
-i18n/en/               ← canonical English skills + shared references (synced into .claude/ by setup.sh)
-mcp-servers/llm-review/ ← Review LLM cross-model server
+i18n/en/               ← canonical English skills + shared references
+skills/                ← canonical skills; `.claude/skills` and `.agents/skills` point here
 docs/                  ← long-form runtime references (this file lives here)
 ```
 
 ## Fast Reminders
 
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs.
-- `raw/discovered/` is for fetched external papers, not user drop-ins.
 - `raw/tmp/papers/` holds MinerU-generated prepared markdown (`<slug>.md` + `assets/<slug>/*`).
 - `graph/` is derived and should be maintained only through `tools/research_wiki.py`.
 - All Python tools run via `uv run python tools/<tool>.py …` (no manual venv activation needed).

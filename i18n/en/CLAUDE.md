@@ -35,7 +35,6 @@ Keep this mental map in immediate context:
 ### `raw/` and `config/`
 
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
-- `raw/discovered/` stores externally fetched papers from `/init`
 - `raw/tmp/papers/` stores MinerU-prepared markdown (`<slug>.md` + `assets/<slug>/*`) for `/init` and direct local `/ingest`
 - `config/` holds environment templates (`.env.example`, `settings.local.json.example`)
 
@@ -115,9 +114,9 @@ Standard log line:
 
 ## Constraints
 
-- **`raw/papers/`, `raw/notes/`, `raw/web/` are user-owned**: treat them as authoritative inputs. `/init` may add externally fetched papers only under `raw/discovered/`. `/init` and direct local `/ingest` may add MinerU-prepared markdown sidecars under `raw/tmp/papers/` (additions only — never overwrite an existing user-owned file). `/edit` may add raw sources only when the user explicitly asked for it. `/init` subagents running `/ingest` in INIT MODE still treat `raw/` as strictly read-only and must consume the handed-off canonical path directly.
+- **`raw/papers/`, `raw/notes/`, `raw/web/` are user-owned**: treat them as authoritative inputs. `/init` and direct local `/ingest` may add MinerU-prepared markdown sidecars under `raw/tmp/papers/` (additions only — never overwrite an existing user-owned file). `/edit` may add raw sources only when the user explicitly asked for it. `/init` subagents running `/ingest` in INIT MODE still treat `raw/` as strictly read-only and must consume the handed-off canonical path directly.
 - **User-facing skill parameters are user-owned**: flags and values shown in a skill's `argument-hint` belong to the user's command, not to agent strategy. Do not invent, flip, or drop those parameters from repository state alone. If the user omitted a parameter, only use a default or derived value when that skill explicitly documents omission behavior; otherwise leave it unset or ask the user. Internal derived settings that are not user-facing parameters may still be inferred by the skill.
-- **INIT MODE handoff is manifest-driven**: when `/init` writes `.checkpoints/init-sources.json`, that manifest becomes the single source of truth for ingest order and canonical source paths. Prepared local inputs should point to `raw/tmp/papers/<slug>.md` (MinerU output); introduced external papers should point to `raw/discovered/`.
+- **INIT MODE handoff is manifest-driven**: when `/init` writes `.checkpoints/init-sources.json`, that manifest becomes the single source of truth for ingest order and canonical source paths. Prepared local inputs should point to `raw/tmp/papers/<slug>.md` (MinerU output).
 - **graph/ is auto-generated**: never manually edit files in `graph/` — only via `tools/research_wiki.py`.
 - **Bidirectional links**: always write the reverse link when writing a forward link.
 - **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`, optional `arxivId`). `/ingest` and `/init` consume the prepared `raw/tmp/papers/<slug>.md` — never the raw PDF directly.
@@ -129,7 +128,7 @@ Standard log line:
 - **Claim confidence range**: 0.0-1.0; re-evaluate every time evidence changes.
 - **Experiments must link to a claim**: every experiment requires `target_claim`; results are written back to the claim's evidence after the user runs the experiment externally and reports results to `/exp-eval`.
 - **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
-- **Semantic Scholar key**: `SEMANTIC_SCHOLAR_API_KEY` is recommended (free). Without it, `/init` runs ~3x slower and citation backfill is skipped per-paper.
+- **Literature lookup**: `tools/fetch_literature.py` uses no-key arXiv/Crossref APIs for paper search and metadata. Citation graph coverage is best-effort because no-key providers expose fewer citation edges than key-gated services.
 
 ---
 

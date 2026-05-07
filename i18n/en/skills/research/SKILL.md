@@ -146,11 +146,11 @@ export PYTHON_BIN
    ```
 
 2. **Search for relevant papers**:
-   - Semantic Scholar: `"$PYTHON_BIN" tools/fetch_s2.py search "{direction}" --limit 20`
+   - Literature lookup: `"$PYTHON_BIN" tools/fetch_literature.py search "{direction}" --limit 20`
 
 3. **Merge, rank, and select top 5**:
    - Deduplicate by arxiv_id
-   - Ranking priority: S2 citation count > recency > relevance score
+   - Ranking priority: available citation count > recency > relevance score
    - Select top 5
 
 4. **Auto-ingest each paper** via the `/ingest` skill (PDFs route through MinerU automatically).
@@ -432,7 +432,7 @@ Update pipeline-progress: status: completed.
 - `"$PYTHON_BIN" tools/research_wiki.py log wiki/ "<message>"` — append log entry
 - `"$PYTHON_BIN" tools/research_wiki.py maturity wiki/ --json` — wiki maturity (Stage 0 trigger + Growth Report)
 - `"$PYTHON_BIN" tools/research_wiki.py init wiki/` — initialize wiki structure (Stage 0)
-- `"$PYTHON_BIN" tools/fetch_s2.py search "{query}" --limit 20` — Semantic Scholar search (Stage 0)
+- `"$PYTHON_BIN" tools/fetch_literature.py search "{query}" --limit 20` — no-key literature search (Stage 0)
 
 ### Claude Code Native
 - `Read` — read pipeline-progress, wiki pages, RESEARCH_BRIEF

@@ -92,7 +92,7 @@ Set `WIKI_ROOT=wiki/`.
    - **Cite claim confidence**: when referencing claims, note their confidence and status
 3. If the question exceeds the wiki's current knowledge, honestly say so and suggest:
    - which papers to ingest to fill the gap
-   - possible search directions (arXiv keywords, Semantic Scholar queries)
+   - possible search directions (arXiv keywords, literature-search queries)
 
 ### Step 4: Assess Crystallize Value
 

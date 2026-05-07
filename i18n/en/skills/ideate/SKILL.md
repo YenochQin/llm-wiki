@@ -6,7 +6,7 @@ argument-hint: "[research-direction-or-topic] [--max-ideas N] [--skip-validation
 # /ideate
 
 > Generates high-quality research ideas through a 5-phase pipeline, grounded in the wiki knowledge base and external search.
-> Phase 1 scans the research landscape (wiki + WebSearch + S2), Phase 2 runs a dual-model brainstorm (Claude + Review LLM independently),
+> Phase 1 scans the research landscape (wiki + WebSearch + no-key literature search), Phase 2 runs a dual-model brainstorm (Claude + Review LLM independently),
 > Phase 3 applies a first-pass filter (feasibility + quick novelty check), Phase 4 performs deep validation (calls /novelty + /review),
 > Phase 5 writes to the wiki (ideas/ + graph edges), including eliminated ideas (failure reasons recorded as anti-repetition memory).
 
@@ -57,10 +57,10 @@ argument-hint: "[research-direction-or-topic] [--max-ideas N] [--skip-validation
    python3 tools/research_wiki.py maturity wiki/ --json
    ```
    Adjust subsequent behavior based on maturity level:
-   - **cold**: expand Phase 1 external search (WebSearch queries from 5 to 8, S2/DeepXiv limit from 20 to 30),
+   - **cold**: expand Phase 1 external search (WebSearch queries from 5 to 8, literature-search limit from 20 to 30),
      skip wiki internal context loading (empty, no value), annotate "cold-start mode: heavier external search"
    - **warm**: standard behavior (current default)
-   - **hot**: reduce Phase 1 external search (WebSearch queries from 5 to 2, S2/DeepXiv limit from 20 to 10),
+   - **hot**: reduce Phase 1 external search (WebSearch queries from 5 to 2, literature-search limit from 20 to 10),
      raise Phase 3 gap_alignment_bonus from +2 to +3, prioritize resolving weak claims already in the wiki
 3. **Snapshot wiki state** (for the Growth Report at the end):
    Save the JSON returned by maturity to memory variable `maturity_before`
@@ -80,27 +80,12 @@ Goal: build a comprehensive view of the target domain, including existing work, 
 
 2. **External search** (run in parallel using Agent tool):
    - **WebSearch**: search for recent 6-month papers and advances in the target direction (3–5 queries)
-   - **Semantic Scholar**:
+   - **No-key literature search**:
      ```bash
-     python3 tools/fetch_s2.py search "<direction-keywords>" --limit 20
+     python3 tools/fetch_literature.py search "<direction-keywords>" --limit 20
      ```
      Fetch details for the top 5 highly-cited papers
-   - **DeepXiv semantic search**:
-     ```bash
-     python3 tools/fetch_deepxiv.py search "<direction-keywords>" --mode hybrid --limit 20
-     ```
-     Fetch TLDR and keywords for top 5 most relevant results:
-     ```bash
-     python3 tools/fetch_deepxiv.py brief <arxiv_id>
-     ```
-     Semantic search supplements S2 keyword search for conceptually related papers that keyword search may miss.
-   - **DeepXiv trending papers**:
-     ```bash
-     python3 tools/fetch_deepxiv.py trending --days 14
-     ```
-     Trending papers indicate community focus areas, useful for discovering trend-driven gaps.
-   - **arXiv latest**: `site:arxiv.org <direction> 2025 2026`
-   - **If DeepXiv is unavailable**: skip DeepXiv search and trending, rely on S2 + WebSearch only (fallback to original behavior).
+   - **WebSearch (recent venues)**: search recent NeurIPS / ICML / ICLR / TMLR / domain-specific journals for `<direction-keywords> 2025 2026` to surface advances structured search may miss.
 
 3. **Compile landscape report** (internal use, not written to wiki):
    - Current SOTA methods and performance
@@ -351,7 +336,7 @@ Write the validated ideas to the wiki (including eliminated ideas, with their el
 
 ## Constraints
 
-- **Auto-switch to cold-start mode when wiki is cold**: expand external search (WebSearch 8 queries, S2/DeepXiv limit 30), do not block execution
+- **Auto-switch to cold-start mode when wiki is cold**: expand external search (WebSearch 8 queries, literature-search limit 30), do not block execution
 - **Every idea must have wiki grounding**: each idea must reference at least 2 wiki pages (paper/concept/claim)
 - **Banlist must be loaded**: Phase 1 must read failed ideas' failure_reason; Phase 2/3 must check for overlap
 - **Review LLM independence**: in Phase 2, Review LLM does not see Claude's idea list (cross-model-review.md)
@@ -364,8 +349,7 @@ Write the validated ideas to the wiki (including eliminated ideas, with their el
 
 - **Wiki is empty**: proceed with external search (Phase 1 sources B/C/D), but skip wiki internal context; prompt user to build the knowledge base first
 - **WebSearch unavailable**: skip external search, generate ideas from wiki internal knowledge only (degraded mode, noted in report)
-- **Semantic Scholar API unavailable**: skip S2 search, rely on DeepXiv + WebSearch for compensation
-- **DeepXiv API unavailable**: skip DeepXiv search and trending, fall back to S2 + WebSearch (original behavior)
+- **Literature API unavailable**: skip structured literature search, rely on WebSearch for compensation
 - **Review LLM unavailable**: Phase 2 uses Claude only (no dual-model diversity, noted in report)
 - **/novelty fails**: if novelty fails for a single idea in Phase 4, mark "novelty unverified" and continue
 - **/review fails**: if review fails in Phase 4, mark "unreviewed" and continue; recommend user manually runs /review
@@ -381,10 +365,7 @@ Write the validated ideas to the wiki (including eliminated ideas, with their el
 - `python3 tools/research_wiki.py rebuild-context-brief wiki/` — rebuild query_pack
 - `python3 tools/research_wiki.py rebuild-open-questions wiki/` — rebuild gap_map
 - `python3 tools/research_wiki.py log wiki/ "<message>"` — append log
-- `python3 tools/fetch_s2.py search "<query>" --limit 20` — Semantic Scholar search
-- `python3 tools/fetch_deepxiv.py search "<query>" --mode hybrid --limit 20` — DeepXiv semantic search
-- `python3 tools/fetch_deepxiv.py brief <arxiv_id>` — fetch paper TLDR
-- `python3 tools/fetch_deepxiv.py trending --days 14` — trending paper trends
+- `python3 tools/fetch_literature.py search "<query>" --limit 20` — no-key literature search
 
 ### Skills（via Skill tool）
 - `/novelty` — Phase 4 deep novelty validation

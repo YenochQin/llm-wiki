@@ -1,12 +1,12 @@
 ---
-description: Multi-source novelty verification — WebSearch + Semantic Scholar + wiki + Review LLM cross-verify — outputs novelty score and recommendations
+description: Multi-source novelty verification — WebSearch + no-key literature search + wiki + Review LLM cross-verify — outputs novelty score and recommendations
 argument-hint: <idea-description-or-slug>
 ---
 
 # /novelty
 
 > Verify the novelty of a research idea or method using multiple sources. Searches WebSearch,
-> Semantic Scholar, existing wiki work, and arXiv recent preprints, then Review LLM cross-verifies.
+> no-key literature search, existing wiki work, and arXiv recent preprints, then Review LLM cross-verifies.
 > Outputs a novelty score (1-5), closest prior work, differentiation points, and next-step recommendations.
 > Can be used standalone or called by /ideate Phase 4.
 
@@ -15,7 +15,7 @@ argument-hint: <idea-description-or-slug>
 - `target`: one of the following:
   - free-text description of the idea (a paragraph or a few sentences)
   - slug of an ideas/ page in the wiki (e.g. `sparse-lora-for-edge-devices`)
-  - paper title or arXiv URL (check novelty of that paper's method)
+  - paper title (check novelty of that paper's method)
 - `--quick`: fast mode, skip Review LLM cross-verify (Step 3), search only
 - `--verbose`: output full search results, not just summaries
 
@@ -52,7 +52,7 @@ argument-hint: <idea-description-or-slug>
 
 1. **If target is a slug**: read `wiki/ideas/{slug}.md`, extract title, Hypothesis, Approach sketch
 2. **If target is free text**: use directly
-3. **If target is an arXiv URL**: download the abstract, extract method description
+3. **If target is a paper title**: query `tools/fetch_literature.py search "<title>" --limit 5` to recover the abstract; if no provider has a match, ask the user for a description
 4. Extract the "method signature" from the target — the core elements of the method:
    - **What**: what it does (task / goal)
    - **How**: the method used (technical approach)
@@ -70,19 +70,14 @@ Execute the following searches in parallel (use Agent tool for concurrency):
 4. Competitor query: `<alternative-approach> + <same-task>`
 5. Recent query: `<method-keywords> + arXiv + 2025 2026`
 
-**Source B — Semantic Scholar + DeepXiv:**
+**Source B — no-key literature search:**
 ```bash
-python3 tools/fetch_s2.py search "<method-keywords>" --limit 20
-python3 tools/fetch_deepxiv.py search "<method-keywords>" --mode hybrid --limit 20
+python3 tools/fetch_literature.py search "<method-keywords>" --limit 20
 ```
-Merge results from both sources (deduplicate by arxiv_id). DeepXiv's hybrid semantic search finds semantically similar work that S2 keyword search may miss.
-- Fetch details and TLDR for top 5 results:
+- Fetch details for top 5 results:
 ```bash
-python3 tools/fetch_s2.py paper <s2_id>
-python3 tools/fetch_deepxiv.py brief <arxiv_id>
+python3 tools/fetch_literature.py paper <arxiv-id-or-doi>
 ```
-Use DeepXiv brief TLDRs to quickly judge method similarity.
-**If DeepXiv is unavailable**: fall back to S2 search only (original behavior).
 
 **Source C — Wiki Internal Search:**
 1. Scan Key idea and Method sections of all pages in `wiki/papers/`
@@ -92,8 +87,8 @@ Use DeepXiv brief TLDRs to quickly judge method similarity.
    - ideas with status = proposed/in_progress (avoid internal duplication)
 4. Read `wiki/graph/context_brief.md` for global perspective
 
-**Source D — Recent arXiv Preprints:**
-- Use WebSearch: `site:arxiv.org <method-keywords> 2025 2026`
+**Source D — Recent venues (WebSearch):**
+- Search recent NeurIPS / ICML / ICLR / TMLR / domain-specific journals for `<method-keywords> 2025 2026` to surface very recent work structured search may miss.
 
 ### Step 3: Review LLM Cross-Verify
 
@@ -168,15 +163,14 @@ Synthesize Step 2 search results and Step 3 Review LLM assessment into a structu
 - **Do not modify the wiki**: novelty check is a pure query; all results are output to terminal only
 - **Conservative scoring**: underestimate novelty rather than overestimate to avoid wasting effort on known work
 - **Must check failed ideas**: ideas with status=failed in wiki/ideas/ are important anti-repetition signals
-- **Search coverage**: at least 5 distinct WebSearch queries + Semantic Scholar + wiki internal search
+- **Search coverage**: at least 5 distinct WebSearch queries + no-key literature search + wiki internal search
 - **Review LLM independence**: do not include Claude's own novelty judgment when submitting to Review LLM; let Review LLM assess independently
-- **Cite real sources**: all prior work listed in the report must be real (returned by WebSearch/S2); do not fabricate
+- **Cite real sources**: all prior work listed in the report must be real (returned by WebSearch/literature search); do not fabricate
 
 ## Error Handling
 
-- **WebSearch unavailable**: skip Sources A and D, rely only on S2 + wiki search; note limited coverage in report
-- **Semantic Scholar API unavailable**: skip S2 portion, use DeepXiv + WebSearch as compensation
-- **DeepXiv API unavailable**: skip DeepXiv portion, rely on S2 + WebSearch (fall back to original behavior)
+- **WebSearch unavailable**: skip Sources A and D, rely only on literature + wiki search; note limited coverage in report
+- **Literature API unavailable**: skip structured literature search, rely on WebSearch + wiki search; note limited coverage in report
 - **Review LLM unavailable**: skip Step 3; annotate report with "Review LLM cross-verify unavailable, single-model assessment only"
 - **Wiki empty**: proceed with external searches normally; annotate wiki internal search section with "wiki empty"
 - **idea slug not found**: prompt user to check the slug, list available slugs in wiki/ideas/
@@ -184,10 +178,8 @@ Synthesize Step 2 search results and Step 3 Review LLM assessment into a structu
 ## Dependencies
 
 ### Tools（via Bash）
-- `python3 tools/fetch_s2.py search "<query>" --limit 20` — Semantic Scholar keyword search
-- `python3 tools/fetch_s2.py paper <s2_id>` — fetch paper details
-- `python3 tools/fetch_deepxiv.py search "<query>" --mode hybrid --limit 20` — DeepXiv semantic search
-- `python3 tools/fetch_deepxiv.py brief <arxiv_id>` — fetch paper TLDR for similarity judgment
+- `python3 tools/fetch_literature.py search "<query>" --limit 20` — no-key literature search
+- `python3 tools/fetch_literature.py paper <arxiv-id-or-doi>` — fetch paper details
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Review LLM cross-verify (Step 3)

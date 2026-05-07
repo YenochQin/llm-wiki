@@ -30,7 +30,6 @@ Updated wiki files, `index.md`, `log.md`
 
 1. **Add raw sources**:
    - If the user provides a local path: copy to the corresponding directory under `raw/`
-   - If the user provides an arXiv URL: download to `raw/papers/`
    - If the user provides a web URL: fetch readable markdown/text content and save to `raw/web/`
 2. **Delete raw sources**:
    - Confirm then execute deletion

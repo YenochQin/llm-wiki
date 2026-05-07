@@ -1,5 +1,5 @@
 ---
-description: Interactive API key configuration guide — checks llm-wiki user config, then walks you through MinerU, Semantic Scholar, and Review LLM setup
+description: Interactive API key configuration guide — checks llm-wiki user config, then walks you through MinerU and Review LLM setup
 ---
 
 # /setup
@@ -50,7 +50,6 @@ except Exception:
     pass
 keys = {
     'MINERU_API_TOKEN':         'MinerU API token',
-    'SEMANTIC_SCHOLAR_API_KEY': 'Semantic Scholar',
     'LLM_API_KEY':              'Review LLM (API key)',
     'LLM_BASE_URL':             'Review LLM (base URL)',
     'LLM_MODEL':                'Review LLM (model)',
@@ -78,9 +77,6 @@ llm-wiki Configuration Status
 
 Required for PDF ingest:
 ✗  MinerU API token       — not set  (PDF ingest will fail — get free token)
-
-Recommended:
-✗  Semantic Scholar        — not set  (citation expansion 3x slower — get free key)
 
 Optional:
 ✗  Review LLM              — not set  (cross-model review unavailable)
@@ -122,34 +118,14 @@ No token is required for the local backend.
 
 ---
 
-#### 4b: Semantic Scholar API Key
-
-**Explain**: "Semantic Scholar gives citation data and paper search.
-Used by /ingest, /init, /novelty, /ideate. Free to get.
-**Recommended** — without it, /init runs 3x slower and citation-chain expansion is much less effective."
-
-**Guide to get it**: "Go to https://www.semanticscholar.org/product/api and click 'Get API Key'. It's free."
-
-**Ask**: "Do you have a Semantic Scholar API key? (paste it, or 'skip')"
-
-**If provided**, write to the llm-wiki user config file:
-```python
-# Read current user config .env, update or append SEMANTIC_SCHOLAR_API_KEY=<value>
-```
-Use the Edit tool to update the user config file:
-- If `SEMANTIC_SCHOLAR_API_KEY=` line exists (even empty), replace it
-- Otherwise append `SEMANTIC_SCHOLAR_API_KEY=<value>`
-
----
-
-#### 4c: Review LLM
+#### 4b: Review LLM
 
 **Explain**: "The Review LLM connects llm-wiki to a second AI model for independent
 adversarial review. It's used by /review, /novelty, /ideate, /paper-plan, /paper-draft,
 /rebuttal, /refine, /exp-eval, and /exp-design. Works with any OpenAI-compatible API.
 Without it, those skills skip the cross-model review step (everything still works)."
 
-**Present the provider table** from `config/setup-guide.md` (Key 3 section).
+**Present the provider table** from `config/setup-guide.md` (Key 2 section).
 
 **Clarify what 'OpenAI-compatible' means** if the user asks: any API that accepts
 `POST /chat/completions` with `{"model": "...", "messages": [...]}` in the OpenAI format.
@@ -182,7 +158,7 @@ try:
     import _env
 except Exception:
     pass
-keys = ['MINERU_API_TOKEN', 'SEMANTIC_SCHOLAR_API_KEY', 'LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL']
+keys = ['MINERU_API_TOKEN', 'LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL']
 for k in keys:
     v = os.environ.get(k, '').strip()
     print(f'SET   {k}' if v else f'UNSET {k}')
@@ -199,8 +175,8 @@ If this is a fresh install (no `wiki/` directory):
 Configuration done. Next:
   • Put your own papers in raw/papers/ (.pdf — MinerU will convert to mineru-md)
   • Optional: add intent notes to raw/notes/ and saved pages to raw/web/
-  • /init and direct local /ingest will manage generated inputs under raw/discovered/ and raw/tmp/
-  • Run: /init [your-research-topic]
+  • /init and direct local /ingest will manage prepared inputs under raw/tmp/
+  • Run: /init
 ```
 
 If `wiki/` already exists:
