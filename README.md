@@ -37,6 +37,24 @@ skills/      — canonical skills entrypoint for the active language; `.claude/s
 mcp-servers/ — optional project MCP servers, including `llm-review` for cross-model review.
 ```
 
+`wiki/` and `raw/` may live outside this code repository. Put absolute paths in
+`config/paths.json` (ignored by git; see `config/paths.json.example`) or run:
+
+```bash
+uv run python tools/separate_wiki_repository.py \
+  --wiki-root /absolute/path/to/wiki \
+  --raw-root /absolute/path/to/raw \
+  --mode copy --yes
+
+uv run python tools/clean_wiki_repository.py --target all --yes
+```
+
+Core graph commands can use `@wiki` to resolve the configured vault path:
+
+```bash
+uv run python tools/research_wiki.py rebuild-index @wiki
+```
+
 ## Skills (21)
 
 `setup, reset, init, prefill, ingest, reingest, discover, ask, edit, check, novelty, review, ideate, exp-design, exp-eval, refine, paper-plan, paper-draft, survey, research, rebuttal`.
@@ -58,7 +76,7 @@ All Python operations run through `uv` — no manual venv activation needed:
 ```bash
 uv run python tools/research_wiki.py --help
 uv run python tools/lint.py
-uv run python tools/prepare_paper_source.py --raw-root raw --source raw/papers/<file>.pdf
+uv run python tools/prepare_paper_source.py --source raw/papers/<file>.pdf
 ```
 
 The optional local MinerU backend (downloads several GB of models on first run) is opt-in:

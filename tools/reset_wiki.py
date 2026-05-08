@@ -26,6 +26,8 @@ import shutil
 import sys
 from pathlib import Path
 
+from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
+
 ENTITY_DIRS = [
     "papers", "concepts", "topics", "people",
     "ideas", "experiments", "claims", "Summary",
@@ -60,36 +62,47 @@ def _list_source_entries(directory: Path) -> list[Path]:
     return [p for p in directory.iterdir() if p.name != ".gitkeep"]
 
 
-def plan(project_root: Path, scopes: list[str]) -> dict:
+def _show(path: Path, project_root: Path) -> str:
+    return display_path(path, project_root)
+
+
+def plan(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[str]) -> dict:
     """Return a structured plan of what will be deleted/reset."""
-    p: dict = {"scopes": scopes, "delete_files": [], "reset_files": [], "actions": []}
-    wiki = project_root / "wiki"
+    p: dict = {
+        "scopes": scopes,
+        "wiki_root": _show(wiki_root, project_root),
+        "raw_root": _show(raw_root, project_root),
+        "delete_files": [],
+        "reset_files": [],
+        "actions": [],
+    }
+    wiki = wiki_root
 
     if "wiki" in scopes:
         for entity in ENTITY_DIRS:
             for f in _list_md(wiki / entity):
-                p["delete_files"].append(str(f.relative_to(project_root)))
+                p["delete_files"].append(_show(f, project_root))
         for f in _list_md(wiki / "outputs"):
-            p["delete_files"].append(str(f.relative_to(project_root)))
+            p["delete_files"].append(_show(f, project_root))
         for f in _list_source_entries(wiki / "sources"):
-            p["delete_files"].append(str(f.relative_to(project_root)))
+            p["delete_files"].append(_show(f, project_root))
         # Scaffold files — deleted, not reset (init recreates them)
         if (wiki / "index.md").exists():
-            p["delete_files"].append("wiki/index.md")
+            p["delete_files"].append(_show(wiki / "index.md", project_root))
         if (wiki / "log.md").exists():
-            p["delete_files"].append("wiki/log.md")
+            p["delete_files"].append(_show(wiki / "log.md", project_root))
         for gf in GRAPH_FILES:
             gf_path = wiki / "graph" / gf
             if gf_path.exists():
-                p["delete_files"].append(f"wiki/graph/{gf}")
+                p["delete_files"].append(_show(gf_path, project_root))
 
     if "raw" in scopes:
         for sub in RAW_SUBDIRS:
-            for f in _list_raw(project_root / "raw" / sub):
-                p["delete_files"].append(str(f.relative_to(project_root)))
+            for f in _list_raw(raw_root / sub):
+                p["delete_files"].append(_show(f, project_root))
 
     if "log" in scopes and "wiki" not in scopes:
-        p["reset_files"].append("wiki/log.md")
+        p["reset_files"].append(_show(wiki / "log.md", project_root))
 
     if "checkpoints" in scopes:
         p["actions"].append("research_wiki.py checkpoint-clear")
@@ -97,11 +110,11 @@ def plan(project_root: Path, scopes: list[str]) -> dict:
     return p
 
 
-def execute(project_root: Path, scopes: list[str]) -> dict:
+def execute(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[str]) -> dict:
     """Apply the plan. Returns counts of what was actually changed."""
     deleted = 0
     reset = 0
-    wiki = project_root / "wiki"
+    wiki = wiki_root
 
     if "wiki" in scopes:
         for entity in ENTITY_DIRS + ["outputs"]:
@@ -142,13 +155,13 @@ def execute(project_root: Path, scopes: list[str]) -> dict:
 
     if "raw" in scopes:
         for sub in RAW_SUBDIRS:
-            for f in _list_raw(project_root / "raw" / sub):
+            for f in _list_raw(raw_root / sub):
                 if f.is_dir():
                     shutil.rmtree(f)
                 else:
                     f.unlink()
                 deleted += 1
-            keep = project_root / "raw" / sub / ".gitkeep"
+            keep = raw_root / sub / ".gitkeep"
             if not keep.parent.exists():
                 keep.parent.mkdir(parents=True, exist_ok=True)
             if not keep.exists():
@@ -173,7 +186,10 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--scope", required=True,
                    help="Comma-separated list, or one of: wiki, raw, log, checkpoints, all")
-    p.add_argument("--project-root", default=".", help="Project root (default: cwd)")
+    p.add_argument("--project-root", default=None, type=Path, help="Project root (default: auto-detect)")
+    p.add_argument("--wiki-root", default=None, type=Path, help="Wiki vault root (default: config/paths.json or ./wiki)")
+    p.add_argument("--raw-root", default=None, type=Path, help="Raw source root (default: config/paths.json or ./raw)")
+    p.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path, help="Path config JSON")
     p.add_argument("--yes", action="store_true", help="Apply changes (default: dry-run plan only)")
     p.add_argument("--dry-run", action="store_true", help="Print plan and exit (default behavior)")
     args = p.parse_args()
@@ -189,14 +205,20 @@ def main() -> None:
                                   "valid": ALL_SCOPES}))
                 sys.exit(1)
 
-    root = Path(args.project_root).resolve()
-    the_plan = plan(root, scopes)
+    paths = load_paths(
+        config_path=args.paths_config,
+        project_root=args.project_root,
+        wiki_root=args.wiki_root,
+        raw_root=args.raw_root,
+    )
+    root = paths.project_root
+    the_plan = plan(root, paths.wiki_root, paths.raw_root, scopes)
 
     if not args.yes or args.dry_run:
         print(json.dumps({"status": "plan", **the_plan}, ensure_ascii=False, indent=2))
         return
 
-    result = execute(root, scopes)
+    result = execute(root, paths.wiki_root, paths.raw_root, scopes)
     print(json.dumps({"status": "ok", "scopes": scopes, **result}, ensure_ascii=False))
 
 

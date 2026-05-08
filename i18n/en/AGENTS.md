@@ -37,7 +37,8 @@ Keep this mental map in immediate context:
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
 - `wiki/sources/papers/` stores MinerU-converted paper markdown; source PDFs stay in `raw/papers/`
 - `wiki/sources/notes/` and `wiki/sources/web/` store vault-visible copies of notes and web markdown/text
-- `config/` holds environment templates (`.env.example`, `mineru.env.example`, `settings.local.json.example`)
+- `config/` holds environment templates (`.env.example`, `settings.local.json.example`, `paths.json.example`)
+- `config/paths.json` may connect this code repository to an external wiki vault and raw source directory by absolute path; it is machine-local and not committed
 
 ---
 
@@ -137,8 +138,9 @@ Standard log line:
 - prefer `.venv/bin/python` (Unix/macOS) or `.venv/Scripts/python.exe` (Windows) when `.venv/` exists
 - otherwise fall back to `python3` (Unix/macOS) or `python` (Windows)
 - skills typically run tools as `"$PYTHON_BIN" tools/<name>.py …`; equivalently, `uv run --python .venv/bin/python python tools/<name>.py …`
-- Python tools auto-load most API keys from `~/.env` and project-root `.env` via `tools/_env.py`; MinerU cloud reads `MINERU_API_TOKEN` from the process environment or `~/.config/MinerU/mineru.env` / `$XDG_CONFIG_HOME/MinerU/mineru.env`
-- the optional MinerU local backend is opt-in: `uv pip install -e ".[local]"` (downloads several GB of model weights)
+- Python tools load API keys through `tools/_env.py`: first process environment, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`); project-root `.env` and `~/.env` are legacy fallbacks only
+- Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`) to set external `wiki_root` / `raw_root`; without config, tools fall back to in-repo `wiki/` and `raw/`
+- the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
 
 ---
 
@@ -157,8 +159,9 @@ Standard log line:
 - **Failed ideas must record reason**: `failure_reason` is anti-repetition memory — prevents re-exploring known dead ends.
 - **Claim confidence range**: 0.0-1.0; re-evaluate every time evidence changes.
 - **Experiments must link to a claim**: every experiment requires `target_claim`; results are written back to the claim's evidence after the user runs the experiment externally and reports results to `/exp-eval`.
-- **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv pip install -e ".[local]"`) for offline operation.
+- **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
 - **Literature lookup**: `tools/fetch_literature.py` uses no-key Crossref search and metadata. Citation graph coverage is best-effort because public sources expose fewer citation edges than key-gated services.
+- **Repository and wiki can be separated**: use `tools/separate_wiki_repository.py` to copy/move `wiki/` and `raw/` to external absolute paths and write `config/paths.json`; use `tools/clean_wiki_repository.py` to remove leftover in-repo `wiki/` and `raw/`. Cleanup is dry-run by default and deletes only with `--yes`.
 
 ---
 

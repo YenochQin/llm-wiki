@@ -32,6 +32,8 @@ import re
 import sys
 from pathlib import Path
 
+from _paths import DEFAULT_CONFIG_PATH, load_paths
+
 # Schema constants — single source of truth shared with research_wiki.py.
 # See tools/_schemas.py for the spec; do not duplicate the definitions here.
 from _schemas import (
@@ -899,7 +901,10 @@ def _fix_missing_field(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixRe
 
 def main():
     parser = argparse.ArgumentParser(description="OmegaWiki linter")
-    parser.add_argument("--wiki-dir", default="wiki/", help="Path to wiki directory")
+    parser.add_argument("--wiki-dir", default=None, type=Path,
+                        help="Path to wiki directory (default: config/paths.json or ./wiki)")
+    parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path,
+                        help="Path config JSON (default: config/paths.json)")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     parser.add_argument("--fix", action="store_true",
                         help="Auto-fix deterministic issues (xref reverse links, missing field defaults)")
@@ -909,7 +914,8 @@ def main():
                         help="Show actionable suggestions for non-auto-fixable issues")
     args = parser.parse_args()
 
-    wiki_dir = Path(args.wiki_dir)
+    paths = load_paths(config_path=args.paths_config, wiki_root=args.wiki_dir)
+    wiki_dir = paths.wiki_root
     if not wiki_dir.exists():
         print(f"Error: {wiki_dir} does not exist", file=sys.stderr)
         sys.exit(1)

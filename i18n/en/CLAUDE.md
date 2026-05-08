@@ -37,7 +37,8 @@ Keep this mental map in immediate context:
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
 - `wiki/sources/papers/` stores MinerU-converted paper markdown; source PDFs stay in `raw/papers/`
 - `wiki/sources/notes/` and `wiki/sources/web/` store vault-visible copies of notes and web markdown/text
-- `config/` holds environment templates (`.env.example`, `settings.local.json.example`)
+- `config/` holds environment templates (`.env.example`, `settings.local.json.example`, `paths.json.example`)
+- `config/paths.json` may connect this code repository to an external wiki vault and raw source directory by absolute path; it is machine-local and not committed
 
 ---
 
@@ -138,6 +139,7 @@ Standard log line:
 - otherwise fall back to `python3` (Unix/macOS) or `python` (Windows)
 - skills typically run tools as `"$PYTHON_BIN" tools/<name>.py …`; equivalently, `uv run --python .venv/bin/python python tools/<name>.py …`
 - Python tools auto-load API keys from process env first, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`) via `tools/_env.py`; project-root `.env` and `~/.env` are legacy fallbacks only
+- Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`) to set external `wiki_root` / `raw_root`; without config, tools fall back to in-repo `wiki/` and `raw/`
 - the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
 
 ---
@@ -159,6 +161,7 @@ Standard log line:
 - **Experiments must link to a claim**: every experiment requires `target_claim`; results are written back to the claim's evidence after the user runs the experiment externally and reports results to `/exp-eval`.
 - **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
 - **Literature lookup**: `tools/fetch_literature.py` uses no-key Crossref search and metadata. Citation graph coverage is best-effort because public sources expose fewer citation edges than key-gated services.
+- **Repository and wiki can be separated**: use `tools/separate_wiki_repository.py` to copy/move `wiki/` and `raw/` to external absolute paths and write `config/paths.json`; use `tools/clean_wiki_repository.py` to remove leftover in-repo `wiki/` and `raw/`. Cleanup is dry-run by default and deletes only with `--yes`.
 
 ---
 

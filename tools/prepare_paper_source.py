@@ -47,9 +47,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import _mineru
+from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
 from research_wiki import slugify
 
-WIKI_SOURCE_SUBDIR = Path("wiki") / "sources"
 PREPARED_SUBDIR = "prepared"
 LEGACY_PREPARED_SUBDIR = "tmp"
 
@@ -536,8 +536,10 @@ def _project_root(raw_root: Path) -> Path:
     return raw_root.resolve().parent
 
 
-def _source_output_dir(raw_root: Path) -> Path:
-    return _project_root(raw_root) / WIKI_SOURCE_SUBDIR / "papers"
+def _source_output_dir(raw_root: Path, wiki_root: Path | None = None) -> Path:
+    if wiki_root is not None:
+        return wiki_root.resolve() / "sources" / "papers"
+    return _project_root(raw_root) / "wiki" / "sources" / "papers"
 
 
 def prepare(
@@ -548,18 +550,21 @@ def prepare(
     language: str = "en",
     backend: str = "api",
     overwrite: bool = False,
+    wiki_root: Path | None = None,
+    project_root: Path | None = None,
 ) -> dict:
     """Run MinerU on a PDF and write a structured markdown source to wiki/sources/papers/.
 
     Returns the manifest `/ingest` consumes.
     """
     warnings: list[str] = []
-    output_dir = _source_output_dir(raw_root)
+    output_dir = _source_output_dir(raw_root, wiki_root=wiki_root)
     output_dir.mkdir(parents=True, exist_ok=True)
+    display_root = project_root or _project_root(raw_root)
 
     if not pdf.exists():
         return {
-            "canonical_ingest_path": str(pdf),
+            "canonical_ingest_path": display_path(pdf, display_root),
             "prepared_path": None,
             "ingest_format": "pdf",
             "title": title_override,
@@ -575,7 +580,7 @@ def prepare(
         md_path, json_path = _mineru.extract(pdf, cache_dir, language, backend)
     except Exception as exc:
         return {
-            "canonical_ingest_path": str(pdf),
+            "canonical_ingest_path": display_path(pdf, display_root),
             "prepared_path": None,
             "ingest_format": "pdf",
             "title": title_override,
@@ -605,14 +610,14 @@ def prepare(
         if _same_source(existing_source, pdf):
             existing_text = legacy_prepared_path.read_text(encoding="utf-8", errors="ignore")
             return {
-                "canonical_ingest_path": str(legacy_prepared_path),
-                "prepared_path": str(legacy_prepared_path),
+                "canonical_ingest_path": display_path(legacy_prepared_path, display_root),
+                "prepared_path": display_path(legacy_prepared_path, display_root),
                 "ingest_format": "mineru-md",
                 "title": existing_front.get("title") or title,
                 "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
                 "warnings": [
-                    f"legacy prepared source reused: {legacy_prepared_path}",
-                    f"new prepared sources are written under {output_dir}",
+                    f"legacy prepared source reused: {display_path(legacy_prepared_path, display_root)}",
+                    f"new prepared sources are written under {display_path(output_dir, display_root)}",
                 ],
                 "usable": True,
             }
@@ -622,14 +627,14 @@ def prepare(
         if _same_source(existing_source, pdf):
             existing_text = legacy_out_path.read_text(encoding="utf-8", errors="ignore")
             return {
-                "canonical_ingest_path": str(legacy_out_path),
-                "prepared_path": str(legacy_out_path),
+                "canonical_ingest_path": display_path(legacy_out_path, display_root),
+                "prepared_path": display_path(legacy_out_path, display_root),
                 "ingest_format": "mineru-md",
                 "title": existing_front.get("title") or title,
                 "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
                 "warnings": [
-                    f"legacy prepared source reused: {legacy_out_path}",
-                    f"new prepared sources are written under {output_dir}",
+                    f"legacy prepared source reused: {display_path(legacy_out_path, display_root)}",
+                    f"new prepared sources are written under {display_path(output_dir, display_root)}",
                 ],
                 "usable": True,
             }
@@ -639,8 +644,8 @@ def prepare(
         existing_text = out_path.read_text(encoding="utf-8", errors="ignore")
         if _same_source(existing_source, pdf):
             return {
-                "canonical_ingest_path": str(out_path),
-                "prepared_path": str(out_path),
+                "canonical_ingest_path": display_path(out_path, display_root),
+                "prepared_path": display_path(out_path, display_root),
                 "ingest_format": "mineru-md",
                 "title": existing_front.get("title") or title,
                 "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
@@ -648,13 +653,13 @@ def prepare(
                 "usable": True,
             }
         return {
-            "canonical_ingest_path": str(out_path),
-            "prepared_path": str(out_path),
+            "canonical_ingest_path": display_path(out_path, display_root),
+            "prepared_path": display_path(out_path, display_root),
             "ingest_format": "mineru-md",
             "title": title,
             "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
             "warnings": [
-                f"prepared source collision: another source already uses this title/slug: {out_path}",
+                f"prepared source collision: another source already uses this title/slug: {display_path(out_path, display_root)}",
                 "Rerun with --overwrite only after confirming replacement with the user.",
             ],
             "usable": False,
@@ -664,7 +669,7 @@ def prepare(
 
     if not body.strip():
         return {
-            "canonical_ingest_path": str(_source_output_dir(raw_root) / f"{slug}.md"),
+            "canonical_ingest_path": display_path(_source_output_dir(raw_root, wiki_root=wiki_root) / f"{slug}.md", display_root),
             "prepared_path": None,
             "ingest_format": "mineru-md",
             "title": title,
@@ -715,8 +720,8 @@ def prepare(
     )
 
     return {
-        "canonical_ingest_path": str(out_path),
-        "prepared_path": str(out_path),
+        "canonical_ingest_path": display_path(out_path, display_root),
+        "prepared_path": display_path(out_path, display_root),
         "ingest_format": "mineru-md",
         "title": title,
         "abstract_excerpt": _build_abstract_excerpt(body),
@@ -730,6 +735,8 @@ def prepare_paper_source(
     raw_root: Path,
     title: str = "",
     overwrite: bool = False,
+    wiki_root: Path | None = None,
+    project_root: Path | None = None,
 ) -> dict:
     """Compatibility wrapper used by init_discovery.py."""
     result = prepare(
@@ -737,11 +744,13 @@ def prepare_paper_source(
         raw_root=raw_root,
         title_override=title,
         overwrite=overwrite,
+        wiki_root=wiki_root,
+        project_root=project_root,
     )
     result.setdefault("candidate_id", _local_candidate_id(path, raw_root))
     result.setdefault("source_kind", "paper")
-    result.setdefault("source_path", _project_relative(path, raw_root))
-    result.setdefault("resolved_source_path", _project_relative(path, raw_root))
+    result.setdefault("source_path", _project_relative(path, raw_root, project_root=project_root))
+    result.setdefault("resolved_source_path", _project_relative(path, raw_root, project_root=project_root))
     result.setdefault("canonical_read_path", result.get("canonical_ingest_path", ""))
     result.setdefault("original_format", path.suffix.lower().lstrip(".") or "file")
     return result
@@ -756,19 +765,39 @@ def _local_candidate_id(path: Path, raw_root: Path) -> str:
     return f"local:{slug or path.stem.lower()}"
 
 
-def _project_relative(path: Path, raw_root: Path) -> str:
+def _project_relative(path: Path, raw_root: Path, project_root: Path | None = None) -> str:
+    if project_root is not None:
+        return display_path(path, project_root)
     try:
         return str(path.resolve().relative_to(raw_root.resolve().parent))
     except ValueError:
         return str(path)
 
 
+def _resolve_source_path(source: Path, raw_root: Path, project_root: Path) -> Path:
+    if source.is_absolute():
+        return source.resolve()
+    candidates = [(project_root / source).resolve(), (raw_root / source).resolve()]
+    parts = source.parts
+    if parts and parts[0] == "raw":
+        candidates.append((raw_root / Path(*parts[1:])).resolve())
+    candidates.append((raw_root / "papers" / source.name).resolve())
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Prepare a local PDF for /ingest via the MinerU pipeline.",
     )
-    parser.add_argument("--raw-root", required=True, type=Path,
-                        help="Wiki raw root (e.g. 'raw'). Output goes under wiki/sources/papers/.")
+    parser.add_argument("--raw-root", default=None, type=Path,
+                        help="Raw source root. Defaults to config/paths.json or ./raw.")
+    parser.add_argument("--wiki-root", default=None, type=Path,
+                        help="Wiki vault root. Defaults to config/paths.json or ./wiki.")
+    parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path,
+                        help="Path config JSON (default: config/paths.json).")
     parser.add_argument("--source", required=True, type=Path,
                         help="Path to a local PDF to prepare.")
     parser.add_argument("--title", default="",
@@ -782,14 +811,18 @@ def main() -> None:
                         help="Replace an existing wiki/sources/papers/<slug>.md after user confirmation.")
     args = parser.parse_args()
 
+    paths = load_paths(config_path=args.paths_config, wiki_root=args.wiki_root, raw_root=args.raw_root)
+    source = _resolve_source_path(args.source, paths.raw_root, paths.project_root)
     result = prepare(
-        pdf=args.source,
-        raw_root=args.raw_root,
+        pdf=source,
+        raw_root=paths.raw_root,
         title_override=args.title,
         cache_root=args.cache_root,
         language=args.language,
         backend=args.backend,
         overwrite=args.overwrite,
+        wiki_root=paths.wiki_root,
+        project_root=paths.project_root,
     )
     print(json.dumps(result, ensure_ascii=False))
     if not result.get("usable"):

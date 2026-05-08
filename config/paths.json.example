@@ -1,0 +1,4 @@
+{
+  "wiki_root": "/absolute/path/to/your/obsidian-vault-or-wiki-directory",
+  "raw_root": "/absolute/path/to/your/raw-source-directory"
+}

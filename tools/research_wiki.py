@@ -61,6 +61,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from _paths import load_paths
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -2751,6 +2753,9 @@ def main():
                    help="If given, print the raw value; otherwise print the whole metadata dict as JSON")
 
     args = parser.parse_args()
+
+    if hasattr(args, "wiki_root") and args.wiki_root in {"@wiki", "@configured"}:
+        args.wiki_root = str(load_paths().wiki_root)
 
     if args.command == "init":
         init_wiki(args.wiki_root)

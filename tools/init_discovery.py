@@ -29,10 +29,10 @@ from typing import Any
 
 import _env  # noqa: F401 — load .env files for child tools
 import prepare_paper_source as paper_source
+from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
 from research_wiki import slugify
 
 TEXT_SUFFIXES = {".md", ".txt", ".html", ".htm"}
-SOURCE_SUBDIR = Path("wiki") / "sources"
 
 
 def _paper_entry_match_key(entry: dict[str, Any]) -> tuple[str, str]:
@@ -73,7 +73,9 @@ def _project_root(raw_root: Path) -> Path:
     return raw_root.resolve().parent
 
 
-def _relative_to_project(path: Path, raw_root: Path) -> str:
+def _relative_to_project(path: Path, raw_root: Path, project_root: Path | None = None) -> str:
+    if project_root is not None:
+        return display_path(path, project_root)
     return str(path.resolve().relative_to(_project_root(raw_root)))
 
 
@@ -88,6 +90,9 @@ def _normalize_prepare_source_path(raw_root: Path, source_path: str) -> str:
     else:
         project_root = _project_root(raw_root)
         resolved = (project_root / raw_source).resolve()
+        parts = candidate.parts
+        if not resolved.exists() and parts and parts[0] == "raw":
+            resolved = (raw_root / Path(*parts[1:])).resolve()
         if not resolved.exists() and not raw_source.startswith("raw/"):
             resolved = (raw_root / raw_source).resolve()
 
@@ -211,17 +216,22 @@ def _ingest_format_from_path(path_str: str) -> str:
     return "directory"
 
 
-def _prepare_text_entry(path: Path, raw_root: Path, kind: str) -> dict[str, Any] | None:
+def _prepare_text_entry(
+    path: Path,
+    raw_root: Path,
+    kind: str,
+    wiki_root: Path,
+    project_root: Path,
+) -> dict[str, Any] | None:
     text = _read_text(path, limit=120000)
     if not text.strip():
         return None
-    source_rel = _relative_to_project(path, raw_root)
-    project_root = _project_root(raw_root)
+    source_rel = _relative_to_project(path, raw_root, project_root=project_root)
     relative_name = path.relative_to(raw_root / kind)
-    prepared_path = project_root / SOURCE_SUBDIR / kind / relative_name
+    prepared_path = wiki_root / "sources" / kind / relative_name
     prepared_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(path, prepared_path)
-    prepared_rel = _relative_to_project(prepared_path, raw_root)
+    prepared_rel = _relative_to_project(prepared_path, raw_root, project_root=project_root)
     title = _guess_title_from_text(text, path.stem)
     return {
         "entry_id": f"{kind}:{_path_slug(path.relative_to(raw_root))}",
@@ -238,17 +248,33 @@ def _prepare_text_entry(path: Path, raw_root: Path, kind: str) -> dict[str, Any]
     }
 
 
-def _prepare_paper_entry(path: Path, raw_root: Path, title: str = "") -> dict[str, Any]:
-    return paper_source.prepare_paper_source(path, raw_root, title=title)
+def _prepare_paper_entry(
+    path: Path,
+    raw_root: Path,
+    wiki_root: Path,
+    project_root: Path,
+    title: str = "",
+) -> dict[str, Any]:
+    return paper_source.prepare_paper_source(
+        path,
+        raw_root,
+        wiki_root=wiki_root,
+        project_root=project_root,
+        title=title,
+    )
 
 
 def prepare_inputs(
     raw_root: Path,
+    wiki_root: Path | None = None,
+    project_root: Path | None = None,
     pdf_titles: dict[str, Any] | None = None,
     warning_sink: list[str] | None = None,
 ) -> dict[str, Any]:
     raw_root = raw_root.resolve()
-    source_root = _project_root(raw_root) / SOURCE_SUBDIR
+    project_root = (project_root or _project_root(raw_root)).resolve()
+    wiki_root = (wiki_root or (project_root / "wiki")).resolve()
+    source_root = wiki_root / "sources"
     (source_root / "papers").mkdir(parents=True, exist_ok=True)
     (source_root / "notes").mkdir(parents=True, exist_ok=True)
     (source_root / "web").mkdir(parents=True, exist_ok=True)
@@ -262,13 +288,15 @@ def prepare_inputs(
         for entry in sorted(papers_root.iterdir()):
             if entry.name == ".gitkeep":
                 continue
-            source_rel = _relative_to_project(entry, raw_root)
-            recovered = normalized_handoffs.get(source_rel, {})
+            source_rel = _relative_to_project(entry, raw_root, project_root=project_root)
+            raw_relative_source_rel = _relative_to_project(entry, raw_root)
+            recovered = normalized_handoffs.get(source_rel) or normalized_handoffs.get(raw_relative_source_rel, {})
             recovered_title = recovered.get("title", "")
             if recovered_title:
                 seen_title_keys.add(source_rel)
+                seen_title_keys.add(raw_relative_source_rel)
             paper_entries.append(
-                _prepare_paper_entry(entry, raw_root, title=recovered_title)
+                _prepare_paper_entry(entry, raw_root, wiki_root, project_root, title=recovered_title)
             )
 
     deduped_papers: dict[str, dict[str, Any]] = {}
@@ -303,13 +331,13 @@ def prepare_inputs(
         for path in sorted(base.rglob("*")):
             if path.is_dir() or path.name == ".gitkeep" or path.suffix.lower() not in TEXT_SUFFIXES:
                 continue
-            record = _prepare_text_entry(path, raw_root, kind)
+            record = _prepare_text_entry(path, raw_root, kind, wiki_root, project_root)
             if record:
                 other_entries.append(record)
 
     return {
-        "raw_root": _relative_to_project(raw_root, raw_root),
-        "prepared_root": _relative_to_project(source_root, raw_root),
+        "raw_root": _relative_to_project(raw_root, raw_root, project_root=project_root),
+        "prepared_root": _relative_to_project(source_root, raw_root, project_root=project_root),
         "entries": list(deduped_papers.values()) + other_entries,
     }
 
@@ -360,7 +388,9 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_prepare = sub.add_parser("prepare", help="Prepare local raw paper inputs into wiki/sources/ and emit a manifest")
-    p_prepare.add_argument("--raw-root", default="raw")
+    p_prepare.add_argument("--raw-root", default=None, type=Path)
+    p_prepare.add_argument("--wiki-root", default=None, type=Path)
+    p_prepare.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path)
     p_prepare.add_argument("--pdf-titles-json")
     p_prepare.add_argument("--output-manifest", required=True)
 
@@ -368,7 +398,9 @@ def main() -> None:
         "manifest",
         help="Build .checkpoints/init-sources.json from a prepared manifest (local papers only)",
     )
-    p_manifest.add_argument("--raw-root", default="raw")
+    p_manifest.add_argument("--raw-root", default=None, type=Path)
+    p_manifest.add_argument("--wiki-root", default=None, type=Path)
+    p_manifest.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path)
     p_manifest.add_argument("--prepared-manifest", required=True)
     p_manifest.add_argument("--output-sources", required=True)
 
@@ -382,7 +414,14 @@ def main() -> None:
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 parser.error(f"--pdf-titles-json: {exc}")
         warnings: list[str] = []
-        manifest = prepare_inputs(Path(args.raw_root), pdf_titles=pdf_titles, warning_sink=warnings)
+        paths = load_paths(config_path=args.paths_config, wiki_root=args.wiki_root, raw_root=args.raw_root)
+        manifest = prepare_inputs(
+            paths.raw_root,
+            wiki_root=paths.wiki_root,
+            project_root=paths.project_root,
+            pdf_titles=pdf_titles,
+            warning_sink=warnings,
+        )
         output_path = Path(args.output_manifest)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

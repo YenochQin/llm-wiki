@@ -40,6 +40,35 @@ These are the **minimum permissions** for ΩmegaWiki skills to function. Claude 
 
 **To customize:** You can add more permissions (e.g., `Bash(git add:*)` for auto-commit) or remove permissions if you want more manual control. See [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for the full permissions format.
 
+### `paths.json.example`
+
+Local absolute paths that connect this code repository to an external wiki
+vault and raw source directory. Copy it to `config/paths.json` on each machine:
+
+```bash
+cp config/paths.json.example config/paths.json
+```
+
+Then edit the two values:
+
+```json
+{
+  "wiki_root": "/absolute/path/to/wiki",
+  "raw_root": "/absolute/path/to/raw"
+}
+```
+
+`config/paths.json` is ignored by git because these paths are machine-specific.
+Most tools read it automatically; `tools/research_wiki.py` accepts `@wiki` as a
+shortcut for the configured wiki root.
+
+Helpers:
+
+```bash
+uv run python tools/separate_wiki_repository.py --wiki-root /abs/wiki --raw-root /abs/raw
+uv run python tools/clean_wiki_repository.py --target all
+```
+
 ### `zotero-roots.json`
 
 Cross-platform Zotero lookup candidates used by `/ingest` when the user passes

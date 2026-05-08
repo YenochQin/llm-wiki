@@ -37,7 +37,8 @@
 - `raw/papers/`、`raw/notes/`、`raw/web/` 是用户拥有的输入
 - `wiki/sources/papers/` 存放 MinerU 转化后的论文 markdown（PDF 原件仍留在 `raw/papers/`）
 - `wiki/sources/notes/`、`wiki/sources/web/` 存放复制到 vault 中的 notes 和 web markdown/text
-- `config/` 存放环境模板（`.env.example`、`settings.local.json.example`）
+- `config/` 存放环境模板（`.env.example`、`settings.local.json.example`、`paths.json.example`）
+- `config/paths.json` 可用绝对路径连接外部 wiki vault 和 raw source 目录；这是本机私有配置，不提交
 
 ---
 
@@ -138,6 +139,7 @@
 - 否则回退到 `python3`（Unix/macOS）或 `python`（Windows）
 - skill 通常按 `"$PYTHON_BIN" tools/<name>.py …` 运行工具；等价写法是 `uv run --python .venv/bin/python python tools/<name>.py …`
 - Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
+- 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；未配置时回退到仓库内 `wiki/` 和 `raw/`
 - 可选 MinerU 本地后端需显式启用：`uv sync --extra local`（首次会下载数 GB 模型权重）
 
 ---
@@ -159,6 +161,7 @@
 - **Experiment 必须链接到 claim**：每个 experiment 都需要 `target_claim`；用户外部运行实验并通过 `/exp-eval` 报告结果后，把结果写回 claim evidence。
 - **MinerU API token**：`MINERU_API_TOKEN` 环境变量驱动默认云端后端。没有它 PDF ingest 会失败；离线可安装本地后端（`uv sync --extra local`）。
 - **文献检索**：`tools/fetch_literature.py` 使用无需 API key 的 Crossref 搜索和元数据检索。由于公开源暴露的 citation graph 较少，引用图覆盖是 best-effort。
+- **仓库和 wiki 可分离**：使用 `tools/separate_wiki_repository.py` 将 `wiki/`、`raw/` 复制/移动到外部绝对路径并写入 `config/paths.json`；使用 `tools/clean_wiki_repository.py` 清理仓库内残留的 `wiki/`、`raw/`。清理脚本默认 dry-run，只有 `--yes` 才会删除。
 
 ---
 
