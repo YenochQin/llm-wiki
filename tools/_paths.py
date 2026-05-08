@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,7 @@ class RuntimePaths:
     raw_root: Path
     config_path: Path
     used_config: bool
+    profile: str
 
 
 def find_project_root(start: Path | None = None) -> Path:
@@ -51,6 +53,37 @@ def _read_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def current_platform_profile() -> str:
+    system = platform.system().lower()
+    if system == "darwin":
+        return "macos"
+    if system == "windows":
+        return "windows"
+    if system == "linux":
+        return "linux"
+    return system or "unknown"
+
+
+def _select_profile(cfg: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    profiles = cfg.get("profiles")
+    if not isinstance(profiles, dict):
+        return "legacy", cfg
+
+    requested = os.environ.get("LLM_WIKI_PATH_PROFILE", "").strip()
+    active = requested or str(cfg.get("active_profile") or "auto")
+    selected = current_platform_profile() if active == "auto" else active
+    profile_cfg = profiles.get(selected)
+
+    if not isinstance(profile_cfg, dict):
+        fallback = cfg.get("fallback_profile")
+        if isinstance(fallback, str) and isinstance(profiles.get(fallback), dict):
+            selected = fallback
+            profile_cfg = profiles[fallback]
+        else:
+            profile_cfg = {}
+    return selected, profile_cfg
+
+
 def load_paths(
     *,
     config_path: Path | None = None,
@@ -63,11 +96,13 @@ def load_paths(
     cfg_path = expand_path(config_path or DEFAULT_CONFIG_PATH, root)
     cfg = _read_json(cfg_path)
 
+    profile_name, profile_cfg = _select_profile(cfg)
+
     env_wiki = os.environ.get("LLM_WIKI_WIKI_ROOT", "").strip()
     env_raw = os.environ.get("LLM_WIKI_RAW_ROOT", "").strip()
 
-    wiki_value = wiki_root or env_wiki or cfg.get("wiki_root") or (root / "wiki")
-    raw_value = raw_root or env_raw or cfg.get("raw_root") or (root / "raw")
+    wiki_value = wiki_root or env_wiki or profile_cfg.get("wiki_root") or cfg.get("wiki_root") or (root / "wiki")
+    raw_value = raw_root or env_raw or profile_cfg.get("raw_root") or cfg.get("raw_root") or (root / "raw")
 
     return RuntimePaths(
         project_root=root,
@@ -75,6 +110,7 @@ def load_paths(
         raw_root=expand_path(raw_value, root),
         config_path=cfg_path,
         used_config=bool(cfg),
+        profile=profile_name,
     )
 
 
@@ -89,8 +125,13 @@ def display_path(path: Path, project_root: Path) -> str:
 
 def write_paths_config(config_path: Path, wiki_root: Path, raw_root: Path) -> None:
     payload = {
-        "wiki_root": str(wiki_root.resolve()),
-        "raw_root": str(raw_root.resolve()),
+        "active_profile": current_platform_profile(),
+        "profiles": {
+            current_platform_profile(): {
+                "wiki_root": str(wiki_root.resolve()),
+                "raw_root": str(raw_root.resolve()),
+            }
+        },
     }
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

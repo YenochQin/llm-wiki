@@ -55,6 +55,7 @@ def build_plan(paths, targets: list[str]) -> dict:
     return {
         "project_root": str(paths.project_root),
         "config_path": display_path(paths.config_path, paths.project_root),
+        "active_profile": paths.profile,
         "configured_wiki_root": str(paths.wiki_root),
         "configured_raw_root": str(paths.raw_root),
         "targets": targets,

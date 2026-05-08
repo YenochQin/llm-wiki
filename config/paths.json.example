@@ -1,4 +1,17 @@
 {
-  "wiki_root": "/absolute/path/to/your/obsidian-vault-or-wiki-directory",
-  "raw_root": "/absolute/path/to/your/raw-source-directory"
+  "active_profile": "auto",
+  "profiles": {
+    "macos": {
+      "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
+      "raw_root": "/Users/you/Documents/ResearchWiki/raw"
+    },
+    "windows": {
+      "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
+      "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw"
+    },
+    "linux": {
+      "wiki_root": "~/Documents/ResearchWiki/wiki",
+      "raw_root": "~/Documents/ResearchWiki/raw"
+    }
+  }
 }

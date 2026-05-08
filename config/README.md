@@ -42,25 +42,46 @@ These are the **minimum permissions** for ΩmegaWiki skills to function. Claude 
 
 ### `paths.json.example`
 
-Local absolute paths that connect this code repository to an external wiki
-vault and raw source directory. Copy it to `config/paths.json` on each machine:
+Cross-platform paths that connect this code repository to an external wiki
+vault and raw source directory. Copy it to `config/paths.json` and fill in the
+profiles you use:
 
 ```bash
 cp config/paths.json.example config/paths.json
 ```
 
-Then edit the two values:
+Then edit the profile values:
 
 ```json
 {
-  "wiki_root": "/absolute/path/to/wiki",
-  "raw_root": "/absolute/path/to/raw"
+  "active_profile": "auto",
+  "profiles": {
+    "macos": {
+      "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
+      "raw_root": "/Users/you/Documents/ResearchWiki/raw"
+    },
+    "windows": {
+      "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
+      "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw"
+    },
+    "linux": {
+      "wiki_root": "~/Documents/ResearchWiki/wiki",
+      "raw_root": "~/Documents/ResearchWiki/raw"
+    }
+  }
 }
 ```
 
-`config/paths.json` is ignored by git because these paths are machine-specific.
-Most tools read it automatically; `tools/research_wiki.py` accepts `@wiki` as a
-shortcut for the configured wiki root.
+With `"active_profile": "auto"`, tools choose `macos`, `windows`, or `linux`
+from the current OS. Set `active_profile` to a concrete profile name to force
+one, or set `LLM_WIKI_PATH_PROFILE` temporarily. Environment variables
+`LLM_WIKI_WIKI_ROOT` and `LLM_WIKI_RAW_ROOT` still override the selected
+profile.
+
+The legacy flat format with top-level `wiki_root` and `raw_root` is still
+accepted, but the profiled format is preferred for synced multi-platform use.
+Most tools read this file automatically; `tools/research_wiki.py` accepts
+`@wiki` as a shortcut for the configured wiki root.
 
 Helpers:
 

@@ -37,8 +37,9 @@ skills/      — canonical skills entrypoint for the active language; `.claude/s
 mcp-servers/ — optional project MCP servers, including `llm-review` for cross-model review.
 ```
 
-`wiki/` and `raw/` may live outside this code repository. Put absolute paths in
-`config/paths.json` (ignored by git; see `config/paths.json.example`) or run:
+`wiki/` and `raw/` may live outside this code repository. Put OS-specific
+absolute paths in `config/paths.json` (ignored by git; see
+`config/paths.json.example`) or run:
 
 ```bash
 uv run python tools/separate_wiki_repository.py \
@@ -54,6 +55,10 @@ Core graph commands can use `@wiki` to resolve the configured vault path:
 ```bash
 uv run python tools/research_wiki.py rebuild-index @wiki
 ```
+
+When `active_profile` is `"auto"`, the path config chooses `macos`, `windows`,
+or `linux` from the current operating system. Set `LLM_WIKI_PATH_PROFILE` to
+override that selection temporarily.
 
 ## Skills (21)
 

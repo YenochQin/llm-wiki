@@ -43,7 +43,7 @@ mcp-servers/
 
 config/
 ├── .env.example       ← template for ~/.config/llm-wiki/.env
-├── paths.json.example ← template for local absolute wiki/raw path config
+├── paths.json.example ← template for cross-platform wiki/raw path config
 ├── zotero-roots.json  ← Zotero data/profile directory candidates
 └── settings.local.json.example
 
@@ -58,7 +58,7 @@ docs/                  ← long-form runtime references (this file lives here)
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned original inputs.
 - `wiki/sources/` is the vault-visible source layer: converted paper markdown, copied notes, and copied web clips.
 - Source PDFs stay outside the vault in `raw/papers/`; only their MinerU markdown goes under `wiki/sources/papers/`.
-- `config/paths.json` may point `wiki_root` and `raw_root` to absolute external directories; it is machine-local and ignored by git.
+- `config/paths.json` may point `wiki_root` and `raw_root` to OS-specific external directories via `profiles.macos/windows/linux`; it is machine-local and ignored by git.
 - `docs/templates/` is the maintained template library; do not keep a root-level `templates/` directory.
 - `graph/` is derived and should be maintained only through `tools/research_wiki.py`.
 - All Python tools run via `uv run python tools/<tool>.py …` (no manual venv activation needed).
