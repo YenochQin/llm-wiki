@@ -3,9 +3,10 @@
 
 Scopes:
     wiki         delete all .md content under wiki/<entity>/, wiki/outputs/,
-                 wiki/index.md, wiki/log.md, and wiki/graph/ files.
+                 wiki/sources/, wiki/index.md, wiki/log.md, and wiki/graph/ files.
                  Preserves .gitkeep and wiki/CLAUDE.md.
-    raw          delete all files under raw/<sub>/ except .gitkeep.
+    raw          delete all files under raw/<sub>/ except .gitkeep; does not
+                 delete vault-visible copies under wiki/sources/.
     log          reset wiki/log.md to empty header.
     checkpoints  call `research_wiki.py checkpoint-clear` to drop batch state.
     all          all of the above.
@@ -30,8 +31,9 @@ ENTITY_DIRS = [
     "ideas", "experiments", "claims", "Summary",
     "foundations",
 ]
-# New MinerU sidecars live under raw/prepared/. Keep raw/tmp/ here as a legacy
-# cleanup target so older worktrees can still be reset cleanly.
+# Keep raw/prepared/ and raw/tmp/ here as legacy cleanup targets so older
+# worktrees can still be reset cleanly. New vault-visible source sidecars live
+# under wiki/sources/ and are cleaned by the wiki scope.
 RAW_SUBDIRS = ["papers", "discovered", "prepared", "tmp", "notes", "web"]
 ALL_SCOPES = ["wiki", "raw", "log", "checkpoints"]
 
@@ -52,6 +54,12 @@ def _list_raw(directory: Path) -> list[Path]:
     return [p for p in directory.iterdir() if p.name != ".gitkeep"]
 
 
+def _list_source_entries(directory: Path) -> list[Path]:
+    if not directory.exists():
+        return []
+    return [p for p in directory.iterdir() if p.name != ".gitkeep"]
+
+
 def plan(project_root: Path, scopes: list[str]) -> dict:
     """Return a structured plan of what will be deleted/reset."""
     p: dict = {"scopes": scopes, "delete_files": [], "reset_files": [], "actions": []}
@@ -62,6 +70,8 @@ def plan(project_root: Path, scopes: list[str]) -> dict:
             for f in _list_md(wiki / entity):
                 p["delete_files"].append(str(f.relative_to(project_root)))
         for f in _list_md(wiki / "outputs"):
+            p["delete_files"].append(str(f.relative_to(project_root)))
+        for f in _list_source_entries(wiki / "sources"):
             p["delete_files"].append(str(f.relative_to(project_root)))
         # Scaffold files — deleted, not reset (init recreates them)
         if (wiki / "index.md").exists():
@@ -117,6 +127,18 @@ def execute(project_root: Path, scopes: list[str]) -> dict:
                 if gfp.exists():
                     gfp.unlink()
                     deleted += 1
+        sources = wiki / "sources"
+        for f in _list_source_entries(sources):
+            if f.is_dir():
+                shutil.rmtree(f)
+            else:
+                f.unlink()
+            deleted += 1
+        for sub in ["papers", "notes", "web"]:
+            keep = sources / sub / ".gitkeep"
+            keep.parent.mkdir(parents=True, exist_ok=True)
+            if not keep.exists():
+                keep.touch()
 
     if "raw" in scopes:
         for sub in RAW_SUBDIRS:

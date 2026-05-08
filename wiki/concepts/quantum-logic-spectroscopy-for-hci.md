@@ -25,7 +25,7 @@ Quantum logic spectroscopy for HCI is the use of a co-trapped, laser-coolable lo
 
 ## Source excerpts
 
-- [[highly-charged-ions-optical-clocks-applications]] ([prepared markdown](../../raw/prepared/papers/highly-charged-ions-optical-clocks-applications.md)):
+- [[highly-charged-ions-optical-clocks-applications]] ([prepared markdown](../sources/papers/highly-charged-ions-optical-clocks-applications.md)):
   > using a cotrapped singly charged atomic ion for sympathetic cooling and quantum logic spectroscopy
 
 ## Intuition

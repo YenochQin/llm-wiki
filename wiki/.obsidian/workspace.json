@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "papers/star-planet-composition-connection.md",
+                "file": "concepts/highly-charged-ion-optical-clocks.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "star-planet-composition-connection"
+              "title": "highly-charged-ion-optical-clocks"
             }
           }
         ]
@@ -185,12 +185,34 @@
   },
   "active": "e76f3107eac9b72f",
   "lastOpenFiles": [
-    "papers/cosmochemistry-planetary-systems.md",
+    "sources/papers/assets/cosmochemistry-planetary-systems/fc160a1d1eadff632b0e4fa23ccf12e490c3d5b5c8de63f6b576521bc2766972.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/f6c073e487685be5d4a2fa080ed99aede9c2f626775e76618a0311cee37a0d79.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/f2091738b960b4ad3a2570aeaf7bb70bf35100ee1c30a2ca3103e983588e71d5.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/e1ecca45b4c067f4596bcb1e5480413943d1e65e4b7a85c08ebb8034d2415865.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/dfede6776953667141dee66ef1b54cde749d3166d97f4d1815ff05f362619e06.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/db45dc9e5d7f7253ecf0cc363a0ce31119830e4a37411dbc1bf5e487d4701df3.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/d4089afd3eac5d6c1b5d5807b1a48a9213071f7e0c0682c658c02ca030356cba.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/d18953e90f679f6152b77c0d31370df329e0ca919e7fc936db34276b7a41718a.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/cd3fa496b84bf80b1b10d96fa508d2c82a2408897376d25f403cb2b852bb0242.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/c895f29a36eea6b387e3f3a358640bdf2f6bd25187f628920e1cc1be70a61281.jpg",
+    "sources/papers/assets/cosmochemistry-planetary-systems/bb74667fdb8d24fd244ce668c7b045ae51c1949edae18794ea95519f2d77c1c9.jpg",
+    "sources/papers/assets/star-planet-composition-connection",
+    "sources/papers/assets/highly-charged-ions-optical-clocks-applications",
+    "sources/papers/assets/cosmochemistry-planetary-systems",
+    "sources/papers/assets",
+    "sources/papers/highly-charged-ions-optical-clocks-applications.md",
+    "sources/papers/cosmochemistry-planetary-systems.md",
+    "sources/papers/star-planet-composition-connection.md",
+    "sources/web",
+    "sources/papers",
+    "sources/notes",
+    "sources",
     "papers/highly-charged-ions-optical-clocks-applications.md",
+    "papers/cosmochemistry-planetary-systems.md",
+    "papers/star-planet-composition-connection.md",
     "index.md",
     "graph/open_questions.md",
     "graph/context_brief.md",
-    "papers/star-planet-composition-connection.md",
     "people/p-o-schmidt.md",
     "people/j-r-crespo-lopez-urrutia.md",
     "people/m-s-safronova.md",
@@ -206,7 +228,6 @@
     "claims/pebble-accretion-reproduces-solar-system-chemical.md",
     "people/martin-bizzarro.md",
     "people/caroline-dorn.md",
-    "people/anders-johansen.md",
-    "log.md"
+    "people/anders-johansen.md"
   ]
 }

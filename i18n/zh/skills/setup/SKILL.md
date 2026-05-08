@@ -177,7 +177,7 @@ If this is a fresh install (no `wiki/` directory):
 Configuration done. Next:
   • Put your own papers in raw/papers/ (.pdf — MinerU will convert to mineru-md)
   • Optional: add intent notes to raw/notes/ and saved pages to raw/web/
-  • /init and direct local /ingest will manage prepared inputs under raw/prepared/
+  • /init copies notes/web and writes converted paper markdown under wiki/sources/
   • Run: /init
 ```
 

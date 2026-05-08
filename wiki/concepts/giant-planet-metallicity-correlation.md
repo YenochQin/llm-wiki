@@ -23,7 +23,7 @@ The empirical observation that the occurrence rate of close-in gas-giant planets
 
 ## Source excerpts
 
-- [[star-planet-composition-connection]] ([prepared markdown](../../raw/prepared/papers/star-planet-composition-connection.md)):
+- [[star-planet-composition-connection]] ([prepared markdown](../sources/papers/star-planet-composition-connection.md)):
   > giant planet-metallicity correlation
 
 ## Intuition

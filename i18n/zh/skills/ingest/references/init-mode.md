@@ -8,8 +8,8 @@ INIT MODE is active for any `/ingest` invocation whose source path originates fr
 
 In INIT MODE:
 
-- the source is always a `canonical_ingest_path` already prepared by `/init` (a `raw/prepared/papers/<slug>.md` path produced by MinerU)
-- `raw/` is strictly read-only — do not write to `raw/prepared/` or anywhere else under `raw/`
+- the source is always a `canonical_ingest_path` already prepared by `/init` (a `wiki/sources/papers/<slug>.md` path produced by MinerU)
+- `raw/` is strictly read-only — do not write to `wiki/sources/` or anywhere else under `raw/`
 - `fetch_literature.py citations <doi-or-title>` and `fetch_literature.py references <doi-or-title>` are **skipped** — the parent `/init` does a unified citation sweep at fan-in
 - `rebuild-context-brief` and `rebuild-open-questions` are **skipped** — the parent runs them once after all subagents merge
 - conflict-prone topic writes are **skipped** — if multiple parallel ingests all try to append to the same topic, they will merge-conflict. Let the parent handle topic updates after fan-in, or defer them to `/edit`.
@@ -21,10 +21,10 @@ Everything else — paper page creation, concept/claim dedup via `find-similar-*
 
 `/init` passes the canonical path in the subagent prompt. A `/ingest` invocation can recognize INIT MODE by either of:
 
-- the source path starts with `raw/prepared/` **and** the `.checkpoints/init-sources.json` manifest references it
+- the source path starts with `wiki/sources/` **and** the `.checkpoints/init-sources.json` manifest references it
 - the subagent prompt explicitly states "INIT MODE"
 
-When both signals are absent, treat the invocation as a direct user call and run the full workflow (including citations, rebuilds, and any `raw/prepared/` preparation needed).
+When both signals are absent, treat the invocation as a direct user call and run the full workflow (including citations, rebuilds, and any `wiki/sources/` preparation needed).
 
 ## Parallel-safe writes
 

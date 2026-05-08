@@ -1,7 +1,7 @@
 ---
 name: reingest
 description: Regenerate an already-ingested paper page from its raw PDF or prepared MinerU markdown, refreshing paper analysis and migrating affected concept/claim/people pages when the new source changes the wiki's knowledge.
-argument-hint: "<local-pdf-or-raw/prepared/papers/*.md> [--paper-only] [--update-entities] [--refresh-metadata] [--discover]"
+argument-hint: "<local-pdf-or-wiki/sources/papers/*.md> [--paper-only] [--update-entities] [--refresh-metadata] [--discover]"
 ---
 
 # /reingest
@@ -13,7 +13,7 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 `/reingest` updates the paper page, its canonical prepared source, and affected knowledge entities. It is not a reset:
 
 - raw files under `raw/papers/`, `raw/notes/`, `raw/web/` remain read-only.
-- `raw/prepared/papers/<slug>.md` may be overwritten via `tools/prepare_paper_source.py --overwrite`.
+- `wiki/sources/papers/<slug>.md` may be overwritten via `tools/prepare_paper_source.py --overwrite`.
 - entity migration is enabled by default; `--update-entities` does not need to be provided.
 - `--paper-only` disables entity migration for this run.
 - existing concept/claim/people pages must be reviewed and migrated when the regenerated source makes an old definition, claim status, confidence, evidence detail, alias, author metadata, or research-area summary stale or incomplete.
@@ -38,7 +38,7 @@ Resolve `PYTHON_BIN` using the same logic as `/ingest`; prefer `.venv/bin/python
    ```
 
    Pass `--title` only when confidently recovered from the PDF itself or an existing trusted paper page.
-2. If input is a prepared `raw/prepared/papers/*.md`, use it directly.
+2. If input is a prepared `wiki/sources/papers/*.md`, use it directly.
 3. Stop if the prep manifest has `usable: false`; report warnings verbatim.
 
 ### Step 2: Match existing paper
@@ -89,7 +89,7 @@ For each connected entity:
 
 1. Compare the old entity statement against the regenerated source and bibliography-backed evidence.
 2. Migrate when there is a substantive mismatch or missing precision:
-   - **Concepts**: update Definition, Source excerpts, Variants, Known limitations, Open problems, aliases, related_concepts, and `date_updated`; keep `key_papers`. `## Source excerpts` must include short exact original-language blockquotes linked to the refreshed prepared markdown (`../../raw/prepared/papers/<paper-slug>.md`).
+   - **Concepts**: update Definition, Source excerpts, Variants, Known limitations, Open problems, aliases, related_concepts, and `date_updated`; keep `key_papers`. `## Source excerpts` must include short exact original-language blockquotes linked to the refreshed prepared markdown (`../sources/papers/<paper-slug>.md`).
    - **Claims**: update Statement, Evidence summary, Conditions and scope, Counter-evidence, `confidence`, `status`, and `date_updated`; append new evidence or counter-evidence rather than deleting old entries.
    - **People**: update affiliation, research areas, recent work, collaborators, and key papers when the regenerated metadata/source gives clearer information.
 3. If a new concept/claim is needed, run `find-similar-concept` or `find-similar-claim` before creating it. Prefer merging/migrating over creating duplicates.

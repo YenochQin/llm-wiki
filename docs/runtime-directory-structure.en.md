@@ -16,6 +16,10 @@ wiki/
 ├── Summary/           ← domain-wide surveys
 ├── foundations/       ← background knowledge (terminal: receives inward links, writes none)
 ├── outputs/           ← generated artifacts (Related Work, paper drafts)
+├── sources/           ← vault-visible source markdown, notes, and web clips
+│   ├── papers/        ← MinerU-generated markdown; source PDFs stay in raw/papers/
+│   ├── notes/         ← copied markdown/text notes from raw/notes/
+│   └── web/           ← copied markdown/text web clips from raw/web/
 └── graph/             ← auto-generated (do not edit)
     ├── edges.jsonl
     ├── citations.jsonl
@@ -23,8 +27,7 @@ wiki/
     └── open_questions.md
 
 raw/
-├── papers/            ← user-owned .tex / .pdf sources
-├── prepared/papers/        ← MinerU-generated prepared markdown for /init and direct local /ingest
+├── papers/            ← user-owned source PDFs and other original paper files
 ├── notes/             ← user-owned .md notes
 └── web/               ← user-owned HTML / Markdown
 
@@ -50,7 +53,8 @@ docs/                  ← long-form runtime references (this file lives here)
 
 ## Fast Reminders
 
-- `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs.
-- `raw/prepared/papers/` holds MinerU-generated prepared markdown (`<slug>.md` + `assets/<slug>/*`).
+- `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned original inputs.
+- `wiki/sources/` is the vault-visible source layer: converted paper markdown, copied notes, and copied web clips.
+- Source PDFs stay outside the vault in `raw/papers/`; only their MinerU markdown goes under `wiki/sources/papers/`.
 - `graph/` is derived and should be maintained only through `tools/research_wiki.py`.
 - All Python tools run via `uv run python tools/<tool>.py …` (no manual venv activation needed).

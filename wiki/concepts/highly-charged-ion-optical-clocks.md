@@ -25,7 +25,7 @@ Highly charged ion optical clocks use narrow transitions in ions with large posi
 
 ## Source excerpts
 
-- [[highly-charged-ions-optical-clocks-applications]] ([prepared markdown](../../raw/prepared/papers/highly-charged-ions-optical-clocks-applications.md)):
+- [[highly-charged-ions-optical-clocks-applications]] ([prepared markdown](../sources/papers/highly-charged-ions-optical-clocks-applications.md)):
   > optical transitions of interest to metrology in HCI occur within the ground-state configuration
 
 ## Intuition

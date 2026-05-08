@@ -9,15 +9,15 @@ raw/papers/<file>.pdf
     -> tools/_mineru.extract           (cloud API or local backend)
     -> .mineru-cache/<sha16>/          (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source     (adapter: heading hierarchy, cover normalization, cutoffs, image relocation)
-    -> raw/prepared/papers/<slug>.md        + raw/prepared/papers/assets/<slug>/<hash>.jpg
-    -> /ingest reads canonical_ingest_path = raw/prepared/papers/<slug>.md
+    -> wiki/sources/papers/<slug>.md        + wiki/sources/papers/assets/<slug>/<hash>.jpg
+    -> /ingest reads canonical_ingest_path = wiki/sources/papers/<slug>.md
 ```
 
 `prepare_paper_source.py` returns a JSON manifest with:
 
 | Field | Meaning |
 |-------|---------|
-| `canonical_ingest_path` | the markdown file `/ingest` should read (always under `raw/prepared/papers/`) |
+| `canonical_ingest_path` | the markdown file `/ingest` should read (always under `wiki/sources/papers/`) |
 | `prepared_path` | same as above; kept for parity with the OmegaWiki contract |
 | `ingest_format` | `"mineru-md"` — flag to skills that this is structured MinerU output, not raw PDF or `.tex` |
 | `title` | best-effort title detected from the cover or the first non-junk heading |
@@ -48,7 +48,7 @@ uv run python tools/prepare_paper_source.py \
 Output is a JSON manifest on stdout (consumed by `/ingest`). Side effects:
 
 - Populates `.mineru-cache/<sha16>/` (reused on subsequent runs).
-- Writes `raw/prepared/papers/<slug>.md` + `raw/prepared/papers/assets/<slug>/`.
+- Writes `wiki/sources/papers/<slug>.md` + `wiki/sources/papers/assets/<slug>/`.
 
 ## Cache layout
 
@@ -66,7 +66,7 @@ Output is a JSON manifest on stdout (consumed by `/ingest`). Side effects:
 ## Output layout
 
 ```
-raw/prepared/papers/
+wiki/sources/papers/
     <slug>.md                        # frontmatter + body (this is canonical_ingest_path)
     assets/<slug>/<hash>.jpg         # only images that survive the adapter cut
 ```

@@ -14,7 +14,7 @@ This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
     -> .mineru-cache/<sha16>/           (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation)
-    -> raw/prepared/papers/<slug>.md         + raw/prepared/papers/assets/<slug>/<hash>.jpg
+    -> wiki/sources/papers/<slug>.md         + wiki/sources/papers/assets/<slug>/<hash>.jpg
 ```
 
 For full details (cache layout, adapter passes, troubleshooting) open `docs/mineru-pipeline.md`.
@@ -44,7 +44,7 @@ Once you have the title (possibly empty), run:
 - Pass `--title` only when the agent is confident. Do not pass a title derived from PDF metadata or from the filename — those poison the literature enrichment lookup.
 - Omit the flag when no title is confident. The helper falls back cleanly.
 
-The helper writes the prepared entry under `raw/prepared/papers/` and prints a JSON record with:
+The helper writes the prepared entry under `wiki/sources/papers/` and prints a JSON record with:
 
 | Field | Meaning |
 |-------|---------|
@@ -97,12 +97,12 @@ Use the frontmatter as your structural anchor when extracting concepts, claims, 
 
 A successful preprocessing pass produces:
 
-- `raw/prepared/papers/<slug>.md` — frontmatter + cleaned body
-- `raw/prepared/papers/assets/<slug>/<hash>.jpg` — only the figures that survived the cut
+- `wiki/sources/papers/<slug>.md` — frontmatter + cleaned body
+- `wiki/sources/papers/assets/<slug>/<hash>.jpg` — only the figures that survived the cut
 
 From this point on, treat the prepared `.md` as the canonical source for the rest of `/ingest`. Do not re-copy the PDF into `raw/papers/`; the original path remains the user-owned artifact.
 
-Legacy compatibility: older worktrees may still reference `raw/tmp/papers/*.md`. Treat those files as readable prepared sources, but all newly generated prepared markdown must be written under `raw/prepared/papers/`.
+Legacy compatibility: older worktrees may still reference `raw/tmp/papers/*.md`. Treat those files as readable prepared sources, but all newly generated prepared markdown must be written under `wiki/sources/papers/`.
 
 ## Failure modes
 

@@ -55,7 +55,7 @@ When you do create or edit a concept or claim page, run the same narrow shape ch
 - every required frontmatter key present and non-empty
 - `maturity` ∈ {`stable`, `active`, `emerging`, `deprecated`} for concepts
 - `status` ∈ {`proposed`, `weakly_supported`, `supported`, `challenged`, `deprecated`} and `confidence` ∈ [0,1] for claims
-- concept pages include `## Source excerpts` with short exact original-language source fragments linked to prepared MinerU markdown under `raw/prepared/papers/`
+- concept pages include `## Source excerpts` with short exact original-language source fragments linked to prepared MinerU markdown under `wiki/sources/papers/`
 - YAML parses
 
 This check keeps `/check` from flagging trivially malformed pages on its next run. Anything beyond this — backlink symmetry, whether the claim's evidence is actually sufficient to justify its status, whether the concept's `part_of` topic is reciprocated — is `/check`'s job. Running those audits inside `/ingest` slows the skill down and duplicates work.

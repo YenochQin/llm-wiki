@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Source preparation + manifest builder for /init.
 
-Local-papers-only pipeline: prepares raw PDFs/text inputs into raw/prepared/ and
-builds the .checkpoints/init-sources.json manifest from the prepared output.
+Local-papers-only pipeline: prepares raw PDFs into wiki/sources/ and
+copies notes/web sources from raw/ into wiki/sources/ for vault browsing.
 External discovery and remote source fetching have been removed; /init now
 operates purely over the user's local raw/papers/ inputs.
 
@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -31,7 +32,7 @@ import prepare_paper_source as paper_source
 from research_wiki import slugify
 
 TEXT_SUFFIXES = {".md", ".txt", ".html", ".htm"}
-PREPARED_SUBDIR = "prepared"
+SOURCE_SUBDIR = Path("wiki") / "sources"
 
 
 def _paper_entry_match_key(entry: dict[str, Any]) -> tuple[str, str]:
@@ -215,14 +216,20 @@ def _prepare_text_entry(path: Path, raw_root: Path, kind: str) -> dict[str, Any]
     if not text.strip():
         return None
     source_rel = _relative_to_project(path, raw_root)
+    project_root = _project_root(raw_root)
+    relative_name = path.relative_to(raw_root / kind)
+    prepared_path = project_root / SOURCE_SUBDIR / kind / relative_name
+    prepared_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, prepared_path)
+    prepared_rel = _relative_to_project(prepared_path, raw_root)
     title = _guess_title_from_text(text, path.stem)
     return {
         "entry_id": f"{kind}:{_path_slug(path.relative_to(raw_root))}",
         "source_kind": kind,
         "source_path": source_rel,
-        "prepared_path": None,
-        "canonical_ingest_path": source_rel,
-        "canonical_read_path": source_rel,
+        "prepared_path": prepared_rel,
+        "canonical_ingest_path": prepared_rel,
+        "canonical_read_path": prepared_rel,
         "original_format": path.suffix.lower().lstrip(".") or "text",
         "title": title,
         "abstract_excerpt": _extract_abstract_excerpt(text, limit=400),
@@ -241,8 +248,10 @@ def prepare_inputs(
     warning_sink: list[str] | None = None,
 ) -> dict[str, Any]:
     raw_root = raw_root.resolve()
-    prepared_root = raw_root / PREPARED_SUBDIR
-    (prepared_root / "papers").mkdir(parents=True, exist_ok=True)
+    source_root = _project_root(raw_root) / SOURCE_SUBDIR
+    (source_root / "papers").mkdir(parents=True, exist_ok=True)
+    (source_root / "notes").mkdir(parents=True, exist_ok=True)
+    (source_root / "web").mkdir(parents=True, exist_ok=True)
     paper_entries: list[dict[str, Any]] = []
     other_entries: list[dict[str, Any]] = []
     normalized_handoffs, original_title_keys = _normalize_pdf_titles_map(raw_root, pdf_titles, warning_sink=warning_sink)
@@ -300,7 +309,7 @@ def prepare_inputs(
 
     return {
         "raw_root": _relative_to_project(raw_root, raw_root),
-        "prepared_root": _relative_to_project(prepared_root, raw_root),
+        "prepared_root": _relative_to_project(source_root, raw_root),
         "entries": list(deduped_papers.values()) + other_entries,
     }
 
@@ -350,7 +359,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_prepare = sub.add_parser("prepare", help="Prepare local raw inputs into raw/prepared/ and emit a manifest")
+    p_prepare = sub.add_parser("prepare", help="Prepare local raw paper inputs into wiki/sources/ and emit a manifest")
     p_prepare.add_argument("--raw-root", default="raw")
     p_prepare.add_argument("--pdf-titles-json")
     p_prepare.add_argument("--output-manifest", required=True)

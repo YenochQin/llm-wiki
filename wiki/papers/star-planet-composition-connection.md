@@ -56,79 +56,71 @@ code_url: ""
 cited_by: []
 ---
 
-> Author: Johanna K. Teske. Source: `raw/papers/Teske - 2024 - The star–planet composition connection.pdf` (prepared MinerU markdown at `raw/prepared/papers/star-planet-composition-connection.md`). `importance` is provisional — Semantic Scholar enrichment was unavailable at ingest time (rate-limited; no API key set).
+> Author: Johanna K. Teske. Source: `raw/papers/Teske - 2024 - The star–planet composition connection.pdf`；prepared MinerU markdown: [wiki/sources/papers/star-planet-composition-connection.md](../sources/papers/star-planet-composition-connection.md)。`importance` 暂定为 3，因为 ingest 时外部元数据富化受限。
 
 ## Problem
 
-How does the elemental composition of host stars constrain the formation, presence, architecture, and bulk composition of their orbiting planets? After three decades and 5,600+ confirmed exoplanets, the field has accumulated rich abundance data but still struggles to disentangle (i) selection effects, (ii) Galactic chemical evolution (GCE) trends in `[X/Fe]`, and (iii) genuine planet-formation imprints on stellar photospheres. The review asks what stellar abundances can — and cannot — tell us under the slogan "know thy star, know thy planet".
+这篇综述追问一个核心问题：恒星的元素丰度在多大程度上能够约束行星的存在、系统结构、形成历史和体成分？在数千颗系外行星已经被确认之后，研究者仍需要区分三类信号：观测选择效应、银河化学演化造成的丰度趋势，以及真正由行星形成或行星吞噬留下的恒星光球印记。
 
 ## Key idea
 
-The review organizes the star-planet composition connection along two axes:
+文章把“恒星-行星成分连接”拆成两条主线。第一条是把恒星丰度当作行星存在和系统结构的预测量：例如 `[Fe/H]` 是否预测巨行星、亚海王星、超级地球或紧凑多行星系统的发生率。第二条是把恒星丰度当作行星体成分的近似先验：例如岩石行星是否可以近似采用“star ≡ planet”假设，巨行星大气的 C/O 和难挥发元素比例是否能反推形成位置与吸积历史。
 
-1. **Stellar composition as an indicator of planet presence and architecture** — does iron metallicity (and beyond-Fe ratios) predict whether a star hosts giants, sub-Neptunes, super-Earths, or compact multiplanet systems?
-2. **Stellar composition as an indicator of planet formation and composition** — once a planet exists, can host-star abundances be used as a proxy for the bulk or atmospheric composition of the planet (the so-called "star ≡ planet" assumption for rocky planets, or the C/O / refractory ratio comparisons for giants)?
-
-A third detour treats anomalous abundance signatures — solar twins, binary pairs, and lithium — as natural laboratories for isolating planet-related processes (engulfment, depletion) from GCE and stellar mixing.
+文章还用太阳双胞胎、双星和锂丰度异常作为自然实验，讨论吞噬行星、岩质物质亏损、恒星混合和银河化学演化如何互相混淆。
 
 ## Research classification
 
-- **Theory**: compares core accretion, gravitational instability, Galactic chemical evolution, planet engulfment, and the rocky-planet "star ≡ planet" composition assumption.
-- **Computation**: synthesizes occurrence-rate statistics, abundance-trend corrections, MESA engulfment detectability modelling, planet interior/composition inference, and population-synthesis comparisons.
-- **Experiment**: reviews high-resolution stellar spectroscopy, radial-velocity and transit planet surveys, polluted white dwarf abundance measurements, and exoplanet atmosphere spectroscopy.
-- **Research objects**: exoplanet host stars, FGK dwarfs, M dwarfs, giant planets, sub-Neptunes, small rocky planets, solar twins, binary stars, and polluted white dwarfs.
+- **Theory**: 综述核心吸积、引力不稳定、银河化学演化、行星吞噬，以及岩石行星“star ≡ planet”成分假设。
+- **Computation**: 综合行星发生率统计、恒星丰度趋势校正、MESA 行星吞噬可探测性建模、行星内部成分反演和种群合成比较。
+- **Experiment**: 综述高分辨率恒星光谱、径向速度和凌星巡天、污染白矮星丰度测量，以及系外行星大气光谱。
+- **Research objects**: 系外行星宿主恒星、FGK 矮星、M 矮星、巨行星、亚海王星、小型岩石行星、太阳双胞胎、双星和污染白矮星。
 
 ## Method
 
-This is an invited review, not an original empirical study. The synthesis approach is:
+这是 Annual Review 综述，不是一篇新观测论文。作者按证据类型组织文献：
 
-- collect the major published occurrence-rate / metallicity studies (CKS, LAMOST, APOGEE-Kepler, TESS halo-star surveys, radial-velocity giant-planet samples) and re-state their consensus or disagreement;
-- contrast the differential-spectroscopy literature on solar twins (Meléndez 2009 and successors) and binary pairs (16 Cyg A&B, Kronos-Krios, HIP 34407/26, etc.) on whether refractory–`T_cond` trends are explained by planet engulfment vs. GCE;
-- review host-star vs. giant-planet C/O comparisons (planetesimal-accretion vs. pebble-accretion regimes, Mordasini et al. 2016, Öberg & Bergin 2016, Turrini et al. 2021);
-- review the rocky-planet "star ≡ planet" assumption and its empirical tests (Plotnykov & Valencia 2020, Schulze et al. 2021, Adibekyan et al. 2021);
-- summarize what polluted white dwarfs add about extrasolar planetesimal compositions (differentiation, oxidation state, ²⁶Al heating, dry-rock dominance).
+- 汇总 CKS、LAMOST、APOGEE-Kepler、TESS halo-star search 和径向速度巨行星样本中的金属丰度-行星发生率结果；
+- 比较太阳双胞胎差分光谱和双星丰度差异研究，评估难挥发元素-凝结温度趋势到底来自行星形成、行星吞噬还是银河化学演化；
+- 讨论巨行星 C/O、S/N、难挥发/挥发元素比例与形成位置、星子吸积、pebble drift 和盘内碳亏损之间的非唯一关系；
+- 总结岩石行星“star ≡ planet”假设的群体检验，包括密度、核心质量分数和宿主恒星难挥发元素丰度；
+- 用污染白矮星补充系外星子体成分证据，尤其是分异、氧化态、干燥程度和 `26Al` 加热。
 
 ## Results
 
-Major synthesized findings:
-
-- **The giant planet-metallicity correlation remains the strongest star-planet composition link**, with planet occurrence scaling roughly as a power-law in `[Fe/H]` with index ~2 for FGK dwarfs. Both planet mass and radius rise with host metallicity. The trend appears to break above ~4-10 M_Jup, plausibly marking a transition between core accretion and gravitational instability — and suggesting an independent definition of the planet/brown-dwarf boundary that does not depend on internal structure. See [[giant-planet-metallicity-correlation]].
-- **The lower metallicity limit for giant-planet formation is constrained loosely**: radial-velocity studies and TESS halo-star searches put it near `[Fe/H] ≈ -0.7` for hot Jupiters; the most metal-poor confirmed hot Jupiter host (WASP-98) sits near that limit. At low `[Fe/H]`, α-elements may substitute for Fe as planet-formation seeds.
-- **Smaller planets show a much weaker `[Fe/H]` dependence**, with hot rocky planets preferring more metal-rich stars but long-period super-Earths showing flat or slightly negative trends. The most metal-poor known small-planet host sits at `[Fe/H] ≈ -0.89`. Cold Jupiters are over-represented in systems with inner small planets, and their presence appears to suppress high-multiplicity small-planet systems.
-- **Solar refractory depletion (Meléndez 2009)** as a smoking-gun for rocky-planet formation is no longer the consensus: GCE corrections, convection-zone-mass timing arguments, and follow-up samples (Bedell 2018, Nibauer 2021) show the Sun is in the more common low-contrast population; a refractory-vs-volatile signature in solar twins cannot uniquely identify planet hosts.
-- **Binary-pair `T_cond` trends are mostly modest** (≲0.05 dex) and most cannot be attributed to planet engulfment specifically. Modeling with MESA (Behmard 2023a) shows engulfment is detectable mainly in older (>1.5 Gyr), >1.1 M_⊙, low-metallicity stars; quantitative estimates put genuine engulfment at ~3-8% of pairs.
-- **C/O comparisons between hosts and giant planets are not a clean diagnostic** of formation location once planetesimal accretion, pebble drift, and disk C-depletion are all in play. Diversity in measured giant-planet C/O (e.g., HD 149026b ~0.80 vs. HD 209458b ~0.11) underscores the need to go beyond C/O — to S/N, refractory-to-volatile ratios, and joint atmosphere+bulk-density constraints. JWST is starting to enable this.
-- **The rocky-planet "star ≡ planet" assumption is supported in broad outline but contested in detail**: Adibekyan et al. (2021) report a positive correlation between disk-iron mass fraction (predicted from host abundances) and the bulk density of `R_p < 1.6 R_⊕` planets, but Plotnykov & Valencia (2020) and Schulze et al. (2021) find the planet-derived core-mass-fraction distribution wider than the star-derived one, with individual cases inconsistent at the 2σ level (e.g., super-Mercuries). See [[small-planet-density-host-metallicity-correlation]].
-- **Polluted white dwarfs** confirm that most accreted planetesimals are dry, Earth-like, oxidized, and often differentiated — implying widespread early ²⁶Al heating in extrasolar systems. Exotic exceptions (water-rich Kuiper-Belt-Object analogs, Be-enhanced bodies, evaporating icy giants) reveal compositional diversity but stay within the Solar-System range.
+- **巨行星-金属丰度相关仍是最强的恒星-行星成分连接。** FGK 矮星中巨行星发生率大致随 `[Fe/H]` 呈幂律上升，短周期气态巨行星最明显。这个趋势支持核心吸积是低于约 4-10 M_Jup 巨行星的主导形成通道。见 [[giant-planet-metallicity-correlation]]。
+- **巨行星形成的低金属丰度下限仍不精确。** 径向速度和 TESS halo-star 搜索把 hot Jupiter 的下限大致放在 `[Fe/H] ≈ -0.7` 附近；低 `[Fe/H]` 时 alpha 元素可能替代 Fe 作为固体核心增长的关键元素。
+- **小行星的 `[Fe/H]` 依赖弱得多。** 热岩石行星偏好金属更高的宿主，但长周期超级地球趋势平坦甚至略负；冷木星更常与内侧小行星共存，同时又可能压低紧凑多小行星系统的多重性。
+- **太阳难挥发元素亏损不再是岩石行星形成的单一证据。** GCE 校正、对流层质量时序和后续太阳双胞胎样本都表明，难挥发-挥发元素趋势不能唯一诊断是否存在行星。
+- **双星丰度差异多数较小且解释不唯一。** MESA 模型显示，吞噬行星信号主要在年龄较大、质量较高、低金属丰度的恒星中更容易被探测；真实吞噬比例估计约为几个百分点量级。
+- **巨行星大气 C/O 不是干净的形成位置诊断。** 一旦考虑星子吸积、pebble drift 和盘内碳亏损，不同模型可给出相似 C/O；未来需要 S/N、难挥发元素、大气丰度和体密度联合约束。
+- **岩石行星“star ≡ planet”假设在群体上有支持，但个体上有争议。** Adibekyan et al. (2021) 报告宿主丰度预测的盘铁质量分数与 `R_p < 1.6 R_⊕` 行星体密度正相关；Plotnykov & Valencia (2020) 和 Schulze et al. (2021) 则指出核心质量分数分布和若干个体系统并不完全一致。见 [[small-planet-density-host-metallicity-correlation]]。
+- **污染白矮星提供了系外星子体成分窗口。** 多数被吸积的星子体看起来干燥、类地、氧化且常经历分异，暗示早期 `26Al` 加热在系外系统中可能普遍存在。
 
 ## Limitations
 
-- The review is FGK-dwarf-centric; M-dwarf abundances remain measurement-limited, and the small planets that orbit M dwarfs are under-represented in every conclusion.
-- Most precise abundance results are differential, anchored to the Sun; they do not necessarily generalize to stars far from solar `T_eff` and `log g`.
-- Sample selection biases (transit and RV targets favor inactive, single, brighter stars) propagate into every metallicity-occurrence figure.
-- Many host-vs-planet atmosphere C/O conclusions rest on a few well-characterized targets and on disk models with strong assumptions about C-depletion radii and pebble drift.
-- The polluted-WD record samples planetesimals delivered by dynamical scattering, which biases what survives toward bodies that experienced specific orbital histories.
+- 综述以 FGK 矮星为中心；M 矮星丰度测量仍受限，而 M 矮星小行星样本在结论中代表性不足。
+- 高精度丰度结果多来自相对太阳的差分分析，未必能推广到远离太阳参数的恒星。
+- 凌星和径向速度样本偏向明亮、安静、单星目标，选择效应会影响金属丰度-发生率关系。
+- 巨行星大气成分解释依赖少数高质量目标和强模型假设。
+- 污染白矮星记录的是被动力学散射后送入白矮星的物质，可能偏向特定轨道历史和幸存体类型。
 
 ## Open questions
 
-The review closes with five concrete prospects, which are imported here as candidate research gaps:
-
-1. How do abundances of stars hosting Solar-System analogs (small inner + long-period giant) compare to the broader solar-twin trend, especially with Gaia DR4/DR5 long-period giants?
-2. What is the genuine lower `[Fe/H]` floor for planet formation, and how do α-elements and stream/cluster origins shift it?
-3. Do FGK abundance trends extend into the M-dwarf regime once SDSS-V Milky Way Mapper / APOGEE-N+S deliver large H-band M-dwarf abundance samples?
-4. Where and when do giant planets form? Can JWST + ground-based high-resolution refractory + S/N detections move us beyond C/O?
-5. How similar are rocky-planet refractory compositions to their host stars, leveraging "lava world" emission/phase-curve observations and large host-star abundance surveys?
-6. What is the balance of oxidized vs. reduced compositions in extrasolar rocky bodies, and how does it shape habitability proxies (core size, volatile budget, mantle viscosity)?
+- 太阳系类结构宿主星（内侧小行星 + 长周期巨行星）的丰度是否不同于一般太阳双胞胎？
+- 行星形成真实的低 `[Fe/H]` 下限在哪里？alpha 元素、星流和星团起源如何移动这个下限？
+- FGK 丰度趋势是否能扩展到 M 矮星，特别是在 SDSS-V / APOGEE M 矮星丰度成熟之后？
+- JWST 和地面高分辨率光谱能否把巨行星形成诊断从 C/O 推进到难挥发元素和 S/N？
+- 岩石行星难挥发元素体成分与宿主星到底有多相似？lava worlds 的相位曲线和发射光谱能否提供新检验？
+- 系外岩石体的氧化/还原分布如何影响核心大小、挥发物预算和宜居性代理指标？
 
 ## My take
 
-For a wiki-of-research perspective, the most actionable takeaways:
+这篇综述最适合在 wiki 中充当“恒星丰度能告诉我们什么、不能告诉我们什么”的边界页。可靠层是 [[giant-planet-metallicity-correlation]]；有希望但仍弱支持的是 [[small-planet-density-host-metallicity-correlation]]；最重要的教训是不要把单一丰度趋势直接解释成行星形成印记，必须同时处理 GCE、选择效应、恒星演化和模型退化。
 
-- treat **giant-planet metallicity** as a robust prior, **small-planet density-vs-metallicity** as a promising but unsettled signal, and **solar refractory depletion** as a worked-out cautionary tale about how easy it is to misread GCE as a planet signature;
-- when comparing planet atmospheres to host stars, never use a single ratio (C/O) in isolation — joint refractory + volatile + bulk-density constraints are now the bar;
-- polluted white dwarfs are an underused entry point for "what do bulk planetesimal compositions look like beyond the Solar System" and should be wired into any future rocky-planet composition page.
+它也和 [[cosmochemistry-planetary-systems]] 互补：Teske 侧重可观测宿主星和系外行星，Bizzarro et al. 则从太阳系样品和同位素约束追踪固体物质来源。
 
 ## Related
 
-- [[giant-planet-metallicity-correlation]] — the central host-star-composition phenomenon the review re-affirms
-- [[small-planet-density-host-metallicity-correlation]] — emerging, partially supported assertion the review highlights
+- [[giant-planet-metallicity-correlation]] — 综述确认的最稳健宿主星成分现象。
+- supports: [[small-planet-density-host-metallicity-correlation]] — 综述重点讨论但仍需限定条件的岩石行星密度-宿主丰度关系。
+- [[cosmochemistry-planetary-systems]] — 互补综述，提供太阳系样品、pebble accretion 和挥发物来源视角。

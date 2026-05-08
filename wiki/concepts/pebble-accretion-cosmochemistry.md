@@ -24,7 +24,7 @@ Pebble accretion cosmochemistry is the use of chemical, isotopic, and chronologi
 
 ## Source excerpts
 
-- [[cosmochemistry-planetary-systems]] ([prepared markdown](../../raw/prepared/papers/cosmochemistry-planetary-systems.md)):
+- [[cosmochemistry-planetary-systems]] ([prepared markdown](../sources/papers/cosmochemistry-planetary-systems.md)):
   > rapid planetary growth by pebble accretion
 
 ## Intuition

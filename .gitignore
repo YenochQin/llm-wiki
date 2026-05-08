@@ -9,5 +9,6 @@ __pycache__/
 .checkpoints/
 raw/prepared/papers/assets/*
 raw/tmp/
+wiki/sources/papers/assets/*
 wiki/graph/*
 !wiki/graph/.gitkeep

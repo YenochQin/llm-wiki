@@ -25,7 +25,7 @@ HCI level-crossing clock candidates are highly charged ions in which shell reord
 
 ## Source excerpts
 
-- [[highly-charged-ions-optical-clocks-applications]] ([prepared markdown](../../raw/prepared/papers/highly-charged-ions-optical-clocks-applications.md)):
+- [[highly-charged-ions-optical-clocks-applications]] ([prepared markdown](../sources/papers/highly-charged-ions-optical-clocks-applications.md)):
   > transitions in $\mathrm { I r ^ { 1 7 + } }$ ... have more than a factor of 20 higher sensitivity
 
 ## Intuition

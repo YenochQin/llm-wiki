@@ -12,7 +12,7 @@ Checks performed:
   8. Experiment checks: target_claim required, outcome values
   9. Graph edge and citation consistency: from/to nodes exist as wiki pages
  10. Paper classification checks: research_modes/object tags and matching detail fields
- 11. Concept source grounding: Source excerpts section with prepared markdown links
+ 11. Concept source grounding: Source excerpts section with wiki source markdown links
 
 Usage:
     python3 tools/lint.py                      # lint wiki/ in current dir
@@ -251,12 +251,12 @@ def check_concept_source_excerpts(wiki_dir: Path, pages: dict[str, Path]) -> lis
         if not section:
             issues.append(LintIssue("🔴", "concept-source-excerpts", rel,
                                     "Missing body section: ## Source excerpts",
-                                    suggestion="Add brief original-language excerpts linked to raw/prepared/papers/<slug>.md"))
+                                    suggestion="Add brief original-language excerpts linked to wiki/sources/papers/<slug>.md"))
             continue
-        if "raw/prepared/papers/" not in section:
+        if "wiki/sources/papers/" not in section and "sources/papers/" not in section:
             issues.append(LintIssue("🟡", "concept-source-excerpts", rel,
-                                    "Source excerpts section has no prepared markdown link",
-                                    suggestion="Link each excerpt to ../../raw/prepared/papers/<paper-slug>.md"))
+                                    "Source excerpts section has no wiki source markdown link",
+                                    suggestion="Link each excerpt to ../sources/papers/<paper-slug>.md"))
         if ">" not in section:
             issues.append(LintIssue("🟡", "concept-source-excerpts", rel,
                                     "Source excerpts section has no blockquoted original excerpt",
