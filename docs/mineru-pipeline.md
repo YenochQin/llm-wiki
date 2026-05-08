@@ -50,6 +50,9 @@ Output is a JSON manifest on stdout (consumed by `/ingest`). Side effects:
 - Populates `.mineru-cache/<sha16>/` (reused on subsequent runs).
 - Writes `wiki/sources/papers/<slug>.md` + `wiki/sources/papers/assets/<slug>/`.
 
+Zotero-backed ingest uses a separate cache under `config/zotero-cache/` so the
+lookup helper can query a local SQLite snapshot even when Zotero is still open.
+
 ## Cache layout
 
 ```

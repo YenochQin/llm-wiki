@@ -70,7 +70,7 @@ Dropped from upstream OmegaWiki: `daily-arxiv, paper-compile, exp-run, exp-statu
 
 PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. The output format is `mineru-md`; `/ingest` consumes it via the `canonical_ingest_path` field of the prep tool's JSON manifest.
 
-`/ingest` can also locate a PDF from Zotero with `--title`, `--doi`, or `--item-key`. By default it scans the cross-platform candidates in `config/zotero-roots.json`; pass `--zotero-root <Zotero data dir or profile dir>` only to override that list. The Zotero helper reads `prefs.js` when needed, then opens `zotero.sqlite` and attachments read-only before feeding the selected PDF into the same MinerU pipeline without copying it into `raw/papers/`.
+`/ingest` can also locate a PDF from Zotero with `--title`, `--doi`, or `--item-key`. By default it scans the cross-platform candidates in `config/zotero-roots.json`; pass `--zotero-root <Zotero data dir or profile dir>` only to override that list. The Zotero helper reads `prefs.js` when needed, snapshots `zotero.sqlite` into `config/zotero-cache/`, then queries the snapshot read-only before feeding the selected PDF into the same MinerU pipeline without copying it into `raw/papers/`.
 
 Use `/reingest <pdf-or-wiki/sources/papers/*.md>` when a paper already exists in `wiki/papers/` but the PDF adapter, template, or analysis policy has changed. It refreshes the prepared markdown, regenerates the paper page, and by default audits/migrates linked `concepts`, `claims`, and `people` pages. Pass `--paper-only` only for a paper-page-only refresh; `--update-entities` is kept as a compatibility flag and is already the default behavior.
 

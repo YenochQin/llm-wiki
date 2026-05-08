@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from _zotero_snapshot import prepare_snapshot
 
 ATTACHMENT_LINK_MODE_IMPORTED_URL = 0
 ATTACHMENT_LINK_MODE_IMPORTED_FILE = 1
@@ -464,7 +465,9 @@ def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: i
     else:
         input_root = Path(_expand_path_template(str(zotero_root))).resolve()
         zotero_root, notes = _resolve_zotero_root(input_root)
-    db_path = zotero_root / "zotero.sqlite"
+    snapshot_root, snapshot_notes = _prepare_zotero_snapshot(zotero_root)
+    notes.extend(snapshot_notes)
+    db_path = snapshot_root / "zotero.sqlite"
     if not db_path.exists():
         return {
             "status": "error",
