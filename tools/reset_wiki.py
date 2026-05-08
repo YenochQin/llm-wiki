@@ -215,7 +215,12 @@ def main() -> None:
     the_plan = plan(root, paths.wiki_root, paths.raw_root, scopes)
 
     if not args.yes or args.dry_run:
-        print(json.dumps({"status": "plan", **the_plan}, ensure_ascii=False, indent=2))
+        print(json.dumps({
+            "status": "dry_run",
+            "changed": False,
+            "message": "No files were changed. Re-run with --yes to apply this reset.",
+            **the_plan,
+        }, ensure_ascii=False, indent=2))
         return
 
     result = execute(root, paths.wiki_root, paths.raw_root, scopes)

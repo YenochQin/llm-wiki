@@ -1,5 +1,5 @@
 ---
-description: Multi-phase research idea generation pipeline: landscape scan → dual-model brainstorm → first-pass filter → deep validation → write to wiki
+description: "Multi-phase research idea generation pipeline: landscape scan → dual-model brainstorm → first-pass filter → deep validation → write to wiki"
 argument-hint: "[research-direction-or-topic] [--max-ideas N] [--skip-validation] [--auto]"
 ---
 
