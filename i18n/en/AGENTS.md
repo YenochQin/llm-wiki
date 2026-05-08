@@ -28,6 +28,7 @@ Keep this mental map in immediate context:
 ### Formatting guardrail
 
 - Open `docs/runtime-page-templates.en.md` before drafting or repairing wiki page structure, YAML, or body sections
+- For copyable page starter templates, use `docs/templates/`; do not keep a root-level template library
 - Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log.md` format
 - `SKILL.md` is the immediate entrypoint for a skill; some larger skills may also provide local on-demand reference files under their skill directory
 - `/init` is the first concrete example of this pattern: read `skills/init/SKILL.md` first, then open `skills/init/references/*` only when needed

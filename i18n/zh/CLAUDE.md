@@ -28,6 +28,7 @@
 ### 格式守卫
 
 - 起草或修复 wiki 页面结构、YAML、正文区段前，先打开 `docs/runtime-page-templates.en.md`
+- 需要可复制的页面起始模板时，使用 `docs/templates/`；根目录不放模板库
 - 需要 graph 派生文件、`index.md` 或 `log.md` 细节时，打开 `docs/runtime-support-files.en.md`
 - `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
 - `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
