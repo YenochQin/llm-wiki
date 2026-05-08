@@ -1,6 +1,7 @@
 ---
 title: "The star-planet composition connection"
 slug: "star-planet-composition-connection"
+paper_type: review
 venue: "Annual Review of Astronomy and Astrophysics"
 year: 2024
 tags:

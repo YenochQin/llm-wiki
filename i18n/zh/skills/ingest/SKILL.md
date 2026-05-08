@@ -129,7 +129,8 @@ Raw persistence rule: never copy or duplicate a file already under `raw/prepared
 
    Use the result for `venue`, `year`, `external_ids`, citation count when available, and the evidence behind the `importance` score (1-5). If citation counts are unavailable, default `importance` to 3 and mark it provisional.
 4. Use the `mineru-md` frontmatter (`sections`, `figures`, `abstract_excerpt`) as your structural anchor when summarizing. The frontmatter already gives you a clean section list and figure inventory; do not re-parse the body to recover them.
-5. Before drafting the paper page, classify the paper by research direction and object:
+5. Before drafting the paper page, classify the source form, research direction, and object:
+   - `paper_type`: choose one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`. Use `review` for review/survey articles, but do not put `review` in `research_modes`.
    - `research_modes`: choose one or more of `theory`, `computation`, `experiment`. For review papers, classify by the evidence types being synthesized, not by `review`.
    - `theory_tags`: concrete theory/model/mechanism/framework names used, compared, or tested.
    - `computation_tags`: concrete calculation, simulation, statistical, ML, or data-analysis schemes used; `[]` if none.
@@ -143,8 +144,9 @@ Open `docs/runtime-page-templates.en.md` for the paper template. Fill every requ
 
 Before writing, run a **shape check** on the frontmatter you are about to emit — no more than this:
 
-- every required key is present and non-empty, including `research_modes` and `research_object_tags`
+- every required key is present and non-empty, including `paper_type`, `research_modes`, and `research_object_tags`
 - `importance` ∈ {1,2,3,4,5}; `status` on claims ∈ the documented set; `maturity` on concepts ∈ the documented set; claim `confidence` ∈ [0,1]
+- `paper_type` is one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`
 - every value in `research_modes` is one of `theory`, `computation`, `experiment`; for each mode present, the corresponding `theory_tags` / `computation_tags` / `experiment_tags` is non-empty
 - YAML parses
 

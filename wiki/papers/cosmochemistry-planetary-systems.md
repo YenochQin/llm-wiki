@@ -1,6 +1,7 @@
 ---
 title: "The cosmochemistry of planetary systems"
 slug: "cosmochemistry-planetary-systems"
+paper_type: review
 venue: "Nature Reviews Chemistry"
 year: 2025
 tags:

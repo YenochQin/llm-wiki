@@ -1,6 +1,7 @@
 ---
 title: "Highly charged ions: Optical clocks and applications in fundamental physics"
 slug: "highly-charged-ions-optical-clocks-applications"
+paper_type: review
 venue: "Reviews of Modern Physics"
 year: 2018
 tags:

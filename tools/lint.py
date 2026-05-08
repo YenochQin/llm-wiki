@@ -313,7 +313,7 @@ def check_field_values(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue
 
         # Check enum fields
         enum_checks = {
-            "papers": [("importance", "papers.importance")],
+            "papers": [("paper_type", "papers.paper_type"), ("importance", "papers.importance")],
             "concepts": [("maturity", "concepts.maturity")],
             "ideas": [("status", "ideas.status"), ("priority", "ideas.priority")],
             "experiments": [("status", "experiments.status"), ("outcome", "experiments.outcome")],

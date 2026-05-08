@@ -50,6 +50,7 @@
 
 每个 `papers/{slug}.md` 必须先完成研究类型和研究对象分类：
 
+- `paper_type`：标记文献形态，使用 `paper`、`review`、`book`、`degree_thesis`、`preprint`、`report`、`chapter`、`dataset`、`other` 之一。注意这和 `research_modes` 不同：综述论文应写 `paper_type: review`，但 `research_modes` 仍按其分析/综合的证据类型选择。
 - `research_modes`：从 `theory`、`computation`、`experiment` 中选择一个或多个。综述论文按其分析/综合的证据类型选择，不要只写 `review`。
 - `theory_tags`：列出使用、比较或检验的具体理论、模型、机制或分析框架。
 - `computation_tags`：列出采用的计算/模拟/统计/机器学习/数据分析方案；没有则为空列表。

@@ -62,6 +62,7 @@ Follow `/ingest` Step 2-4, but write to the existing paper page instead of creat
 
 Required current paper fields include:
 
+- `paper_type`: one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, `other`
 - `research_modes`: one or more of `theory`, `computation`, `experiment`
 - `theory_tags`
 - `computation_tags`

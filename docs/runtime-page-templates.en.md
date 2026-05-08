@@ -10,6 +10,7 @@
 ---
 title: ""
 slug: ""
+paper_type: paper       # paper | review | book | degree_thesis | preprint | report | chapter | dataset | other
 venue: ""
 year:
 tags: []

@@ -280,7 +280,7 @@ VALID_EDGE_TYPES = set(EDGE_TYPE_SPECS) | LEGACY_EDGE_TYPES
 
 # Required frontmatter fields per entity type (lint.py reports a 🔴 if missing).
 REQUIRED_FIELDS = {
-    "papers": ["title", "slug", "tags", "research_modes", "research_object_tags", "importance"],
+    "papers": ["title", "slug", "paper_type", "tags", "research_modes", "research_object_tags", "importance"],
     "concepts": ["title", "tags", "maturity", "key_papers"],
     "topics": ["title", "tags"],
     "people": ["name", "tags"],
@@ -294,6 +294,7 @@ REQUIRED_FIELDS = {
 # Valid enum values per entity-qualified field. Format: "{entity}.{field}".
 VALID_VALUES = {
     "papers.importance": {"1", "2", "3", "4", "5"},
+    "papers.paper_type": {"paper", "review", "book", "degree_thesis", "preprint", "report", "chapter", "dataset", "other"},
     "concepts.maturity": {"stable", "active", "emerging", "deprecated"},
     "ideas.status": {"proposed", "in_progress", "tested", "validated", "failed"},
     "ideas.priority": {"1", "2", "3", "4", "5"},
@@ -309,7 +310,7 @@ VALID_VALUES = {
 # fixing that is a separate concern from centralizing the schema — see
 # devlog for the discussion. Preserved as-is here.
 FIELD_DEFAULTS = {
-    "papers": {"tags": "[]", "research_modes": "[]", "research_object_tags": "[]", "importance": "3"},
+    "papers": {"paper_type": "paper", "tags": "[]", "research_modes": "[]", "research_object_tags": "[]", "importance": "3"},
     "concepts": {"tags": "[]", "maturity": "active", "key_papers": "[]"},
     "topics": {"tags": "[]"},
     "people": {"tags": "[]"},

@@ -46,6 +46,19 @@ Keep this mental map in immediate context:
 
 Open `docs/runtime-page-templates.en.md` for page templates and `docs/runtime-support-files.en.md` for graph/index/log references.
 
+### Paper Analysis Classification
+
+Every `papers/{slug}.md` must first classify the source form, research direction, and research object:
+
+- `paper_type`: classify the source form as one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`. This is separate from `research_modes`: review articles should use `paper_type: review`, while `research_modes` still reflects the evidence types being analyzed or synthesized.
+- `research_modes`: choose one or more of `theory`, `computation`, `experiment`. For review papers, classify by the evidence types being analyzed/synthesized; do not use `review` as a mode.
+- `theory_tags`: list the concrete theories, models, mechanisms, or analytical frameworks used, compared, or tested.
+- `computation_tags`: list the computational/simulation/statistical/ML/data-analysis schemes used; empty list if none.
+- `experiment_tags`: list observations, experiments, sample analyses, instruments, missions, or protocols; empty list if none.
+- `research_object_tags`: list the research objects, such as materials, celestial bodies, systems, samples, populations, model objects, or datasets.
+
+The body must include `## Research classification`, explaining which of theory/computation/experiment apply, what specific theory/computational scheme/experimental process was used, and what objects were studied. If the source does not make something clear, write `unclear` rather than inventing it.
+
 ### Concept Source Grounding
 
 Every `concepts/{slug}.md` page must include `## Source excerpts` immediately after `## Definition`.
