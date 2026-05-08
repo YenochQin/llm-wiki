@@ -28,6 +28,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 
+ATTACHMENT_LINK_MODE_IMPORTED_URL = 0
 ATTACHMENT_LINK_MODE_IMPORTED_FILE = 1
 ATTACHMENT_LINK_MODE_LINKED_FILE = 2
 DEFAULT_CONFIG_PATH = Path("config/zotero-roots.json")
@@ -311,7 +312,7 @@ def _resolve_attachment_path(zotero_root: Path, attachment_key: str, path_value:
     candidate = Path(unquote(raw)).expanduser()
     if candidate.is_absolute():
         return candidate
-    if link_mode == ATTACHMENT_LINK_MODE_IMPORTED_FILE:
+    if link_mode in {ATTACHMENT_LINK_MODE_IMPORTED_URL, ATTACHMENT_LINK_MODE_IMPORTED_FILE}:
         return zotero_root / "storage" / attachment_key / candidate.name
     return zotero_root / candidate
 

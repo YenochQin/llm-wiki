@@ -15,6 +15,13 @@ papers:
     research_modes: [theory, computation, experiment]
     research_object_tags: [exoplanet-host-stars, fgk-dwarfs, m-dwarfs, giant-planets, small-rocky-planets, polluted-white-dwarfs, binary-stars, solar-twins]
     domain: exoplanets / astrophysics
+  - slug: highly-charged-ions-optical-clocks-applications
+    title: "Highly charged ions: Optical clocks and applications in fundamental physics"
+    tags: [atomic-physics, optical-clocks, highly-charged-ions, frequency-metrology, fundamental-physics]
+    importance: 4
+    research_modes: [theory, computation, experiment]
+    research_object_tags: [highly-charged-ions, hydrogenlike-hci, ag-like-ions, in-like-ions, sn-like-ions, iridium-hci, californium-hci, trapped-ion-optical-clocks]
+    domain: atomic physics / frequency metrology / fundamental physics
 
 concepts:
   - slug: giant-planet-metallicity-correlation
@@ -24,6 +31,18 @@ concepts:
   - slug: pebble-accretion-cosmochemistry
     title: "Pebble accretion cosmochemistry"
     tags: [cosmochemistry, planet-formation, pebble-accretion, volatile-delivery, rocky-planets]
+    maturity: active
+  - slug: highly-charged-ion-optical-clocks
+    title: "Highly charged ion optical clocks"
+    tags: [atomic-physics, optical-clocks, highly-charged-ions, frequency-metrology]
+    maturity: emerging
+  - slug: quantum-logic-spectroscopy-for-hci
+    title: "Quantum logic spectroscopy for highly charged ions"
+    tags: [atomic-physics, quantum-logic-spectroscopy, sympathetic-cooling, highly-charged-ions, ion-traps]
+    maturity: emerging
+  - slug: hci-level-crossing-clock-candidates
+    title: "HCI level-crossing clock candidates"
+    tags: [atomic-physics, highly-charged-ions, optical-clocks, atomic-structure, fundamental-constant-variation]
     maturity: active
 
 topics:
@@ -38,6 +57,18 @@ people:
   - slug: martin-bizzarro
     tags: [cosmochemistry, planet-formation, meteorites]
     affiliation: "Centre for Star and Planet Formation, Globe Institute, University of Copenhagen; Institut de Physique du Globe de Paris"
+  - slug: m-g-kozlov
+    tags: [atomic-physics, highly-charged-ions, optical-clocks]
+    affiliation: ""
+  - slug: m-s-safronova
+    tags: [atomic-physics, optical-clocks, highly-charged-ions]
+    affiliation: ""
+  - slug: j-r-crespo-lopez-urrutia
+    tags: [atomic-physics, highly-charged-ions, spectroscopy]
+    affiliation: ""
+  - slug: p-o-schmidt
+    tags: [optical-clocks, trapped-ions, quantum-logic-spectroscopy, highly-charged-ions]
+    affiliation: ""
 
 ideas:
 
@@ -56,6 +87,18 @@ claims:
     status: weakly_supported
     confidence: 0.55
     domain: exoplanets / astrophysics
+  - slug: hci-clocks-can-suppress-systematic-shifts
+    title: "Highly charged ion clocks can suppress several dominant systematic shifts"
+    tags: [atomic-physics, optical-clocks, highly-charged-ions, systematic-shifts]
+    status: weakly_supported
+    confidence: 0.7
+    domain: atomic physics / frequency metrology
+  - slug: hci-enable-enhanced-fundamental-physics-tests
+    title: "Highly charged ions enable enhanced tests of fundamental physics"
+    tags: [atomic-physics, highly-charged-ions, fundamental-physics, fine-structure-constant, lorentz-invariance]
+    status: weakly_supported
+    confidence: 0.72
+    domain: atomic physics / fundamental physics
 
 Summary:
 
