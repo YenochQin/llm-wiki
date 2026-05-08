@@ -56,7 +56,7 @@ code_url: ""
 cited_by: []
 ---
 
-> Authors: [[martin-bizzarro]], [[anders-johansen]], [[caroline-dorn]]. Source: `raw/papers/Bizzarro 等 - 2025 - The cosmochemistry of planetary systems.pdf` (prepared MinerU markdown at `raw/tmp/papers/cosmochemistry-planetary-systems.md`). Crossref metadata resolved DOI `10.1038/s41570-025-00711-9`; citation count was 9 at ingest time, while the Nature page reported 15 citations.
+> Authors: [[martin-bizzarro]], [[anders-johansen]], [[caroline-dorn]]. Source: `raw/papers/Bizzarro 等 - 2025 - The cosmochemistry of planetary systems.pdf` (prepared MinerU markdown at `raw/prepared/papers/cosmochemistry-planetary-systems.md`). Crossref metadata resolved DOI `10.1038/s41570-025-00711-9`; citation count was 9 at ingest time, while the Nature page reported 15 citations.
 
 ## Problem
 

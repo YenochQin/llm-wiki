@@ -1,6 +1,6 @@
 ---
 description: Ingest a paper into the wiki — creates pages (papers + concepts + people + claims) and builds all cross-references and graph edges. Trigger whenever the user says "ingest", "add this paper", drops a `.pdf` or `.md` source, or asks to fold a paper into the knowledge base.
-argument-hint: <local-path> [--discover]
+argument-hint: "(<local-path> | --zotero-root <dir> (--title <str>|--doi <doi>|--item-key <key>)) [--discover]"
 ---
 
 # /ingest
@@ -21,7 +21,8 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 ## Inputs
 
-- `source`: one of — local `.pdf`, local `.md` (already-prepared MinerU output or hand-curated source), or a `canonical_ingest_path` handed off by `/init` via `.checkpoints/init-sources.json` (see `references/init-mode.md`). The default prepared format produced by `tools/prepare_paper_source.py` is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
+- `source`: one of — local `.pdf`, local `.md` (already-prepared MinerU output or hand-curated source), Zotero lookup arguments, or a `canonical_ingest_path` handed off by `/init` via `.checkpoints/init-sources.json` (see `references/init-mode.md`). The default prepared format produced by `tools/prepare_paper_source.py` is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
+- Zotero lookup form: `--zotero-root <dir>` plus one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`. The root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
 - `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
 ## Outputs
@@ -97,10 +98,19 @@ export PYTHON_BIN
 ### Step 1: Resolve the source
 
 1. If `/init` passed a `canonical_ingest_path`, enter **INIT MODE** and consume that path verbatim. Do not rescan `raw/`. See `references/init-mode.md`.
-2. If the source is a local `.md` already under `raw/tmp/papers/` (or otherwise marked as prepared `mineru-md`), use it directly.
-3. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `raw/tmp/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
+2. If the user supplied Zotero lookup arguments, run:
 
-Raw persistence rule: never copy or duplicate a file already under `raw/tmp/` or `raw/papers/` into a different raw subtree.
+   ```bash
+   "$PYTHON_BIN" tools/find_zotero_pdf.py \
+     --zotero-root <dir> \
+     [--title "<title>"] [--doi <doi>] [--item-key <key>]
+   ```
+
+   Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, or a clearly unambiguous title match. Otherwise report the candidates and ask the user to choose. Feed the selected PDF path into the normal PDF preprocessing step; do not copy it into `raw/papers/`.
+3. If the source is a local `.md` already under `raw/prepared/papers/` (or otherwise marked as prepared `mineru-md`), use it directly. Legacy `raw/tmp/papers/*.md` inputs may still be read but new prepared outputs must use `raw/prepared/papers/`.
+4. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `raw/prepared/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
+
+Raw persistence rule: never copy or duplicate a file already under `raw/prepared/` or `raw/papers/` into a different raw subtree.
 
 ### Step 2: Paper identity and enrichment
 
@@ -157,6 +167,7 @@ Follow `references/dedup-policy.md`. In short:
 2. Prefer merging into the top result. Create a new page only when the tool returns no acceptable candidate and the paper's importance justifies it.
 3. For each entity you write or edit, write the reverse link in the same turn. The obligation matrix lives in `references/cross-references.md`.
 4. Create a `wiki/people/{slug}.md` only for papers with importance ≥ 4. Otherwise append to existing author pages only.
+5. For every concept page created or materially edited, add or refresh `## Source excerpts`: one short exact original-language blockquote per grounding paper, each linked to that paper's prepared MinerU markdown (`../../raw/prepared/papers/<paper-slug>.md`). If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
 
 ### Step 5: Paper-to-paper edges and `cited_by`
 
@@ -221,7 +232,7 @@ Append the markdown output to the report under a heading like "Related papers yo
 
 ## Constraints
 
-- `raw/papers/`, `raw/notes/`, `raw/web/` are user-owned and read-only. Direct local `/ingest` may add prepared sidecars under `raw/tmp/`. INIT MODE treats all of `raw/` as read-only.
+- `raw/papers/`, `raw/notes/`, `raw/web/` are user-owned and read-only. Direct local `/ingest` may add prepared sidecars under `raw/prepared/`. INIT MODE treats all of `raw/` as read-only.
 - `wiki/graph/` is tool-owned. Edit only through `tools/research_wiki.py`.
 - Slugs always come from `tools/research_wiki.py slug`. Never hand-craft.
 - Every forward link writes its reverse link in the same turn — the wiki's bidirectional-link invariant. The only exception is links to `wiki/foundations/`, which are terminal.

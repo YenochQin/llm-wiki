@@ -11,8 +11,8 @@ Pipeline:
       -> _mineru.extract(...)                    # cache by sha16(PDF)
       -> _normalize_cache(...)                   # synthesize Zotero-style manifest
       -> _convert_to_markdown(...)               # adapter: cleans cover/headings/figures
-      -> raw/tmp/papers/<slug>.md                # canonical_ingest_path
-      -> raw/tmp/papers/assets/<slug>/*.jpg      # extracted figure crops
+      -> raw/prepared/papers/<slug>.md                # canonical_ingest_path
+      -> raw/prepared/papers/assets/<slug>/*.jpg      # extracted figure crops
 
 Cache layout (kept across runs for cheap re-prep):
 
@@ -48,6 +48,9 @@ from pathlib import Path
 
 import _mineru
 from research_wiki import slugify
+
+PREPARED_SUBDIR = "prepared"
+LEGACY_PREPARED_SUBDIR = "tmp"
 
 # ---------------------------------------------------------------------------
 # Adapter constants (lifted verbatim from pdf-source-scripts/pdf_to_source_mineru.py)
@@ -537,12 +540,12 @@ def prepare(
     backend: str = "api",
     overwrite: bool = False,
 ) -> dict:
-    """Run MinerU on a PDF and write a structured markdown source to raw/tmp/papers/.
+    """Run MinerU on a PDF and write a structured markdown source to raw/prepared/papers/.
 
     Returns the manifest `/ingest` consumes.
     """
     warnings: list[str] = []
-    output_dir = raw_root / "tmp" / "papers"
+    output_dir = raw_root / PREPARED_SUBDIR / "papers"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if not pdf.exists():
@@ -585,6 +588,24 @@ def prepare(
     )
     slug = slugify(title)
     out_path = output_dir / f"{slug}.md"
+    legacy_out_path = raw_root / LEGACY_PREPARED_SUBDIR / "papers" / f"{slug}.md"
+    if not out_path.exists() and legacy_out_path.exists() and not overwrite:
+        existing_front = _read_existing_frontmatter(legacy_out_path)
+        existing_source = existing_front.get("source", "")
+        if _same_source(existing_source, pdf):
+            existing_text = legacy_out_path.read_text(encoding="utf-8", errors="ignore")
+            return {
+                "canonical_ingest_path": str(legacy_out_path),
+                "prepared_path": str(legacy_out_path),
+                "ingest_format": "mineru-md",
+                "title": existing_front.get("title") or title,
+                "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
+                "warnings": [
+                    f"legacy prepared source reused: {legacy_out_path}",
+                    f"new prepared sources are written under {output_dir}",
+                ],
+                "usable": True,
+            }
     if out_path.exists() and not overwrite:
         existing_front = _read_existing_frontmatter(out_path)
         existing_source = existing_front.get("source", "")
@@ -616,7 +637,7 @@ def prepare(
 
     if not body.strip():
         return {
-            "canonical_ingest_path": str(raw_root / "tmp" / "papers" / f"{slug}.md"),
+            "canonical_ingest_path": str(raw_root / PREPARED_SUBDIR / "papers" / f"{slug}.md"),
             "prepared_path": None,
             "ingest_format": "mineru-md",
             "title": title,
@@ -720,7 +741,7 @@ def main() -> None:
         description="Prepare a local PDF for /ingest via the MinerU pipeline.",
     )
     parser.add_argument("--raw-root", required=True, type=Path,
-                        help="Wiki raw root (e.g. 'raw'). Output goes under <raw-root>/tmp/papers/.")
+                        help="Wiki raw root (e.g. 'raw'). Output goes under <raw-root>/prepared/papers/.")
     parser.add_argument("--source", required=True, type=Path,
                         help="Path to a local PDF to prepare.")
     parser.add_argument("--title", default="",
@@ -731,7 +752,7 @@ def main() -> None:
     parser.add_argument("--backend", default="api", choices=("api", "local"),
                         help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).")
     parser.add_argument("--overwrite", action="store_true",
-                        help="Replace an existing raw/tmp/papers/<slug>.md after user confirmation.")
+                        help="Replace an existing raw/prepared/papers/<slug>.md after user confirmation.")
     args = parser.parse_args()
 
     result = prepare(

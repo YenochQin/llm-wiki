@@ -30,7 +30,9 @@ ENTITY_DIRS = [
     "ideas", "experiments", "claims", "Summary",
     "foundations",
 ]
-RAW_SUBDIRS = ["papers", "discovered", "tmp", "notes", "web"]
+# New MinerU sidecars live under raw/prepared/. Keep raw/tmp/ here as a legacy
+# cleanup target so older worktrees can still be reset cleanly.
+RAW_SUBDIRS = ["papers", "discovered", "prepared", "tmp", "notes", "web"]
 ALL_SCOPES = ["wiki", "raw", "log", "checkpoints"]
 
 INDEX_TEMPLATE = "# Wiki Index\n\n" + "\n".join(f"{e}:" for e in ENTITY_DIRS) + "\n"

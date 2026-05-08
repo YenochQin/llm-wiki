@@ -139,8 +139,9 @@ Choose the crystallize target based on answer content:
 1. If the answer reveals a new concept: create `wiki/concepts/{slug}.md` using the CLAUDE.md concept template
 2. maturity: emerging
 3. key_papers: extracted from answer citations
-4. Add graph edges (concept → papers)
-5. Append reverse links to relevant paper pages under `## Related`
+4. Add `## Source excerpts` with short exact original-language fragments from the cited prepared markdown files (`raw/prepared/papers/<paper-slug>.md`), linked from the concept page as `../../raw/prepared/papers/<paper-slug>.md`
+5. Add graph edges (concept → papers)
+6. Append reverse links to relevant paper pages under `## Related`
 
 **Case C — Create new claim:**
 1. If the answer surfaces a new assertion: create `wiki/claims/{slug}.md` using the CLAUDE.md claim template

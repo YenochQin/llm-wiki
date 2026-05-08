@@ -5,13 +5,13 @@ Use this reference when `/init` is handing sources to parallel `/ingest` subagen
 ## Pre-Fan-Out Safety
 
 - Run `git status --short`.
-- Treat files under `wiki/`, `raw/papers/`, `raw/tmp/`, and `.checkpoints/init-*.json` as scaffold files.
+- Treat files under `wiki/`, `raw/papers/`, `raw/prepared/`, and `.checkpoints/init-*.json` as scaffold files.
 - Stash unrelated dirty files outside those paths.
 - Verify `.gitattributes` contains `merge=union` for `wiki/log.md`, `wiki/graph/edges.jsonl`, `wiki/graph/citations.jsonl`, and `wiki/index.md`.
 - Commit the scaffold before fan-out so `BASE_COMMIT` contains the generated pages and manifests that every worktree must inherit:
 
 ```bash
-git add wiki/ raw/papers/ raw/tmp/ .checkpoints/init-prepare.json .checkpoints/init-sources.json
+git add wiki/ raw/papers/ raw/prepared/ .checkpoints/init-prepare.json .checkpoints/init-sources.json
 git commit -m "init: scaffold before parallel ingest" --no-gpg-sign
 BASE_COMMIT=$(git rev-parse HEAD)
 ```

@@ -12,6 +12,7 @@ Checks performed:
   8. Experiment checks: target_claim required, outcome values
   9. Graph edge and citation consistency: from/to nodes exist as wiki pages
  10. Paper classification checks: research_modes/object tags and matching detail fields
+ 11. Concept source grounding: Source excerpts section with prepared markdown links
 
 Usage:
     python3 tools/lint.py                      # lint wiki/ in current dir
@@ -224,6 +225,42 @@ def check_paper_classification(wiki_dir: Path, pages: dict[str, Path]) -> list[L
             issues.append(LintIssue("🔴", "paper-classification", rel,
                                     "Missing body section: ## Research classification"))
 
+    return issues
+
+
+def _extract_section(content: str, heading: str) -> str:
+    """Return the body text under an exact level-2 markdown heading."""
+    match = re.search(rf"^##\s+{re.escape(heading)}\s*$", content, flags=re.MULTILINE)
+    if not match:
+        return ""
+    start = match.end()
+    next_match = re.search(r"^##\s+", content[start:], flags=re.MULTILINE)
+    end = start + next_match.start() if next_match else len(content)
+    return content[start:end]
+
+
+def check_concept_source_excerpts(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]:
+    """Require concept pages to carry source excerpts linked to prepared markdown."""
+    issues = []
+    for slug, fpath in pages.items():
+        if fpath.parent.name != "concepts":
+            continue
+        content = fpath.read_text(encoding="utf-8")
+        rel = str(fpath.relative_to(wiki_dir))
+        section = _extract_section(content, "Source excerpts")
+        if not section:
+            issues.append(LintIssue("🔴", "concept-source-excerpts", rel,
+                                    "Missing body section: ## Source excerpts",
+                                    suggestion="Add brief original-language excerpts linked to raw/prepared/papers/<slug>.md"))
+            continue
+        if "raw/prepared/papers/" not in section:
+            issues.append(LintIssue("🟡", "concept-source-excerpts", rel,
+                                    "Source excerpts section has no prepared markdown link",
+                                    suggestion="Link each excerpt to ../../raw/prepared/papers/<paper-slug>.md"))
+        if ">" not in section:
+            issues.append(LintIssue("🟡", "concept-source-excerpts", rel,
+                                    "Source excerpts section has no blockquoted original excerpt",
+                                    suggestion="Add at least one short blockquote copied from the prepared markdown"))
     return issues
 
 
@@ -677,6 +714,7 @@ def lint(wiki_dir: Path) -> list[LintIssue]:
 
     issues.extend(check_missing_fields(wiki_dir, pages))
     issues.extend(check_paper_classification(wiki_dir, pages))
+    issues.extend(check_concept_source_excerpts(wiki_dir, pages))
     link_issues, incoming = check_broken_links(wiki_dir, pages)
     issues.extend(link_issues)
     issues.extend(check_orphan_pages(wiki_dir, pages, incoming))

@@ -35,7 +35,7 @@ Keep this mental map in immediate context:
 ### `raw/` and `config/`
 
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
-- `raw/tmp/papers/` stores MinerU-prepared markdown (`<slug>.md` + `assets/<slug>/*`) for `/init` and direct local `/ingest`
+- `raw/prepared/papers/` stores MinerU-prepared markdown (`<slug>.md` + `assets/<slug>/*`) for `/init` and direct local `/ingest`
 - `config/` holds environment templates (`.env.example`, `settings.local.json.example`)
 
 ---
@@ -45,6 +45,22 @@ Keep this mental map in immediate context:
 `papers`, `concepts`, `topics`, `people`, `ideas`, `experiments`, `claims`, `Summary`, `foundations`.
 
 Open `docs/runtime-page-templates.en.md` for page templates and `docs/runtime-support-files.en.md` for graph/index/log references.
+
+### Concept Source Grounding
+
+Every `concepts/{slug}.md` page must include `## Source excerpts` immediately after `## Definition`.
+
+- Add one short original-language excerpt for each paper that materially grounds the concept.
+- Each excerpt must link to the prepared MinerU markdown, usually `raw/prepared/papers/{paper-slug}.md`, using a normal markdown link.
+- Keep the excerpt exact and brief; do not paraphrase inside the blockquote.
+- If the prepared markdown is missing, write `prepared markdown: missing` and state which fallback source was used.
+
+Example:
+
+```markdown
+- [[paper-slug]] ([prepared markdown](../../raw/prepared/papers/paper-slug.md)):
+  > short exact source fragment
+```
 
 ---
 
@@ -114,12 +130,12 @@ Standard log line:
 
 ## Constraints
 
-- **`raw/papers/`, `raw/notes/`, `raw/web/` are user-owned**: treat them as authoritative inputs. `/init` and direct local `/ingest` may add MinerU-prepared markdown sidecars under `raw/tmp/papers/` (additions only — never overwrite an existing user-owned file). `/edit` may add raw sources only when the user explicitly asked for it. `/init` subagents running `/ingest` in INIT MODE still treat `raw/` as strictly read-only and must consume the handed-off canonical path directly.
+- **`raw/papers/`, `raw/notes/`, `raw/web/` are user-owned**: treat them as authoritative inputs. `/init` and direct local `/ingest` may add MinerU-prepared markdown sidecars under `raw/prepared/papers/` (additions only — never overwrite an existing user-owned file). `/edit` may add raw sources only when the user explicitly asked for it. `/init` subagents running `/ingest` in INIT MODE still treat `raw/` as strictly read-only and must consume the handed-off canonical path directly.
 - **User-facing skill parameters are user-owned**: flags and values shown in a skill's `argument-hint` belong to the user's command, not to agent strategy. Do not invent, flip, or drop those parameters from repository state alone. If the user omitted a parameter, only use a default or derived value when that skill explicitly documents omission behavior; otherwise leave it unset or ask the user. Internal derived settings that are not user-facing parameters may still be inferred by the skill.
-- **INIT MODE handoff is manifest-driven**: when `/init` writes `.checkpoints/init-sources.json`, that manifest becomes the single source of truth for ingest order and canonical source paths. Prepared local inputs should point to `raw/tmp/papers/<slug>.md` (MinerU output).
+- **INIT MODE handoff is manifest-driven**: when `/init` writes `.checkpoints/init-sources.json`, that manifest becomes the single source of truth for ingest order and canonical source paths. Prepared local inputs should point to `raw/prepared/papers/<slug>.md` (MinerU output).
 - **graph/ is auto-generated**: never manually edit files in `graph/` — only via `tools/research_wiki.py`.
 - **Bidirectional links**: always write the reverse link when writing a forward link.
-- **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`). `/ingest` and `/init` consume the prepared `raw/tmp/papers/<slug>.md` — never the raw PDF directly.
+- **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`). `/ingest` and `/init` consume the prepared `raw/prepared/papers/<slug>.md` — never the raw PDF directly.
 - **index.md updated on every ingest**; log.md is append-only.
 - **lint default is report-only**: `--fix` auto-fixes deterministic issues (xref backlinks, missing field defaults); `--suggest` outputs suggestions for non-deterministic issues; `--fix --dry-run` previews fixes.
 - **Slug generation rule**: paper title keywords, hyphen-joined, all lowercase.

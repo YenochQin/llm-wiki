@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Source preparation + manifest builder for /init.
 
-Local-papers-only pipeline: prepares raw PDFs/text inputs into raw/tmp/ and
+Local-papers-only pipeline: prepares raw PDFs/text inputs into raw/prepared/ and
 builds the .checkpoints/init-sources.json manifest from the prepared output.
 External discovery and remote source fetching have been removed; /init now
 operates purely over the user's local raw/papers/ inputs.
@@ -31,6 +31,7 @@ import prepare_paper_source as paper_source
 from research_wiki import slugify
 
 TEXT_SUFFIXES = {".md", ".txt", ".html", ".htm"}
+PREPARED_SUBDIR = "prepared"
 
 
 def _paper_entry_match_key(entry: dict[str, Any]) -> tuple[str, str]:
@@ -240,8 +241,8 @@ def prepare_inputs(
     warning_sink: list[str] | None = None,
 ) -> dict[str, Any]:
     raw_root = raw_root.resolve()
-    tmp_root = raw_root / "tmp"
-    (tmp_root / "papers").mkdir(parents=True, exist_ok=True)
+    prepared_root = raw_root / PREPARED_SUBDIR
+    (prepared_root / "papers").mkdir(parents=True, exist_ok=True)
     paper_entries: list[dict[str, Any]] = []
     other_entries: list[dict[str, Any]] = []
     normalized_handoffs, original_title_keys = _normalize_pdf_titles_map(raw_root, pdf_titles, warning_sink=warning_sink)
@@ -299,7 +300,7 @@ def prepare_inputs(
 
     return {
         "raw_root": _relative_to_project(raw_root, raw_root),
-        "prepared_root": _relative_to_project(tmp_root, raw_root),
+        "prepared_root": _relative_to_project(prepared_root, raw_root),
         "entries": list(deduped_papers.values()) + other_entries,
     }
 
@@ -349,7 +350,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_prepare = sub.add_parser("prepare", help="Prepare local raw inputs into raw/tmp/ and emit a manifest")
+    p_prepare = sub.add_parser("prepare", help="Prepare local raw inputs into raw/prepared/ and emit a manifest")
     p_prepare.add_argument("--raw-root", default="raw")
     p_prepare.add_argument("--pdf-titles-json")
     p_prepare.add_argument("--output-manifest", required=True)

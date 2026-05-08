@@ -7,17 +7,17 @@ Use this reference when `/init` is preparing local inputs and writing `.checkpoi
 - Run `"$PYTHON_BIN" tools/init_discovery.py prepare --raw-root raw --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`.
 - Before preparing local PDFs, recover confident titles when possible and write `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }` or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`.
 - `tools/init_discovery.py prepare` must pass recovered titles into `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]`.
-- `tools/init_discovery.py prepare` must delegate local paper normalization to the same helper and reuse pre-staged `raw/tmp/` artifacts when they already exist.
+- `tools/init_discovery.py prepare` must delegate local paper normalization to the same helper and reuse pre-staged `raw/prepared/` artifacts when they already exist.
 - For local PDFs, use this recovery order only: agent-recovered title from the first page -> MinerU produces structured markdown.
 - When the agent supplied a confident PDF title, that title is authoritative for the prepared manifest. MinerU cover-page detected titles are fallback display strings only and must not overwrite the agent title.
 - If no confident PDF title is available, omit `--title`. The MinerU pipeline still runs cleanly with the flag absent. Metadata or filename titles remain display-only.
 
 ## Source Preference Rules
 
-- The canonical prepared format is `mineru-md`: `raw/tmp/papers/<slug>.md` plus `raw/tmp/papers/assets/<slug>/<hash>.jpg` for figures.
+- The canonical prepared format is `mineru-md`: `raw/prepared/papers/<slug>.md` plus `raw/prepared/papers/assets/<slug>/<hash>.jpg` for figures.
 - Keep notes/web on their original source paths. `/init` reads them directly during scaffolding.
-- If the handed-off source already lives under `raw/tmp/`, treat that path as canonical and do not duplicate it into `raw/papers/`.
-- Set each local paper's `canonical_ingest_path` to the prepared `raw/tmp/papers/<slug>.md` path. If MinerU prep failed (manifest `usable: false`), record the warning and skip that paper rather than substituting the raw PDF.
+- If the handed-off source already lives under `raw/prepared/`, treat that path as canonical and do not duplicate it into `raw/papers/`.
+- Set each local paper's `canonical_ingest_path` to the prepared `raw/prepared/papers/<slug>.md` path. If MinerU prep failed (manifest `usable: false`), record the warning and skip that paper rather than substituting the raw PDF.
 
 ## Source Manifest Contract
 

@@ -13,13 +13,18 @@ maturity: stable
 key_papers:
   - "[[star-planet-composition-connection]]"
 first_introduced: "Gonzalez 1997; Santos et al. 2001, 2004; Fischer & Valenti 2005"
-date_updated: 2026-05-07
+date_updated: 2026-05-08
 related_concepts: []
 ---
 
 ## Definition
 
 The empirical observation that the occurrence rate of close-in gas-giant planets around FGK dwarfs increases steeply with host-star iron abundance `[Fe/H]`. Above roughly solar metallicity, the giant-planet hosting fraction is several times the rate near `[Fe/H] ≈ -0.3`; below `[Fe/H] ≈ -0.7` the occurrence becomes consistent with zero in current samples (Boley et al. 2021; the most metal-poor known hot-Jupiter host, WASP-98, sits at `[Fe/H] = -0.6 ± 0.19`).
+
+## Source excerpts
+
+- [[star-planet-composition-connection]] ([prepared markdown](../../raw/prepared/papers/star-planet-composition-connection.md)):
+  > giant planet-metallicity correlation
 
 ## Intuition
 

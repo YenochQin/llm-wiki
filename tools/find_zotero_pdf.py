@@ -1,0 +1,370 @@
+#!/usr/bin/env python3
+"""Locate a paper PDF in a local Zotero data directory.
+
+This is a small, read-only helper for `/ingest`: given a Zotero data root and a
+paper identifier (title, DOI, or Zotero item key), inspect `zotero.sqlite` and
+return candidate PDF attachments with enough metadata for the caller to pick or
+prepare the source.
+
+Supported Zotero attachment forms:
+  - imported attachments under storage/<attachmentKey>/<filename>.pdf
+  - linked-file attachments with a file:// path
+  - linked-file attachments relative to the configured Zotero data root
+
+The tool never modifies Zotero files and opens the database in read-only mode.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sqlite3
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+
+ATTACHMENT_LINK_MODE_IMPORTED_FILE = 1
+ATTACHMENT_LINK_MODE_LINKED_FILE = 2
+
+
+@dataclass
+class ItemRecord:
+    item_id: int
+    key: str
+    item_type: str
+    title: str
+    doi: str
+    year: str
+    creators: list[str]
+
+
+def _normalize_text(value: str) -> str:
+    value = value.lower()
+    value = re.sub(r"https?://(?:dx\.)?doi\.org/", "", value)
+    value = re.sub(r"doi:\s*", "", value)
+    value = re.sub(r"[^a-z0-9\u4e00-\u9fff]+", " ", value)
+    return " ".join(value.split())
+
+
+def _normalize_doi(value: str) -> str:
+    value = value.strip().lower()
+    value = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", value)
+    value = re.sub(r"^doi:\s*", "", value)
+    return value.strip().strip(".")
+
+
+def _tokens(value: str) -> set[str]:
+    return {t for t in _normalize_text(value).split() if len(t) >= 2}
+
+
+def _jaccard(a: set[str], b: set[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def _connect(db_path: Path) -> sqlite3.Connection:
+    uri = f"file:{db_path.resolve()}?mode=ro"
+    return sqlite3.connect(uri, uri=True)
+
+
+def _unescape_pref_string(value: str) -> str:
+    try:
+        return bytes(value, "utf-8").decode("unicode_escape")
+    except UnicodeDecodeError:
+        return value
+
+
+def _data_dir_from_prefs(path: Path) -> Path | None:
+    prefs = path / "prefs.js"
+    if not prefs.exists():
+        return None
+    text = prefs.read_text(encoding="utf-8", errors="ignore")
+    match = re.search(
+        r'user_pref\("extensions\.zotero\.dataDir",\s*"((?:\\.|[^"])*)"\)',
+        text,
+    )
+    if not match:
+        return None
+    raw = _unescape_pref_string(match.group(1)).strip()
+    if not raw:
+        return None
+    data_dir = Path(raw).expanduser()
+    if not data_dir.is_absolute():
+        data_dir = (path / data_dir).resolve()
+    return data_dir
+
+
+def _resolve_zotero_root(input_root: Path) -> tuple[Path, list[str]]:
+    root = input_root.expanduser().resolve()
+    notes: list[str] = []
+    if (root / "zotero.sqlite").exists():
+        return root, notes
+    prefs_data_dir = _data_dir_from_prefs(root)
+    if prefs_data_dir:
+        notes.append(f"resolved Zotero dataDir from prefs.js: {prefs_data_dir}")
+        return prefs_data_dir.expanduser().resolve(), notes
+    nested = root / "Zotero"
+    if (nested / "zotero.sqlite").exists():
+        notes.append(f"resolved nested Zotero data directory: {nested}")
+        return nested.resolve(), notes
+    return root, notes
+
+
+def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return {str(row[1]) for row in rows}
+
+
+def _field_id_map(conn: sqlite3.Connection) -> dict[str, int]:
+    return {
+        str(name): int(field_id)
+        for field_id, name in conn.execute("SELECT fieldID, fieldName FROM fields")
+    }
+
+
+def _item_type_map(conn: sqlite3.Connection) -> dict[int, str]:
+    return {
+        int(type_id): str(type_name)
+        for type_id, type_name in conn.execute("SELECT itemTypeID, typeName FROM itemTypes")
+    }
+
+
+def _value_for_field(
+    conn: sqlite3.Connection,
+    item_id: int,
+    field_ids: dict[str, int],
+    field_names: list[str],
+) -> str:
+    ids = [field_ids[name] for name in field_names if name in field_ids]
+    if not ids:
+        return ""
+    placeholders = ",".join("?" for _ in ids)
+    row = conn.execute(
+        f"""
+        SELECT itemDataValues.value
+        FROM itemData
+        JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
+        WHERE itemData.itemID = ? AND itemData.fieldID IN ({placeholders})
+        LIMIT 1
+        """,
+        [item_id, *ids],
+    ).fetchone()
+    return str(row[0]) if row else ""
+
+
+def _creators_for_item(conn: sqlite3.Connection, item_id: int) -> list[str]:
+    try:
+        rows = conn.execute(
+            """
+            SELECT creators.firstName, creators.lastName
+            FROM itemCreators
+            JOIN creators ON itemCreators.creatorID = creators.creatorID
+            WHERE itemCreators.itemID = ?
+            ORDER BY itemCreators.orderIndex
+            """,
+            (item_id,),
+        ).fetchall()
+    except sqlite3.Error:
+        return []
+    creators = []
+    for first, last in rows:
+        name = " ".join(part for part in (str(first or "").strip(), str(last or "").strip()) if part)
+        if name:
+            creators.append(name)
+    return creators
+
+
+def _all_parent_items(conn: sqlite3.Connection) -> list[ItemRecord]:
+    field_ids = _field_id_map(conn)
+    item_types = _item_type_map(conn)
+    rows = conn.execute(
+        """
+        SELECT items.itemID, items.key, items.itemTypeID
+        FROM items
+        LEFT JOIN itemAttachments ON items.itemID = itemAttachments.itemID
+        WHERE itemAttachments.itemID IS NULL
+        """
+    ).fetchall()
+    records: list[ItemRecord] = []
+    for item_id, key, item_type_id in rows:
+        item_id = int(item_id)
+        records.append(
+            ItemRecord(
+                item_id=item_id,
+                key=str(key),
+                item_type=item_types.get(int(item_type_id), ""),
+                title=_value_for_field(conn, item_id, field_ids, ["title"]),
+                doi=_normalize_doi(_value_for_field(conn, item_id, field_ids, ["DOI"])),
+                year=_value_for_field(conn, item_id, field_ids, ["date"])[:4],
+                creators=_creators_for_item(conn, item_id),
+            )
+        )
+    return records
+
+
+def _score_item(item: ItemRecord, query: str, doi: str, item_key: str) -> tuple[float, str]:
+    if item_key and item.key.lower() == item_key.lower():
+        return 1.0, "item-key"
+    if doi and item.doi and _normalize_doi(item.doi) == doi:
+        return 0.98, "doi"
+    q_norm = _normalize_text(query)
+    title_norm = _normalize_text(item.title)
+    if q_norm and title_norm:
+        if q_norm == title_norm:
+            return 0.95, "exact-title"
+        if q_norm in title_norm or title_norm in q_norm:
+            return 0.88, "title-containment"
+        token_score = _jaccard(_tokens(q_norm), _tokens(title_norm))
+        if token_score:
+            return min(0.80, token_score), "title-token-overlap"
+    return 0.0, ""
+
+
+def _candidate_items(conn: sqlite3.Connection, query: str, doi: str, item_key: str, limit: int) -> list[tuple[ItemRecord, float, str]]:
+    scored = []
+    for item in _all_parent_items(conn):
+        score, reason = _score_item(item, query, doi, item_key)
+        if score >= 0.20:
+            scored.append((item, score, reason))
+    scored.sort(key=lambda x: (-x[1], x[0].title.lower()))
+    return scored[:limit]
+
+
+def _resolve_attachment_path(zotero_root: Path, attachment_key: str, path_value: str, link_mode: int | None) -> Path | None:
+    raw = (path_value or "").strip()
+    if not raw:
+        return None
+    raw = raw.replace("storage:", "")
+    if raw.startswith("file://"):
+        parsed = urlparse(raw)
+        return Path(unquote(parsed.path)).expanduser()
+    candidate = Path(unquote(raw)).expanduser()
+    if candidate.is_absolute():
+        return candidate
+    if link_mode == ATTACHMENT_LINK_MODE_IMPORTED_FILE:
+        return zotero_root / "storage" / attachment_key / candidate.name
+    return zotero_root / candidate
+
+
+def _attachments_for_item(conn: sqlite3.Connection, zotero_root: Path, parent_item_id: int) -> list[dict]:
+    columns = _table_columns(conn, "itemAttachments")
+    select_cols = ["itemAttachments.itemID", "items.key"]
+    for col in ("path", "contentType", "linkMode", "title"):
+        if col in columns:
+            select_cols.append(f"itemAttachments.{col}")
+        else:
+            select_cols.append(f"NULL AS {col}")
+    rows = conn.execute(
+        f"""
+        SELECT {", ".join(select_cols)}
+        FROM itemAttachments
+        JOIN items ON itemAttachments.itemID = items.itemID
+        WHERE itemAttachments.parentItemID = ?
+        """,
+        (parent_item_id,),
+    ).fetchall()
+    attachments = []
+    for row in rows:
+        att_item_id, att_key, path_value, content_type, link_mode, title = row
+        resolved = _resolve_attachment_path(
+            zotero_root,
+            str(att_key),
+            str(path_value or ""),
+            int(link_mode) if link_mode is not None else None,
+        )
+        is_pdf = False
+        if resolved and resolved.suffix.lower() == ".pdf":
+            is_pdf = True
+        if str(content_type or "").lower() == "application/pdf":
+            is_pdf = True
+        if not is_pdf:
+            continue
+        attachments.append({
+            "attachment_item_id": int(att_item_id),
+            "attachment_key": str(att_key),
+            "title": str(title or ""),
+            "path": str(resolved) if resolved else "",
+            "exists": bool(resolved and resolved.exists()),
+            "link_mode": int(link_mode) if link_mode is not None else None,
+            "content_type": str(content_type or ""),
+        })
+    attachments.sort(key=lambda x: (not x["exists"], x["path"]))
+    return attachments
+
+
+def find(zotero_root: Path, query: str, doi: str, item_key: str, limit: int) -> dict:
+    input_root = zotero_root.expanduser().resolve()
+    zotero_root, notes = _resolve_zotero_root(input_root)
+    db_path = zotero_root / "zotero.sqlite"
+    if not db_path.exists():
+        return {
+            "status": "error",
+            "message": f"zotero.sqlite not found under {zotero_root}",
+            "input_root": str(input_root),
+            "zotero_root": str(zotero_root),
+            "notes": notes,
+            "candidates": [],
+        }
+    conn = _connect(db_path)
+    try:
+        candidates = []
+        for item, score, reason in _candidate_items(conn, query, _normalize_doi(doi), item_key, limit):
+            attachments = _attachments_for_item(conn, zotero_root, item.item_id)
+            candidates.append({
+                "score": round(score, 3),
+                "match_reason": reason,
+                "item_key": item.key,
+                "item_id": item.item_id,
+                "item_type": item.item_type,
+                "title": item.title,
+                "doi": item.doi,
+                "year": item.year,
+                "creators": item.creators,
+                "attachments": attachments,
+                "pdf_paths": [att["path"] for att in attachments if att.get("exists")],
+            })
+        return {
+            "status": "ok",
+            "input_root": str(input_root),
+            "zotero_root": str(zotero_root),
+            "notes": notes,
+            "query": query,
+            "doi": _normalize_doi(doi),
+            "item_key": item_key,
+            "candidates": candidates,
+        }
+    finally:
+        conn.close()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--zotero-root", required=True, type=Path,
+                        help="Zotero data directory containing zotero.sqlite and storage/, or a profile directory with prefs.js.")
+    parser.add_argument("--query", default="", help="Paper title or free-text query.")
+    parser.add_argument("--title", default="", help="Paper title. Alias for --query.")
+    parser.add_argument("--doi", default="", help="DOI to match.")
+    parser.add_argument("--item-key", default="", help="Zotero item key to match exactly.")
+    parser.add_argument("--limit", type=int, default=10, help="Maximum item candidates to return.")
+    args = parser.parse_args()
+
+    query = args.query or args.title
+    if not (query or args.doi or args.item_key):
+        parser.error("provide at least one of --title, --query, --doi, or --item-key")
+
+    result = find(args.zotero_root, query, args.doi, args.item_key, args.limit)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result.get("status") != "ok":
+        raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except sqlite3.DatabaseError as exc:
+        print(json.dumps({"status": "error", "message": f"sqlite error: {exc}"}), file=sys.stderr)
+        raise SystemExit(2)

@@ -35,7 +35,7 @@
 ### `raw/` 和 `config/`
 
 - `raw/papers/`、`raw/notes/`、`raw/web/` 是用户拥有的输入
-- `raw/tmp/papers/` 存放 MinerU 预处理后的 markdown（`<slug>.md` + `assets/<slug>/*`），供 `/init` 和本地 `/ingest` 使用
+- `raw/prepared/papers/` 存放 MinerU 预处理后的 markdown（`<slug>.md` + `assets/<slug>/*`），供 `/init` 和本地 `/ingest` 使用
 - `config/` 存放环境模板（`.env.example`、`settings.local.json.example`）
 
 ---
@@ -45,6 +45,22 @@
 `papers`、`concepts`、`topics`、`people`、`ideas`、`experiments`、`claims`、`Summary`、`foundations`。
 
 页面模板见 `docs/runtime-page-templates.en.md`；graph、index、log 参考见 `docs/runtime-support-files.en.md`。
+
+### 概念页原文溯源规范
+
+每个 `concepts/{slug}.md` 页面必须在 `## Definition` 后包含 `## Source excerpts`。
+
+- 对每篇实质支撑该概念的论文，加入一条简短的原文片段。
+- 每条片段必须用普通 markdown 链接指向 MinerU 转化后的 markdown，通常是 `raw/prepared/papers/{paper-slug}.md`。
+- 片段必须保持原文语言和原文措辞，简短引用，不要在 blockquote 中改写。
+- 如果转化后的 markdown 缺失，写 `prepared markdown: missing`，并说明使用了哪个 fallback source。
+
+示例：
+
+```markdown
+- [[paper-slug]] ([prepared markdown](../../raw/prepared/papers/paper-slug.md)):
+  > short exact source fragment
+```
 
 ---
 
@@ -114,12 +130,12 @@
 
 ## 约束
 
-- **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和本地 `/ingest` 只可在 `raw/tmp/papers/` 下添加 MinerU 预处理 sidecar（仅新增，不覆盖用户文件）。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
+- **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和本地 `/ingest` 只可在 `raw/prepared/papers/` 下添加 MinerU 预处理 sidecar（仅新增，不覆盖用户文件）。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
 - **用户可见 skill 参数属于用户**：`argument-hint` 中显示的 flag 和值属于用户命令，不是 agent 策略。不要仅凭仓库状态发明、翻转或删除这些参数。若用户省略某参数，只有 skill 文档明确说明可默认/推导时才推导，否则保持未设置或询问用户。
-- **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `raw/tmp/papers/<slug>.md`。
+- **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `raw/prepared/papers/<slug>.md`。
 - **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。
 - **双向链接**：写正向链接时必须同时写反向链接。
-- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest` 和 `/init` 消费 `raw/tmp/papers/<slug>.md`，不要直接消费原始 PDF。
+- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest` 和 `/init` 消费 `raw/prepared/papers/<slug>.md`，不要直接消费原始 PDF。
 - **每次 ingest 都更新 index.md**；`log.md` 只追加。
 - **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
 - **Slug 生成规则**：论文标题关键词，用连字符连接，全小写。

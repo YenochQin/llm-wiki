@@ -29,7 +29,7 @@ claude
 
 ```
 raw/         — user-owned source documents (PDFs, notes, web clips). Read-only to the LLM.
-raw/tmp/     — MinerU-prepared structured markdown (canonical_ingest_path lives here).
+raw/prepared/ — MinerU-prepared structured markdown (canonical_ingest_path lives here).
 wiki/        — LLM-maintained markdown: papers, concepts, topics, people, ideas, experiments, claims, Summary, foundations, outputs.
 wiki/graph/  — auto-derived graph state (edges, citations, context_brief). Never hand-edit.
 tools/       — Python tooling (run via `uv run python tools/<name>.py`).
@@ -47,7 +47,9 @@ Dropped from upstream OmegaWiki: `daily-arxiv, paper-compile, exp-run, exp-statu
 
 PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. The output format is `mineru-md`; `/ingest` consumes it via the `canonical_ingest_path` field of the prep tool's JSON manifest.
 
-Use `/reingest <pdf-or-raw/tmp/papers/*.md>` when a paper already exists in `wiki/papers/` but the PDF adapter, template, or analysis policy has changed. It refreshes the prepared markdown, regenerates the paper page, and by default audits/migrates linked `concepts`, `claims`, and `people` pages. Pass `--paper-only` only for a paper-page-only refresh; `--update-entities` is kept as a compatibility flag and is already the default behavior.
+`/ingest` can also locate a PDF from Zotero with `--zotero-root <Zotero data dir or profile dir>` plus `--title`, `--doi`, or `--item-key`. The Zotero helper reads `prefs.js` when needed, then opens `zotero.sqlite` and attachments read-only before feeding the selected PDF into the same MinerU pipeline without copying it into `raw/papers/`.
+
+Use `/reingest <pdf-or-raw/prepared/papers/*.md>` when a paper already exists in `wiki/papers/` but the PDF adapter, template, or analysis policy has changed. It refreshes the prepared markdown, regenerates the paper page, and by default audits/migrates linked `concepts`, `claims`, and `people` pages. Pass `--paper-only` only for a paper-page-only refresh; `--update-entities` is kept as a compatibility flag and is already the default behavior.
 
 ## Python tooling
 

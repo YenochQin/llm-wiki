@@ -24,7 +24,7 @@ wiki/
 
 raw/
 ├── papers/            ← user-owned .tex / .pdf sources
-├── tmp/papers/        ← MinerU-generated prepared markdown for /init and direct local /ingest
+├── prepared/papers/        ← MinerU-generated prepared markdown for /init and direct local /ingest
 ├── notes/             ← user-owned .md notes
 └── web/               ← user-owned HTML / Markdown
 
@@ -54,6 +54,6 @@ docs/                  ← long-form runtime references (this file lives here)
 ## Fast Reminders
 
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs.
-- `raw/tmp/papers/` holds MinerU-generated prepared markdown (`<slug>.md` + `assets/<slug>/*`).
+- `raw/prepared/papers/` holds MinerU-generated prepared markdown (`<slug>.md` + `assets/<slug>/*`).
 - `graph/` is derived and should be maintained only through `tools/research_wiki.py`.
 - All Python tools run via `uv run python tools/<tool>.py …` (no manual venv activation needed).

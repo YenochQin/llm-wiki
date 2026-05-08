@@ -48,7 +48,16 @@ related_concepts: []
 ---
 ```
 
-Body sections: `## Definition` / `## Intuition` / `## Formal notation` / `## Variants` / `## Comparison` / `## When to use` / `## Known limitations` / `## Open problems` / `## Key papers` / `## My understanding`
+Body sections: `## Definition` / `## Source excerpts` / `## Intuition` / `## Formal notation` / `## Variants` / `## Comparison` / `## When to use` / `## Known limitations` / `## Open problems` / `## Key papers` / `## My understanding`
+
+`## Source excerpts` is required for every concept page. Add one short original-language excerpt for each paper that materially grounds the concept, and link the excerpt back to the prepared MinerU markdown:
+
+```markdown
+- [[paper-slug]] ([prepared markdown](../../raw/prepared/papers/paper-slug.md)):
+  > short exact source fragment
+```
+
+Keep excerpts brief and use the source language exactly. If the relevant prepared markdown is unavailable, write `prepared markdown: missing` and explain the fallback source.
 
 ### topics/{topic-name}.md
 

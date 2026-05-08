@@ -83,6 +83,7 @@ The automated tool checks:
    - ideas: title, slug, status, origin, tags, priority
    - experiments: title, slug, status, target_claim, hypothesis, tags
    - claims: title, slug, status, confidence, tags, source_papers, evidence
+4. **Concept source grounding**: every concept page has `## Source excerpts`, prepared markdown links under `raw/prepared/papers/`, and at least one blockquoted original fragment
 
 ### Step 3: Field Value Validation (automated coverage)
 

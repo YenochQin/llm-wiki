@@ -55,7 +55,7 @@ code_url: ""
 cited_by: []
 ---
 
-> Author: Johanna K. Teske. Source: `raw/papers/Teske - 2024 - The star–planet composition connection.pdf` (prepared MinerU markdown at `raw/tmp/papers/star-planet-composition-connection.md`). `importance` is provisional — Semantic Scholar enrichment was unavailable at ingest time (rate-limited; no API key set).
+> Author: Johanna K. Teske. Source: `raw/papers/Teske - 2024 - The star–planet composition connection.pdf` (prepared MinerU markdown at `raw/prepared/papers/star-planet-composition-connection.md`). `importance` is provisional — Semantic Scholar enrichment was unavailable at ingest time (rate-limited; no API key set).
 
 ## Problem
 

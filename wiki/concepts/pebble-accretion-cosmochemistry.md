@@ -14,13 +14,18 @@ maturity: active
 key_papers:
   - "[[cosmochemistry-planetary-systems]]"
 first_introduced: "Lambrechts & Johansen 2012; Johansen et al. 2015, 2021"
-date_updated: 2026-05-07
+date_updated: 2026-05-08
 related_concepts: []
 ---
 
 ## Definition
 
 Pebble accretion cosmochemistry is the use of chemical, isotopic, and chronological constraints from Solar System materials to test whether rocky planets formed by rapid accretion of drifting mm- to cm-scale solids after planetesimals formed by streaming instability.
+
+## Source excerpts
+
+- [[cosmochemistry-planetary-systems]] ([prepared markdown](../../raw/prepared/papers/cosmochemistry-planetary-systems.md)):
+  > rapid planetary growth by pebble accretion
 
 ## Intuition
 

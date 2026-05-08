@@ -21,7 +21,7 @@ Use these local references on demand:
 ## Outputs
 
 - `wiki/` scaffold and provisional pages (Summary, topics, ideas, concepts, claims)
-- `raw/tmp/` prepared sources
+- `raw/prepared/` prepared sources
 - Final paper pages via parallel `/ingest` subagents
 - `.checkpoints/init-*.json` manifests for resume and replay
 - Updated `wiki/index.md`, `wiki/log.md`, `wiki/graph/*`
@@ -37,7 +37,7 @@ Use these local references on demand:
 ### Writes
 
 - `wiki/` scaffold and provisional pages
-- `raw/tmp/`
+- `raw/prepared/`
 - `wiki/index.md`, `wiki/log.md`, `wiki/graph/*`
 - `.checkpoints/init-prepare.json`, `.checkpoints/init-sources.json`, and `init-session` checkpoint metadata
 
@@ -80,7 +80,7 @@ export PYTHON_BIN
 
 Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log.md`. Do not add a second init log entry here.
 
-### Step 2: Prepare local inputs into `raw/tmp/`
+### Step 2: Prepare local inputs into `raw/prepared/`
 
 ```bash
 "$PYTHON_BIN" tools/init_discovery.py prepare --raw-root raw --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json
@@ -88,11 +88,11 @@ Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log
 
 - before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }` or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`
 - use `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]` for local paper normalization
-- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown at `raw/tmp/papers/<slug>.md`
+- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown at `raw/prepared/papers/<slug>.md`
 - when the agent supplied a PDF title, treat that title as authoritative for the prepared manifest; fetched/source titles are sanitized fallback metadata only and must not overwrite it
 - metadata or filename titles may remain as provisional display labels only; they are not trusted identity or title-search inputs
 - keep notes/web on their original source paths; `/init` reads them directly during scaffolding
-- set each local paper's `canonical_ingest_path` to a prepared `raw/tmp/` path when available; otherwise fall back to the original `raw/papers/...` path
+- set each local paper's `canonical_ingest_path` to a prepared `raw/prepared/` path when available; otherwise fall back to the original `raw/papers/...` path
 - record warnings for failed decode / title recovery rather than aborting `/init`
 - see `references/prepare.md` for the prepare decision tree and source-preference rules
 
@@ -129,7 +129,7 @@ Provisional note: seeded from raw/notes or raw/web during /init; pending validat
 
 ### Step 5: Parallel paper ingest with worktree isolation
 
-Paper sources for this step come strictly from `.checkpoints/init-sources.json`. Every entry is `origin=user_local` with a canonical prepared `raw/tmp/papers/<slug>.md` (MinerU output); the helper refuses to fall back to a raw PDF.
+Paper sources for this step come strictly from `.checkpoints/init-sources.json`. Every entry is `origin=user_local` with a canonical prepared `raw/prepared/papers/<slug>.md` (MinerU output); the helper refuses to fall back to a raw PDF.
 
 Parallel ingest contract:
 
@@ -169,7 +169,7 @@ After all subagents complete:
 
 Report separately:
 
-- user-provided papers ingested through prepared `raw/tmp/` paths
+- user-provided papers ingested through prepared `raw/prepared/` paths
 - user-provided papers that fell back to original `raw/papers/` paths
 - provisional pages seeded from notes/web
 - pages created by `/ingest`
@@ -181,8 +181,8 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 ## Constraints
 
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
-- `raw/tmp/` is a generated handoff area; direct local `/ingest` may also prepare reusable local sidecars under `raw/tmp/`
-- `/init` may write generated prepared local sources to `raw/tmp/`; it does not download external papers
+- `raw/prepared/` is a generated handoff area; direct local `/ingest` may also prepare reusable local sidecars under `raw/prepared/`
+- `/init` may write generated prepared local sources to `raw/prepared/`; it does not download external papers
 - `/prefill` is optional background seeding, not part of `/init`
 - no skill other than `/prefill` may auto-create foundations
 - `/init` must not create `people/` pages directly
