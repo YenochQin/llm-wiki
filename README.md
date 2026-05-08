@@ -34,7 +34,7 @@ wiki/        — LLM-maintained markdown: papers, concepts, topics, people, idea
 wiki/graph/  — auto-derived graph state (edges, citations, context_brief). Never hand-edit.
 tools/       — Python tooling (run via `uv run python tools/<name>.py`).
 skills/      — canonical skills entrypoint for the active language; `.claude/skills` and `.agents/skills` point here.
-omega/       — optional OmegaWiki spillover (remote experiment helpers, compatibility config).
+mcp-servers/ — optional project MCP servers, including `llm-review` for cross-model review.
 ```
 
 ## Skills (21)

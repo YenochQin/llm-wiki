@@ -35,15 +35,12 @@ tools/                 ← Python tooling (run via uv)
 ├── lint.py            ← link / field health checks
 └── …                  ← discover, init, fetch_*, reset_wiki
 
-omega/
-├── tools/remote.py    ← optional remote experiment helper (moved out of main wiki path)
-└── config/server.yaml.example ← optional remote GPU config template
-└── mcp-servers/llm-review/ ← Review LLM cross-model server
+mcp-servers/
+└── llm-review/        ← optional Review LLM cross-model server
 
 config/
-├── server.yaml        ← remote GPU server config (optional)
-├── server.yaml.example
 ├── .env.example       ← template for ~/.config/llm-wiki/.env
+├── zotero-roots.json  ← Zotero data/profile directory candidates
 └── settings.local.json.example
 
 i18n/en/               ← canonical English skills + shared references

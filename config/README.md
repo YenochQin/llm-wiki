@@ -70,31 +70,6 @@ Each entry may be either a string path or an object:
 `zotero.sqlite` and `storage/`, and profile directories containing `prefs.js`
 that points to the real data directory.
 
-### `server.yaml.example`
-
-Remote GPU server configuration for the optional Omega spillover in `omega/tools/remote.py`.
-Copy it to `config/server.yaml` if you still use the remote helper:
-
-```bash
-cp omega/config/server.yaml.example config/server.yaml
-```
-
-Then edit `config/server.yaml` with your server's SSH details, GPU info, conda environment, and work directory. See comments in the file for each field.
-
-**Only needed if you run experiments on a remote server.** Local-only users can skip this.
-
-**Key fields:**
-
-| Field | Required | Example |
-|-------|----------|---------|
-| `host` | Yes | `gpu1.cs.university.edu` |
-| `user` | Yes | `researcher` |
-| `work_dir` | Yes | `/home/researcher/experiments` |
-| `conda.path` + `conda.env` | One of conda or env_setup | `/opt/conda` + `research` |
-| `port` | No (default 22) | `2222` |
-| `identity_file` | No | `~/.ssh/id_ed25519` |
-| `proxy_jump` | No | `bastion.cs.edu` |
-
 ## All Done by `setup.sh`
 
 If you ran `setup.sh`, these files are already copied to the right locations. You only need to edit `~/.config/llm-wiki/.env` if you want to add API keys.
