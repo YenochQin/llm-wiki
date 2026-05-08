@@ -5,14 +5,12 @@ Use this reference when `/init` is preparing local inputs and writing `.checkpoi
 ## Prepare Flow
 
 - Run `"$PYTHON_BIN" tools/init_discovery.py prepare --raw-root raw --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`.
-- Before preparing local PDFs, recover confident titles when possible and write `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }` or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title", "arxiv_id": "2401.00001" } }` when a confident arXiv ID is already known.
-- `tools/init_discovery.py prepare` must pass those recovered titles and IDs into `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"] [--arxiv-id "<recovered-arxiv-id>"]`.
+- Before preparing local PDFs, recover confident titles when possible and write `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }` or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`.
+- `tools/init_discovery.py prepare` must pass recovered titles into `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]`.
 - `tools/init_discovery.py prepare` must delegate local paper normalization to the same helper and reuse pre-staged `raw/tmp/` artifacts when they already exist.
-- For local PDFs, use this recovery order only: handed-off arXiv ID or filename/path arXiv ID -> title-based no-key literature lookup when a confident title was supplied -> MinerU produces structured markdown.
+- For local PDFs, use this recovery order only: agent-recovered title from the first page -> MinerU produces structured markdown.
 - When the agent supplied a confident PDF title, that title is authoritative for the prepared manifest. MinerU cover-page detected titles are fallback display strings only and must not overwrite the agent title.
-- Do not use PDF metadata or PDF body text as arXiv-ID hints during prepare.
-- The arXiv ID, when recovered, is used only for downstream metadata enrichment (venue, year, citation counts) once `/ingest` runs. The prepared `.md` file itself is always MinerU output.
-- If no confident PDF title is available, omit `--title`; if no confident arXiv ID is available, omit `--arxiv-id`. The MinerU pipeline still runs cleanly with both flags absent. Metadata or filename titles remain display-only.
+- If no confident PDF title is available, omit `--title`. The MinerU pipeline still runs cleanly with the flag absent. Metadata or filename titles remain display-only.
 
 ## Source Preference Rules
 

@@ -119,7 +119,7 @@ Standard log line:
 - **INIT MODE handoff is manifest-driven**: when `/init` writes `.checkpoints/init-sources.json`, that manifest becomes the single source of truth for ingest order and canonical source paths. Prepared local inputs should point to `raw/tmp/papers/<slug>.md` (MinerU output).
 - **graph/ is auto-generated**: never manually edit files in `graph/` — only via `tools/research_wiki.py`.
 - **Bidirectional links**: always write the reverse link when writing a forward link.
-- **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`, optional `arxivId`). `/ingest` and `/init` consume the prepared `raw/tmp/papers/<slug>.md` — never the raw PDF directly.
+- **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`). `/ingest` and `/init` consume the prepared `raw/tmp/papers/<slug>.md` — never the raw PDF directly.
 - **index.md updated on every ingest**; log.md is append-only.
 - **lint default is report-only**: `--fix` auto-fixes deterministic issues (xref backlinks, missing field defaults); `--suggest` outputs suggestions for non-deterministic issues; `--fix --dry-run` previews fixes.
 - **Slug generation rule**: paper title keywords, hyphen-joined, all lowercase.
@@ -128,7 +128,7 @@ Standard log line:
 - **Claim confidence range**: 0.0-1.0; re-evaluate every time evidence changes.
 - **Experiments must link to a claim**: every experiment requires `target_claim`; results are written back to the claim's evidence after the user runs the experiment externally and reports results to `/exp-eval`.
 - **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
-- **Literature lookup**: `tools/fetch_literature.py` uses no-key arXiv/Crossref APIs for paper search and metadata. Citation graph coverage is best-effort because no-key providers expose fewer citation edges than key-gated services.
+- **Literature lookup**: `tools/fetch_literature.py` uses no-key Crossref search and metadata. Citation graph coverage is best-effort because public sources expose fewer citation edges than key-gated services.
 
 ---
 

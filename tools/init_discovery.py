@@ -3,7 +3,7 @@
 
 Local-papers-only pipeline: prepares raw PDFs/text inputs into raw/tmp/ and
 builds the .checkpoints/init-sources.json manifest from the prepared output.
-External discovery and arxiv source fetching have been removed; /init now
+External discovery and remote source fetching have been removed; /init now
 operates purely over the user's local raw/papers/ inputs.
 
 Usage:
@@ -34,7 +34,7 @@ TEXT_SUFFIXES = {".md", ".txt", ".html", ".htm"}
 
 
 def _paper_entry_match_key(entry: dict[str, Any]) -> tuple[str, str]:
-    return (str(entry.get("arxiv_id") or ""), _normalize_text(str(entry.get("title") or "")))
+    return ("", _normalize_text(str(entry.get("title") or "")))
 
 
 def _paper_entry_source_key(entry: dict[str, Any]) -> str:
@@ -51,7 +51,6 @@ def _paper_entry_preference(entry: dict[str, Any]) -> tuple[int, int, int]:
     original_format = str(entry.get("original_format") or "")
     ingest_format = str(entry.get("ingest_format") or "")
     abstract_len = len(str(entry.get("abstract_excerpt") or ""))
-    has_arxiv = 1 if entry.get("arxiv_id") else 0
 
     if original_format == "tex" and ingest_format == "tex":
         rank = 4
@@ -65,7 +64,7 @@ def _paper_entry_preference(entry: dict[str, Any]) -> tuple[int, int, int]:
         rank = 3
     else:
         rank = 0
-    return (rank, has_arxiv, abstract_len)
+    return (rank, abstract_len)
 
 
 def _project_root(raw_root: Path) -> Path:
@@ -96,13 +95,6 @@ def _normalize_prepare_source_path(raw_root: Path, source_path: str) -> str:
         return ""
 
 
-def _normalize_arxiv_id(arxiv_id: str) -> str:
-    arxiv_id = str(arxiv_id or "").strip()
-    if not arxiv_id:
-        return ""
-    return re.sub(r"v\d+$", "", arxiv_id, flags=re.IGNORECASE)
-
-
 def _normalize_pdf_titles_map(
     raw_root: Path,
     pdf_titles: dict[str, Any] | None,
@@ -114,17 +106,15 @@ def _normalize_pdf_titles_map(
         key = _normalize_prepare_source_path(raw_root, str(raw_key))
         if isinstance(raw_title, dict):
             title = " ".join(str(raw_title.get("title") or "").split())
-            arxiv_id = _normalize_arxiv_id(str(raw_title.get("arxiv_id") or ""))
         else:
             title = " ".join(str(raw_title or "").split())
-            arxiv_id = ""
         if not key:
             if warning_sink is not None:
                 warning_sink.append(f"ignored invalid PDF title mapping: {raw_key}")
             continue
-        if not title and not arxiv_id:
+        if not title:
             continue
-        normalized_payloads[key] = {"title": title, "arxiv_id": arxiv_id}
+        normalized_payloads[key] = {"title": title}
         original_keys[key] = str(raw_key)
     return normalized_payloads, original_keys
 
@@ -132,7 +122,7 @@ def _normalize_pdf_titles_map(
 def _load_pdf_titles_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError("expected a JSON object mapping source paths to titles or {title, arxiv_id} records")
+        raise ValueError("expected a JSON object mapping source paths to titles or {title} records")
     return payload
 
 
@@ -240,8 +230,8 @@ def _prepare_text_entry(path: Path, raw_root: Path, kind: str) -> dict[str, Any]
     }
 
 
-def _prepare_paper_entry(path: Path, raw_root: Path, title: str = "", arxiv_id: str = "") -> dict[str, Any]:
-    return paper_source.prepare_paper_source(path, raw_root, title=title, arxiv_id=arxiv_id)
+def _prepare_paper_entry(path: Path, raw_root: Path, title: str = "") -> dict[str, Any]:
+    return paper_source.prepare_paper_source(path, raw_root, title=title)
 
 
 def prepare_inputs(
@@ -265,17 +255,15 @@ def prepare_inputs(
             source_rel = _relative_to_project(entry, raw_root)
             recovered = normalized_handoffs.get(source_rel, {})
             recovered_title = recovered.get("title", "")
-            recovered_arxiv_id = recovered.get("arxiv_id", "")
-            if recovered_title or recovered_arxiv_id:
+            if recovered_title:
                 seen_title_keys.add(source_rel)
             paper_entries.append(
-                _prepare_paper_entry(entry, raw_root, title=recovered_title, arxiv_id=recovered_arxiv_id)
+                _prepare_paper_entry(entry, raw_root, title=recovered_title)
             )
 
     deduped_papers: dict[str, dict[str, Any]] = {}
     for entry in paper_entries:
-        arxiv_id, _title_key = _paper_entry_match_key(entry)
-        key = f"arxiv:{arxiv_id}" if arxiv_id else entry["candidate_id"]
+        key = entry["candidate_id"]
 
         existing = deduped_papers.get(key)
         if existing is None:

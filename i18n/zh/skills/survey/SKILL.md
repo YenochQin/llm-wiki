@@ -131,7 +131,7 @@ Following `shared-references/academic-writing.md`:
 If output format is LaTeX, following `shared-references/citation-verification.md`:
 
 1. Collect all `\cite{key}` citations
-2. For each key, attempt to fetch BibTeX: DBLP → CrossRef → arXiv/Crossref wrapper
+2. For each key, attempt to fetch BibTeX: DBLP → CrossRef → `tools/fetch_literature.py` CrossRef wrapper
 3. Verified: record BibTeX
 4. Unverified: mark `[UNCONFIRMED]`
 5. Output list of BibTeX entries (can be appended to paper/references.bib)

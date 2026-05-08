@@ -4,15 +4,14 @@
 
 ## What it catches
 
-For each candidate, `tools/discover.py` extracts the `arxiv_id` from the candidate record (`externalIds.ArXiv`, etc.) and checks whether any existing `wiki/papers/*.md` page has a matching `arxiv` (or legacy `arxiv_id`) in its frontmatter. Matches are dropped from the shortlist before scoring; the count is reported as `wiki_dedup_count`.
+For each candidate, `tools/discover.py` builds an identity key from DOI/provider ID/title and checks whether any existing `wiki/papers/*.md` page has a matching DOI or title in frontmatter. Matches are dropped from the shortlist before scoring; the count is reported as `wiki_dedup_count`.
 
 This catches the typical case: an already-ingested paper bubbles up as a recommendation again. Surfacing such a paper would waste the user's review attention; dropping it is correct.
 
 ## What it does not catch
 
-- **Title-only matches**: a paper in the wiki without `arxiv` or `arxiv_id` (e.g., a journal article ingested via `/edit`) will not match a candidate by title alone. This is intentional — fuzzy title matching produces false positives that hide legitimate candidates.
-- **arXiv version skew**: `2106.09685` and `2106.09685v3` should both be treated as the same paper. The frontmatter scanner strips `arxiv:`/`ARXIV:` prefixes but does not currently strip `vN` suffixes. If you find duplicates leaking through, normalise the version suffix in the candidate's `arxiv_id` before comparison.
-- **Cross-source duplicates within the candidate set**: the dedup pass before wiki filtering uses `_candidate_key` (arxiv → provider ID/DOI → title-slug) which catches most cross-source duplicates. Fully missing IDs and titles are dropped silently.
+- **No DOI and weak titles**: a paper without a DOI can only be matched by normalized title. If two records use substantially different titles, they may both appear.
+- **Cross-source duplicates within the candidate set**: the dedup pass before wiki filtering uses `_candidate_key` (DOI → provider ID → title) which catches most cross-source duplicates. Fully missing IDs and titles are dropped silently.
 
 ## What to do with a "high dedup" report
 

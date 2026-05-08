@@ -8,7 +8,7 @@ argument-hint: <idea-description-or-slug>
 > 中文运行提示：除非用户特别要求英文输出，执行本 skill 时请用中文向用户汇报；命令、路径、YAML 字段、slug、frontmatter key、工具参数和 wikilink 语法保持原样。下面保留英文规范作为精确操作说明。
 
 > Verify the novelty of a research idea or method using multiple sources. Searches WebSearch,
-> no-key literature search, existing wiki work, and arXiv recent preprints, then Review LLM cross-verifies.
+> no-key literature search, existing wiki work, and recent web/literature results, then Review LLM cross-verifies.
 > Outputs a novelty score (1-5), closest prior work, differentiation points, and next-step recommendations.
 > Can be used standalone or called by /ideate Phase 4.
 
@@ -70,7 +70,7 @@ Execute the following searches in parallel (use Agent tool for concurrency):
 2. Component query: `<component-1> + <component-2> + <domain>` — component combination search
 3. Survey query: `"survey" OR "review" + <task-area> + 2024 2025`
 4. Competitor query: `<alternative-approach> + <same-task>`
-5. Recent query: `<method-keywords> + arXiv + 2025 2026`
+5. Recent query: `<method-keywords> + 2025 2026`
 
 **Source B — no-key literature search:**
 ```bash
@@ -78,7 +78,7 @@ python3 tools/fetch_literature.py search "<method-keywords>" --limit 20
 ```
 - Fetch details for top 5 results:
 ```bash
-python3 tools/fetch_literature.py paper <arxiv-id-or-doi>
+python3 tools/fetch_literature.py paper <doi-or-title>
 ```
 
 **Source C — Wiki Internal Search:**
@@ -181,7 +181,7 @@ Synthesize Step 2 search results and Step 3 Review LLM assessment into a structu
 
 ### Tools（via Bash）
 - `python3 tools/fetch_literature.py search "<query>" --limit 20` — no-key literature search
-- `python3 tools/fetch_literature.py paper <arxiv-id-or-doi>` — fetch paper details
+- `python3 tools/fetch_literature.py paper <doi-or-title>` — fetch paper details
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Review LLM cross-verify (Step 3)

@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""No-key literature lookup via arXiv + Crossref.
+"""No-key literature lookup via Crossref.
 
 Usage:
     python3 tools/fetch_literature.py search "low rank adaptation"
-    python3 tools/fetch_literature.py paper 2106.09685
-    python3 tools/fetch_literature.py paper 10.48550/arXiv.2106.09685
     python3 tools/fetch_literature.py references 10.1145/3366423.3380287
-    python3 tools/fetch_literature.py recommend 2106.09685 --limit 20
+    python3 tools/fetch_literature.py recommend "low rank adaptation" --limit 20
 
-The wrapper intentionally avoids API-key-gated literature services. arXiv is
-used for preprint discovery; Crossref is used for broader DOI metadata and
-reference lists when publishers have deposited them.
+The wrapper intentionally avoids API-key-gated literature services. Crossref is
+used for DOI metadata, title search, and reference lists when publishers have
+deposited them.
 """
 
 from __future__ import annotations
@@ -21,8 +19,6 @@ import html
 import json
 import re
 import sys
-import time
-import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import quote
 
@@ -31,31 +27,14 @@ import _env  # noqa: F401 - load optional CROSSREF_MAILTO from user config
 import os
 import requests
 
-ARXIV_API_URL = "https://export.arxiv.org/api/query"
 CROSSREF_API_URL = "https://api.crossref.org/works"
 USER_AGENT = "llm-wiki/0.1 (mailto:llm-wiki-local@example.invalid)"
-ARXIV_DELAY_SECONDS = 3.0
 REQUEST_TIMEOUT = 30
-
-_last_arxiv_request = 0.0
 
 
 def _clean_text(text: str) -> str:
     text = html.unescape(re.sub(r"<[^>]+>", " ", text or ""))
     return re.sub(r"\s+", " ", text).strip()
-
-
-def _bare_arxiv_id(raw_id: str) -> str:
-    value = str(raw_id or "").strip()
-    value = value.removeprefix("ARXIV:").removeprefix("arXiv:").removeprefix("arxiv:")
-    value = re.sub(r"^https?://arxiv\.org/(abs|pdf)/", "", value, flags=re.IGNORECASE)
-    value = value.removesuffix(".pdf")
-    return re.sub(r"v\d+$", "", value, flags=re.IGNORECASE)
-
-
-def _looks_like_arxiv_id(value: str) -> bool:
-    value = _bare_arxiv_id(value)
-    return bool(re.match(r"^\d{4}\.\d{4,5}$", value) or re.match(r"^[a-z-]+(?:\.[A-Z]{2})?/\d{7}$", value))
 
 
 def _looks_like_doi(value: str) -> bool:
@@ -81,17 +60,6 @@ def _get_json(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     return resp.json()
 
 
-def _get_arxiv(params: dict[str, Any]) -> str:
-    global _last_arxiv_request
-    elapsed = time.monotonic() - _last_arxiv_request
-    if elapsed < ARXIV_DELAY_SECONDS:
-        time.sleep(ARXIV_DELAY_SECONDS - elapsed)
-    resp = requests.get(ARXIV_API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=REQUEST_TIMEOUT)
-    _last_arxiv_request = time.monotonic()
-    resp.raise_for_status()
-    return resp.text
-
-
 def _published_year(value: str) -> int | None:
     if not value:
         return None
@@ -100,63 +68,6 @@ def _published_year(value: str) -> int | None:
     except ValueError:
         match = re.search(r"\b(19|20)\d{2}\b", value)
         return int(match.group(0)) if match else None
-
-
-def _arxiv_entry_id(entry: ET.Element, ns: dict[str, str]) -> str:
-    raw = entry.findtext("atom:id", default="", namespaces=ns)
-    return _bare_arxiv_id(raw)
-
-
-def _normalize_arxiv_entry(entry: ET.Element) -> dict[str, Any]:
-    ns = {"atom": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
-    arxiv_id = _arxiv_entry_id(entry, ns)
-    title = _clean_text(entry.findtext("atom:title", default="", namespaces=ns))
-    abstract = _clean_text(entry.findtext("atom:summary", default="", namespaces=ns))
-    published = entry.findtext("atom:published", default="", namespaces=ns)
-    doi = entry.findtext("arxiv:doi", default="", namespaces=ns)
-    categories = [cat.attrib.get("term", "") for cat in entry.findall("atom:category", ns)]
-    authors = [
-        {"name": _clean_text(author.findtext("atom:name", default="", namespaces=ns))}
-        for author in entry.findall("atom:author", ns)
-    ]
-    authors = [a for a in authors if a.get("name")]
-    url = f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else entry.findtext("atom:id", default="", namespaces=ns)
-    external_ids = {"ArXiv": arxiv_id}
-    if doi:
-        external_ids["DOI"] = doi
-    return {
-        "paperId": arxiv_id,
-        "arxiv_id": arxiv_id,
-        "title": title,
-        "abstract": abstract,
-        "authors": authors,
-        "year": _published_year(published),
-        "citationCount": 0,
-        "influentialCitationCount": 0,
-        "venue": "arXiv",
-        "publicationTypes": ["preprint"],
-        "fieldsOfStudy": categories,
-        "externalIds": external_ids,
-        "url": url,
-        "_provider": "arxiv",
-    }
-
-
-def _arxiv_query(*, search_query: str = "", id_list: list[str] | None = None, limit: int = 10) -> list[dict[str, Any]]:
-    params = {
-        "search_query": search_query,
-        "start": 0,
-        "max_results": max(1, limit),
-        "sortBy": "relevance",
-        "sortOrder": "descending",
-    }
-    if id_list:
-        params["id_list"] = ",".join(_bare_arxiv_id(item) for item in id_list)
-        params["search_query"] = ""
-    xml_text = _get_arxiv(params)
-    root = ET.fromstring(xml_text)
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
-    return [_normalize_arxiv_entry(entry) for entry in root.findall("atom:entry", ns)]
 
 
 def _date_parts_year(parts: list[list[int]] | None) -> int | None:
@@ -186,7 +97,6 @@ def _normalize_crossref_item(item: dict[str, Any]) -> dict[str, Any]:
     external_ids = {"DOI": doi} if doi else {}
     return {
         "paperId": doi or item.get("URL") or title,
-        "arxiv_id": "",
         "title": title,
         "abstract": abstract,
         "authors": authors,
@@ -220,10 +130,10 @@ def _crossref_paper(doi: str) -> dict[str, Any]:
 
 def _candidate_key(item: dict[str, Any]) -> str:
     external = item.get("externalIds") or {}
-    if external.get("ArXiv"):
-        return f"arxiv:{external['ArXiv']}"
     if external.get("DOI"):
         return f"doi:{str(external['DOI']).lower()}"
+    if item.get("paperId"):
+        return f"provider:{str(item['paperId']).lower()}"
     title = re.sub(r"\s+", " ", (item.get("title") or "").lower()).strip()
     return f"title:{title}" if title else ""
 
@@ -243,29 +153,12 @@ def _dedupe(items: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
 
 
 def search(query: str, limit: int = 10) -> list[dict[str, Any]]:
-    """Search arXiv and Crossref without API keys."""
-    results: list[dict[str, Any]] = []
-    errors: list[str] = []
-    for label, fn in (
-        ("arXiv", lambda: _arxiv_query(search_query=f"all:{query}", limit=limit)),
-        ("Crossref", lambda: _crossref_search(query, limit=limit)),
-    ):
-        try:
-            results.extend(fn())
-        except Exception as exc:
-            errors.append(f"{label} search failed: {exc}")
-    for error in errors:
-        print(f"warn: {error}", file=sys.stderr)
-    return _dedupe(results, limit)
+    """Search Crossref without API keys."""
+    return _dedupe(_crossref_search(query, limit=limit), limit)
 
 
 def paper(identifier: str) -> dict[str, Any]:
-    """Get paper details by arXiv ID, DOI, or title query."""
-    if _looks_like_arxiv_id(identifier):
-        results = _arxiv_query(id_list=[identifier], limit=1)
-        if results:
-            return results[0]
-        raise RuntimeError(f"arXiv paper not found: {identifier}")
+    """Get paper details by DOI or title query."""
     if _looks_like_doi(identifier):
         return _crossref_paper(identifier)
     results = search(identifier, limit=1)
@@ -350,15 +243,13 @@ def recommend(
 
 
 def paper_id_to_stub(identifier: str) -> dict[str, Any]:
-    if _looks_like_arxiv_id(identifier):
-        return {"externalIds": {"ArXiv": _bare_arxiv_id(identifier)}, "title": ""}
     if _looks_like_doi(identifier):
         return {"externalIds": {"DOI": _normalize_doi(identifier)}, "title": ""}
     return {"paperId": identifier, "title": identifier}
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="No-key arXiv/Crossref literature lookup")
+    parser = argparse.ArgumentParser(description="No-key Crossref literature lookup")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_search = sub.add_parser("search", help="Search papers")
@@ -367,14 +258,14 @@ def main() -> None:
     p_search.add_argument("--limit", type=int, default=None, help="Number of results")
 
     p_paper = sub.add_parser("paper", help="Get paper details")
-    p_paper.add_argument("identifier", help="arXiv ID, DOI, or title")
+    p_paper.add_argument("identifier", help="DOI or title")
 
     p_cite = sub.add_parser("citations", help="Get citing papers when available")
-    p_cite.add_argument("identifier", help="arXiv ID or DOI")
+    p_cite.add_argument("identifier", help="DOI or title")
     p_cite.add_argument("--limit", type=int, default=100)
 
     p_refs = sub.add_parser("references", help="Get references when available")
-    p_refs.add_argument("identifier", help="arXiv ID or DOI")
+    p_refs.add_argument("identifier", help="DOI or title")
     p_refs.add_argument("--limit", type=int, default=100)
 
     p_rec = sub.add_parser("recommend", help="Find papers related to one or more anchors")

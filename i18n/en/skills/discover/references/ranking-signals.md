@@ -4,9 +4,9 @@ The deterministic ranking lives in `tools/discover.py` — this file documents w
 
 ## Anchor-mode candidate channels
 
-Anchor mode gathers from no-key arXiv/Crossref channels per anchor:
+Anchor mode gathers from no-key Crossref channels per anchor:
 
-- **`recommend`** — approximates related papers by looking up the anchor, extracting title keywords, and searching arXiv/Crossref.
+- **`recommend`** — approximates related papers by looking up the anchor, extracting title keywords, and searching Crossref.
 - **`references`** — surfaces older work when Crossref has deposited reference lists for the anchor DOI.
 - **`citations`** — currently best-effort and often empty because the no-key providers used here do not expose a full citing-works graph.
 
@@ -43,8 +43,7 @@ If a future ranking signal seems shared between `/init` and `/discover`, prefer 
 
 `tools/fetch_literature.py` deliberately uses no-key providers:
 
-- arXiv supplies preprint search and metadata, but not citation counts.
 - Crossref supplies DOI metadata, citation counts when deposited, and references when publishers provide them.
 - A full citing-works graph is not available from these no-key paths, so citation expansion is best-effort.
 
-Do not reintroduce a required API key for discovery. If a richer provider is added later, make it optional and preserve the arXiv/Crossref fallback.
+Do not reintroduce a required API key for discovery. If a richer provider is added later, make it optional and preserve the Crossref fallback.

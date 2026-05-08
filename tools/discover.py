@@ -4,7 +4,7 @@
 This is the deterministic core behind the /discover skill. It produces a
 recommendation shortlist from one of three seed modes:
 
-    from-anchors  — given one or more anchor paper IDs (post-/ingest case)
+    from-anchors  — given one or more anchor paper IDs or titles
     from-topic    — given a topic/query string (lighter alternative to /init)
     from-wiki     — derive anchors from the wiki's most recent papers
 
@@ -14,8 +14,8 @@ init_discovery.py — discovery does not favor surveys; it weights related-paper
 matches, citation counts when available, and freshness.
 
 Usage:
-    python3 tools/discover.py from-anchors --id 2106.09685 [--id 2305.14314] \\
-        [--negative 1810.04805] [--wiki-root wiki/] [--limit 10]
+    python3 tools/discover.py from-anchors --id "A paper title or DOI" \\
+        [--negative "another paper title or DOI"] [--wiki-root wiki/] [--limit 10]
     python3 tools/discover.py from-topic "diffusion model fine-tuning" \\
         [--wiki-root wiki/] [--limit 10]
     python3 tools/discover.py from-wiki --wiki-root wiki/ [--limit 10]
@@ -39,28 +39,18 @@ import fetch_literature
 
 # ---------- candidate normalization ----------------------------------------
 
-def _arxiv_id_from_external(external_ids: dict[str, Any] | None) -> str:
-    if not external_ids:
-        return ""
-    for key in ("ArXiv", "arXiv", "ARXIV"):
-        if external_ids.get(key):
-            return str(external_ids[key])
-    return ""
-
-
 def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") -> dict[str, Any]:
     """Flatten a literature provider record into the discover shortlist schema."""
     if not raw:
         return {}
-    external_ids = raw.get("externalIds") or {}
-    arxiv_id = raw.get("arxiv_id") or _arxiv_id_from_external(external_ids)
     authors = raw.get("authors") or []
+    external_ids = raw.get("externalIds") or {}
     h_indexes = [a.get("hIndex") for a in authors if isinstance(a, dict) and a.get("hIndex")]
     tldr = raw.get("tldr")
     tldr_text = tldr.get("text") if isinstance(tldr, dict) else (tldr or "")
     return {
         "paperId": raw.get("paperId") or "",
-        "arxiv_id": arxiv_id,
+        "externalIds": external_ids,
         "title": raw.get("title") or "",
         "abstract": raw.get("abstract") or "",
         "tldr": tldr_text,
@@ -81,11 +71,16 @@ def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") 
 
 
 def _candidate_key(c: dict[str, Any]) -> str:
-    """Stable dedup key — prefer arxiv_id, fall back to provider ID, then title."""
-    if c.get("arxiv_id"):
-        return f"arxiv:{c['arxiv_id']}"
+    """Stable dedup key — prefer provider/DOI IDs, then title."""
+    external_ids = c.get("externalIds") or {}
+    doi = external_ids.get("DOI") or external_ids.get("doi")
+    if doi:
+        return f"doi:{str(doi).lower()}"
     if c.get("paperId"):
-        return f"provider:{c['paperId']}"
+        paper_id = str(c["paperId"]).strip()
+        if re.match(r"^10\.\d{4,9}/\S+$", paper_id, flags=re.IGNORECASE):
+            return f"doi:{paper_id.lower()}"
+        return f"provider:{str(c['paperId']).lower()}"
     title = re.sub(r"\s+", " ", (c.get("title") or "").strip().lower())
     return f"title:{title}" if title else ""
 
@@ -131,10 +126,15 @@ def _dedupe(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # ---------- wiki dedup -----------------------------------------------------
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
-_ARXIV_LINE_RE = re.compile(r"^arxiv(?:_id)?\s*:\s*[\"']?([^\"'\n]+)[\"']?\s*$", re.MULTILINE)
+_DOI_RE = re.compile(
+    r"^external_ids:\s*\n(?:[ \t]+[A-Za-z0-9_-]+:\s*[\"']?[^\"'\n]*[\"']?\s*\n)*"
+    r"[ \t]+(?:DOI|doi):\s*[\"']?([^\"'\n]+)[\"']?\s*$",
+    re.MULTILINE,
+)
+_TITLE_RE = re.compile(r"^title:\s*[\"']?([^\"'\n]+)[\"']?\s*$", re.MULTILINE)
 
 
-def _extract_arxiv_id_from_paper(path: Path) -> str:
+def _extract_wiki_paper_key(path: Path) -> str:
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
     except OSError:
@@ -143,12 +143,19 @@ def _extract_arxiv_id_from_paper(path: Path) -> str:
     if not m:
         return ""
     fm = m.group(1)
-    am = _ARXIV_LINE_RE.search(fm)
-    return (am.group(1).strip() if am else "")
+    doi_match = _DOI_RE.search(fm)
+    if doi_match:
+        return f"doi:{doi_match.group(1).strip().lower()}"
+    title_match = _TITLE_RE.search(fm)
+    if title_match:
+        title = re.sub(r"\s+", " ", title_match.group(1).strip().lower())
+        if title:
+            return f"title:{title}"
+    return ""
 
 
-def _wiki_known_arxiv_ids(wiki_root: Path | None) -> set[str]:
-    """Scan wiki/papers/*.md for arxiv/arxiv_id frontmatter values."""
+def _wiki_known_paper_keys(wiki_root: Path | None) -> set[str]:
+    """Scan wiki/papers/*.md for DOI/title identity keys."""
     if not wiki_root or not wiki_root.exists():
         return set()
     papers_dir = wiki_root / "papers"
@@ -156,17 +163,16 @@ def _wiki_known_arxiv_ids(wiki_root: Path | None) -> set[str]:
         return set()
     seen: set[str] = set()
     for path in papers_dir.glob("*.md"):
-        aid = _extract_arxiv_id_from_paper(path)
-        if aid:
-            # Strip arXiv prefixes for match consistency.
-            seen.add(aid.removeprefix("arXiv:").removeprefix("ARXIV:").removeprefix("arxiv:").strip())
+        key = _extract_wiki_paper_key(path)
+        if key:
+            seen.add(key)
     return seen
 
 
 def _filter_against_wiki(candidates: list[dict[str, Any]], known: set[str]) -> list[dict[str, Any]]:
     if not known:
         return candidates
-    return [c for c in candidates if c.get("arxiv_id", "").strip() not in known]
+    return [c for c in candidates if _candidate_key(c) not in known]
 
 
 # ---------- ranking --------------------------------------------------------
@@ -340,16 +346,16 @@ def _gather_from_topic(topic: str, limit: int) -> list[dict[str, Any]]:
 
 
 def _wiki_recent_anchors(wiki_root: Path, k: int) -> list[str]:
-    """Pick the K most recently modified paper pages and return their arxiv IDs."""
+    """Pick the K most recently modified paper pages and return DOI/title anchors."""
     papers_dir = wiki_root / "papers"
     if not papers_dir.exists():
         return []
     paths = sorted(papers_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
     anchors: list[str] = []
     for path in paths:
-        aid = _extract_arxiv_id_from_paper(path)
-        if aid:
-            anchors.append(aid.removeprefix("arXiv:").removeprefix("ARXIV:").removeprefix("arxiv:").strip())
+        key = _extract_wiki_paper_key(path)
+        if key:
+            anchors.append(key.split(":", 1)[1])
             if len(anchors) >= k:
                 break
     return anchors
@@ -417,7 +423,7 @@ def build_shortlist(
         raise ValueError(f"unknown mode: {mode}")
 
     candidates = _dedupe(candidates)
-    known = _wiki_known_arxiv_ids(wiki_root) if wiki_root else set()
+    known = _wiki_known_paper_keys(wiki_root) if wiki_root else set()
     candidates = _filter_against_wiki(candidates, known)
 
     for c in candidates:
@@ -464,11 +470,11 @@ def _format_markdown(payload: dict[str, Any]) -> str:
     lines.append("")
     for i, c in enumerate(payload.get("shortlist") or [], start=1):
         title = c.get("title") or "(untitled)"
-        aid = c.get("arxiv_id") or c.get("paperId") or ""
+        identifier = c.get("paperId") or c.get("title") or ""
         rationale = c.get("_rationale") or ""
         score = c.get("_score", 0)
         lines.append(f"{i}. **{title}**  ")
-        lines.append(f"   `{aid}` — score {score} — {rationale}")
+        lines.append(f"   `{identifier}` — score {score} — {rationale}")
         if c.get("tldr"):
             lines.append(f"   > {c['tldr']}")
         lines.append("")

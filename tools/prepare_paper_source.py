@@ -28,8 +28,7 @@ CLI (preserves OmegaWiki's contract — `/ingest` invocations are unchanged):
     python3 tools/prepare_paper_source.py \\
         --raw-root raw \\
         --source raw/papers/example.pdf \\
-        [--title "Recovered Paper Title"] \\
-        [--arxiv-id 2401.00001]
+        [--title "Recovered Paper Title"]
 
 stdout: a single JSON object (one line) with the manifest shape `/ingest`
 expects. `canonical_ingest_path` is the file `/ingest` should read; for this
@@ -102,11 +101,6 @@ KEEP_UNNUMBERED = {
 
 NUMBERED_HEADING_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s*[A-Za-z]")
 IMG_RE = re.compile(r"!\[([^\]]*)\]\(images/([^)]+)\)")
-ARXIV_NEW = re.compile(r"(?<!\d)(\d{4}\.\d{4,5})(?:v\d+)?(?!\d)")
-ARXIV_OLD = re.compile(
-    r"(?<![A-Za-z0-9])([a-z\-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?(?!\d)",
-    re.IGNORECASE,
-)
 FIGURE_LABEL_RE = re.compile(r"\b(Figure|Fig\.?|Table)\s*\d+\b", re.IGNORECASE)
 AUTHOR_INITIAL_RE = re.compile(r"\b[A-Z]\.\s*[A-Z]")
 
@@ -371,14 +365,6 @@ def _detect_title(manifest: dict) -> str:
     return ""
 
 
-def _extract_arxiv_id(text: str) -> str:
-    for pat in (ARXIV_NEW, ARXIV_OLD):
-        m = pat.search(text)
-        if m:
-            return re.sub(r"v\d+$", "", m.group(1), flags=re.IGNORECASE)
-    return ""
-
-
 def _transform_markdown(
     full_md: str,
     slug: str,
@@ -546,7 +532,6 @@ def prepare(
     pdf: Path,
     raw_root: Path,
     title_override: str = "",
-    arxiv_id_override: str = "",
     cache_root: Path | None = None,
     language: str = "en",
     backend: str = "api",
@@ -567,7 +552,6 @@ def prepare(
             "ingest_format": "pdf",
             "title": title_override,
             "abstract_excerpt": "",
-            "arxiv_id": arxiv_id_override,
             "warnings": [f"PDF not found: {pdf}"],
             "usable": False,
         }
@@ -584,7 +568,6 @@ def prepare(
             "ingest_format": "pdf",
             "title": title_override,
             "abstract_excerpt": "",
-            "arxiv_id": arxiv_id_override,
             "warnings": [f"mineru extraction failed: {exc}"],
             "usable": False,
         }
@@ -613,7 +596,6 @@ def prepare(
                 "ingest_format": "mineru-md",
                 "title": existing_front.get("title") or title,
                 "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
-                "arxiv_id": existing_front.get("arxivId") or arxiv_id_override.strip() or _extract_arxiv_id(full_md[:5000]),
                 "warnings": [f"prepared source already exists; reusing: {out_path}"],
                 "usable": True,
             }
@@ -623,7 +605,6 @@ def prepare(
             "ingest_format": "mineru-md",
             "title": title,
             "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
-            "arxiv_id": arxiv_id_override.strip() or _extract_arxiv_id(full_md[:5000]),
             "warnings": [
                 f"prepared source collision: another source already uses this title/slug: {out_path}",
                 "Rerun with --overwrite only after confirming replacement with the user.",
@@ -632,8 +613,6 @@ def prepare(
         }
 
     body, dropped, skipped_sections = _transform_markdown(full_md, slug, title)
-    arxiv_haystack = pdf.name + " " + full_md[:5000]
-    arxiv_id = arxiv_id_override.strip() or _extract_arxiv_id(arxiv_haystack)
 
     if not body.strip():
         return {
@@ -642,7 +621,6 @@ def prepare(
             "ingest_format": "mineru-md",
             "title": title,
             "abstract_excerpt": "",
-            "arxiv_id": arxiv_id,
             "warnings": ["MinerU produced an empty body after filtering"],
             "usable": False,
         }
@@ -667,8 +645,6 @@ def prepare(
         "totalPages": int(manifest.get("totalPages", 0) or 0),
         "totalChars": int(manifest.get("totalChars", 0) or 0),
     }
-    if arxiv_id:
-        front["arxivId"] = arxiv_id
     if skipped_sections:
         front["skippedSectionHeadings"] = skipped_sections
     if dropped:
@@ -696,7 +672,6 @@ def prepare(
         "ingest_format": "mineru-md",
         "title": title,
         "abstract_excerpt": _build_abstract_excerpt(body),
-        "arxiv_id": arxiv_id,
         "warnings": warnings,
         "usable": True,
     }
@@ -706,7 +681,6 @@ def prepare_paper_source(
     path: Path,
     raw_root: Path,
     title: str = "",
-    arxiv_id: str = "",
     overwrite: bool = False,
 ) -> dict:
     """Compatibility wrapper used by init_discovery.py."""
@@ -714,7 +688,6 @@ def prepare_paper_source(
         pdf=path,
         raw_root=raw_root,
         title_override=title,
-        arxiv_id_override=arxiv_id,
         overwrite=overwrite,
     )
     result.setdefault("candidate_id", _local_candidate_id(path, raw_root))
@@ -752,8 +725,6 @@ def main() -> None:
                         help="Path to a local PDF to prepare.")
     parser.add_argument("--title", default="",
                         help="Confident agent-recovered title. Used verbatim when set.")
-    parser.add_argument("--arxiv-id", default="",
-                        help="Confident agent-recovered arXiv ID. Used verbatim when set.")
     parser.add_argument("--cache-root", default=None, type=Path,
                         help="MinerU cache root (default: .mineru-cache at CWD).")
     parser.add_argument("--language", default="en", help="Document language for MinerU.")
@@ -767,7 +738,6 @@ def main() -> None:
         pdf=args.source,
         raw_root=args.raw_root,
         title_override=args.title,
-        arxiv_id_override=args.arxiv_id,
         cache_root=args.cache_root,
         language=args.language,
         backend=args.backend,

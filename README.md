@@ -1,8 +1,8 @@
 # llm-wiki
 
-A personal LLM-maintained research wiki. Adopts the OmegaWiki workflow (24 → 20 Claude Code skills, 9 typed page kinds, claim/experiment graph) but swaps the PDF preprocessing layer for [MinerU](https://mineru.net/) — a vision-language parser that gives section-aware structured markdown.
+A personal LLM-maintained research wiki. Adopts the OmegaWiki workflow (24 → 21 Claude Code skills, 9 typed page kinds, claim/experiment graph) but swaps the PDF preprocessing layer for [MinerU](https://mineru.net/) — a vision-language parser that gives section-aware structured markdown.
 
-See [`../llm-wiki.md`](../llm-wiki.md) for the underlying pattern (Karpathy).
+See [`llm-wiki.md`](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md) for the underlying pattern (Karpathy).
 
 ## Quick start
 
@@ -21,6 +21,7 @@ claude
 /setup              # guided API key configuration
 /init <topic>       # bootstrap the wiki around a research topic
 /ingest <pdf>       # add a single source
+/reingest <pdf>     # regenerate an existing paper and migrate linked entities
 /ask <question>     # query the wiki with citations
 ```
 
@@ -36,15 +37,17 @@ skills/      — canonical skills entrypoint for the active language; `.claude/s
 omega/       — optional OmegaWiki spillover (remote experiment helpers, compatibility config).
 ```
 
-## Skills (20)
+## Skills (21)
 
-`setup, reset, init, prefill, ingest, discover, ask, edit, check, novelty, review, ideate, exp-design, exp-eval, refine, paper-plan, paper-draft, survey, research, rebuttal`.
+`setup, reset, init, prefill, ingest, reingest, discover, ask, edit, check, novelty, review, ideate, exp-design, exp-eval, refine, paper-plan, paper-draft, survey, research, rebuttal`.
 
 Dropped from upstream OmegaWiki: `daily-arxiv, paper-compile, exp-run, exp-status`. `/research` stays design-only: the user runs experiments externally and reports results back to `/exp-eval`.
 
 ## PDF preprocessing
 
 PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. The output format is `mineru-md`; `/ingest` consumes it via the `canonical_ingest_path` field of the prep tool's JSON manifest.
+
+Use `/reingest <pdf-or-raw/tmp/papers/*.md>` when a paper already exists in `wiki/papers/` but the PDF adapter, template, or analysis policy has changed. It refreshes the prepared markdown, regenerates the paper page, and by default audits/migrates linked `concepts`, `claims`, and `people` pages. Pass `--paper-only` only for a paper-page-only refresh; `--update-entities` is kept as a compatibility flag and is already the default behavior.
 
 ## Python tooling
 

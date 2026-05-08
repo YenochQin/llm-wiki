@@ -149,7 +149,7 @@ export PYTHON_BIN
    - Literature lookup: `"$PYTHON_BIN" tools/fetch_literature.py search "{direction}" --limit 20`
 
 3. **Merge, rank, and select top 5**:
-   - Deduplicate by arxiv_id
+   - Deduplicate by DOI/title/provider ID
    - Ranking priority: available citation count > recency > relevance score
    - Select top 5
 

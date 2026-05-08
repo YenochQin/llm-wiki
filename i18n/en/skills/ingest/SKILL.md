@@ -20,7 +20,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 ## Inputs
 
 - `source`: one of — local `.pdf`, local `.md` (already-prepared MinerU output or hand-curated source), or a `canonical_ingest_path` handed off by `/init` via `.checkpoints/init-sources.json` (see `references/init-mode.md`). The default prepared format produced by `tools/prepare_paper_source.py` is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
-- `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-arxiv-id-if-known>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
+- `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
 ## Outputs
 
@@ -108,11 +108,11 @@ Raw persistence rule: never copy or duplicate a file already under `raw/tmp/` or
    "$PYTHON_BIN" tools/research_wiki.py slug "<paper-title>"
    ```
 
-2. Stop-if-exists: if `wiki/papers/{slug}.md` already exists and the arXiv ID or title matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
-3. When an arXiv ID or DOI is available, query the no-key literature lookup:
+2. Stop-if-exists: if `wiki/papers/{slug}.md` already exists and the title or DOI matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
+3. When a DOI or confident title is available, query the no-key literature lookup:
 
    ```bash
-   "$PYTHON_BIN" tools/fetch_literature.py paper <arxiv-id-or-doi>
+   "$PYTHON_BIN" tools/fetch_literature.py paper <doi-or-title>
    ```
 
    Use the result for `venue`, `year`, `external_ids`, citation count when available, and the evidence behind the `importance` score (1-5). If citation counts are unavailable, default `importance` to 3 and mark it provisional.
@@ -146,11 +146,11 @@ Follow `references/dedup-policy.md`. In short:
 Skip this whole step in INIT MODE — the parent `/init` handles it at fan-in.
 
 ```bash
-"$PYTHON_BIN" tools/fetch_literature.py references <arxiv-id-or-doi>
-"$PYTHON_BIN" tools/fetch_literature.py citations <arxiv-id-or-doi>
+"$PYTHON_BIN" tools/fetch_literature.py references <doi-or-title>
+"$PYTHON_BIN" tools/fetch_literature.py citations <doi-or-title>
 ```
 
-- For each reference whose arXiv ID or title resolves to an existing `wiki/papers/{slug}.md`, add a bibliographic `cites` row to `graph/citations.jsonl`.
+- For each reference whose DOI or title resolves to an existing `wiki/papers/{slug}.md`, add a bibliographic `cites` row to `graph/citations.jsonl`.
 - Add a semantic paper-to-paper edge in `graph/edges.jsonl` only when the source text gives a clear cue. Edge-type selection is in `references/cross-references.md`. If no semantic relation cleanly fits, keep only the `cites` row.
 - For each citation already in the wiki, append the citer's slug to this paper's `cited_by`.
 - Surface unmatched high-citation references in the final report so the user can decide whether to follow up with another `/ingest`.
@@ -193,7 +193,7 @@ When active, invoke `/discover` with the just-ingested paper as the single ancho
 
 ```bash
 "$PYTHON_BIN" tools/discover.py from-anchors \
-  --id <arxiv-id-of-this-paper> \
+  --id <doi-or-title-of-this-paper> \
   --wiki-root wiki \
   --limit 10 \
   --output-checkpoint .checkpoints/ \
@@ -209,7 +209,7 @@ Append the markdown output to the report under a heading like "Related papers yo
 - Slugs always come from `tools/research_wiki.py slug`. Never hand-craft.
 - Every forward link writes its reverse link in the same turn — the wiki's bidirectional-link invariant. The only exception is links to `wiki/foundations/`, which are terminal.
 - In INIT MODE, do not write reverse links into pages that already exist (created by a sibling worktree or scaffold). Record the relationship via `tools/research_wiki.py add-edge` only; the parent `/init` backfills reverse links during fan-in.
-- Source format: `mineru-md` is the canonical prepared format. Never ingest from a raw PDF — always go through `tools/prepare_paper_source.py` first so downstream extraction sees structured markdown with frontmatter (`sections`, `figures`, optional `arxivId`). If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than ingesting from the raw PDF text.
+- Source format: `mineru-md` is the canonical prepared format. Never ingest from a raw PDF — always go through `tools/prepare_paper_source.py` first so downstream extraction sees structured markdown with frontmatter (`sections`, `figures`). If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than ingesting from the raw PDF text.
 - Ingest is conservative about new entities:
   - importance < 4: at most **1** new concept and **1** new claim per paper
   - importance ≥ 4: at most **3** new concepts and **2** new claims per paper
@@ -235,9 +235,9 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `"$PYTHON_BIN" tools/research_wiki.py log wiki/ "<message>"`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/`
-- `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"] [--arxiv-id "<recovered-arxiv-id>"]`
-- `"$PYTHON_BIN" tools/fetch_literature.py paper|citations|references <arxiv-id-or-doi>` — only when an arXiv ID or DOI was recovered from the local source
-- `"$PYTHON_BIN" tools/discover.py from-anchors --id <arxiv-id> --wiki-root wiki --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
+- `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]`
+- `"$PYTHON_BIN" tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
+- `"$PYTHON_BIN" tools/discover.py from-anchors --id <doi-or-title> --wiki-root wiki --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
 
 ### Shared References
 
@@ -251,5 +251,5 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 
 ### External APIs
 
-- arXiv/Crossref (via `tools/fetch_literature.py`) — no-key metadata, search, and best-effort reference lookup
+- Crossref (via `tools/fetch_literature.py`) — no-key metadata, search, and best-effort reference lookup
 - MinerU (via `tools/_mineru.py` + `tools/prepare_paper_source.py`; cloud API by default, local backend opt-in)

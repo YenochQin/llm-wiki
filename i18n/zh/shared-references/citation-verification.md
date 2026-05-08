@@ -16,7 +16,7 @@ The only acceptable sources for BibTeX are:
 
 1. **DBLP** (`https://dblp.org/`) — primary source for CS venues
 2. **CrossRef** (`https://api.crossref.org/`) — primary source for DOI-bearing publications
-3. **arXiv/Crossref wrapper** (`tools/fetch_literature.py`) — fallback for preprints and DOI metadata
+3. **CrossRef wrapper** (`tools/fetch_literature.py`) — fallback for DOI/title metadata
 4. **The paper's own .bib file** — if available in `raw/papers/`
 
 ## The [UNCONFIRMED] Protocol
@@ -50,10 +50,10 @@ WebFetch: https://api.crossref.org/works?query.bibliographic={url-encoded-title}
 # Construct BibTeX from structured data
 ```
 
-### arXiv/Crossref wrapper (fallback for arXiv preprints)
+### CrossRef wrapper (fallback for DOI/title lookup)
 
 ```bash
-# Uses no-key arXiv + Crossref APIs
+# Uses no-key Crossref APIs
 python3 tools/fetch_literature.py search "<title>"
 # Returns paperId, title, authors, year, venue, externalIds
 ```
@@ -72,7 +72,7 @@ Examples:
 
 ### /paper-draft
 1. After drafting each section, collect all `\cite{}` references
-2. For each citation: attempt DBLP → CrossRef → arXiv/Crossref wrapper in order
+2. For each citation: attempt DBLP → CrossRef → CrossRef wrapper in order
 3. Only include entries that are actually cited (`\nocite{*}` is forbidden)
 4. Write `references.bib` with fetched entries + [UNCONFIRMED] entries separated at bottom
 
@@ -93,4 +93,4 @@ Examples:
 - **Never** cite a paper not in the wiki (all citations trace back to wiki/papers/)
 - **Never** use `\nocite{*}` (every entry must be explicitly cited)
 - **Never** silently drop a [UNCONFIRMED] marker (it must survive until human verification or successful fetch)
-- **Never** fabricate DOIs or arXiv IDs
+- **Never** fabricate DOIs or other external IDs

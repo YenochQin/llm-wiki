@@ -10,7 +10,6 @@
 ---
 title: ""
 slug: ""
-arxiv: ""
 venue: ""
 year:
 tags: []

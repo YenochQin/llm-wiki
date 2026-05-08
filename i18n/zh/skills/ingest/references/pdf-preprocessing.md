@@ -4,7 +4,7 @@ Open this reference when `/ingest` receives a local `.pdf` and needs to convert 
 
 ## Why preprocessing exists
 
-A raw PDF is a poor ingest source: text extraction varies, equations and captions are easy to miss, and figure regions are not addressable. The MinerU pipeline turns the PDF into a structured markdown file with a YAML frontmatter that already lists `sections`, `figures`, optional `arxivId`, and a clean body where heading depth tracks dotted section numbers. The rest of `/ingest` then works from one uniform input shape.
+A raw PDF is a poor ingest source: text extraction varies, equations and captions are easy to miss, and figure regions are not addressable. The MinerU pipeline turns the PDF into a structured markdown file with a YAML frontmatter that already lists `sections`, `figures`, and a clean body where heading depth tracks dotted section numbers. The rest of `/ingest` then works from one uniform input shape.
 
 This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when `/init` batch-processes local PDFs. You are doing the same thing for a single paper, inline.
 
@@ -26,30 +26,23 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
 1. **Agent inspection of the PDF itself.**
    Before invoking any tool, open the PDF and record:
    - a confident paper title (from the first-page title, not from PDF metadata — metadata is often wrong)
-   - a confident arXiv ID if one is visibly printed on the first page or in a header
-   Either or both may be empty. Do not guess.
-2. **Filename / path arXiv ID extraction.**
-   `prepare_paper_source.py` regex-matches an arXiv ID embedded in the filename or containing folder; you do not need to do this yourself.
-3. **Title-based no-key literature lookup.**
-   Only runs when the agent supplied a confident `--title`. The helper handles it internally.
-
-The MinerU pipeline itself does not require an arXiv ID — it processes any PDF. The arXiv ID is only used to enrich downstream metadata (`venue`, `year`, citation counts) once `/ingest` Step 2 runs.
+   The title may be empty. Do not guess.
+2. **Title-based no-key literature lookup.**
+   Only runs later when the agent supplied a confident `--title`; `/ingest` may use it for Crossref metadata enrichment.
 
 ## Invocation
 
-Once you have the title and/or arXiv ID (possibly both empty), run:
+Once you have the title (possibly empty), run:
 
 ```bash
 "$PYTHON_BIN" tools/prepare_paper_source.py \
   --raw-root raw \
   --source <pdf-path> \
-  [--title "<agent-recovered-title>"] \
-  [--arxiv-id "<agent-recovered-arxiv-id>"]
+  [--title "<agent-recovered-title>"]
 ```
 
 - Pass `--title` only when the agent is confident. Do not pass a title derived from PDF metadata or from the filename — those poison the literature enrichment lookup.
-- Pass `--arxiv-id` only when the agent read it off the page. Filename-embedded IDs are picked up automatically.
-- Omit both flags when neither is confident. The helper falls back cleanly.
+- Omit the flag when no title is confident. The helper falls back cleanly.
 
 The helper writes the prepared entry under `raw/tmp/papers/` and prints a JSON record with:
 
@@ -60,7 +53,6 @@ The helper writes the prepared entry under `raw/tmp/papers/` and prints a JSON r
 | `ingest_format` | always `mineru-md` for this pipeline |
 | `title` | best title (agent-supplied > MinerU-detected > filename stem) |
 | `abstract_excerpt` | first ~400 chars after the abstract heading |
-| `arxiv_id` | recovered from PDF text or supplied by the agent; may be null |
 | `warnings` | non-fatal anomalies (no abstract found, no figures detected, etc.) |
 | `usable` | boolean — `false` blocks ingest |
 
@@ -79,7 +71,6 @@ The prepared `.md` looks like:
 title: "..."
 source: "raw/papers/<file>.pdf"
 ingestedAt: "2026-05-06T..."
-arxivId: "2401.12345"           # optional
 totalPages: 24
 totalChars: 87412
 sections:

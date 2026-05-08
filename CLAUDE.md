@@ -119,7 +119,7 @@
 - **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `raw/tmp/papers/<slug>.md`。
 - **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。
 - **双向链接**：写正向链接时必须同时写反向链接。
-- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`、可选 `arxivId`）。`/ingest` 和 `/init` 消费 `raw/tmp/papers/<slug>.md`，不要直接消费原始 PDF。
+- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest` 和 `/init` 消费 `raw/tmp/papers/<slug>.md`，不要直接消费原始 PDF。
 - **每次 ingest 都更新 index.md**；`log.md` 只追加。
 - **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
 - **Slug 生成规则**：论文标题关键词，用连字符连接，全小写。
@@ -128,7 +128,7 @@
 - **Claim confidence 范围**：0.0-1.0；每次 evidence 变化都重新评估。
 - **Experiment 必须链接到 claim**：每个 experiment 都需要 `target_claim`；用户外部运行实验并通过 `/exp-eval` 报告结果后，把结果写回 claim evidence。
 - **MinerU API token**：`MINERU_API_TOKEN` 环境变量驱动默认云端后端。没有它 PDF ingest 会失败；离线可安装本地后端（`uv sync --extra local`）。
-- **文献检索**：`tools/fetch_literature.py` 使用无需 API key 的 arXiv/Crossref API 做论文搜索和元数据检索。由于无 key provider 暴露的 citation graph 较少，引用图覆盖是 best-effort。
+- **文献检索**：`tools/fetch_literature.py` 使用无需 API key 的 Crossref 搜索和元数据检索。由于公开源暴露的 citation graph 较少，引用图覆盖是 best-effort。
 
 ---
 

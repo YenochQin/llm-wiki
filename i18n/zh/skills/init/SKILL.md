@@ -86,11 +86,10 @@ Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log
 "$PYTHON_BIN" tools/init_discovery.py prepare --raw-root raw --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json
 ```
 
-- before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }` or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title", "arxiv_id": "2401.00001" } }` when a confident arXiv ID is already known
-- use `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"] [--arxiv-id "<recovered-arxiv-id>"]` for local paper normalization
-- local PDF recovery order: handed-off arXiv ID or filename/path arXiv ID -> agent-recovered title via no-key literature lookup -> MinerU produces structured markdown at `raw/tmp/papers/<slug>.md`
+- before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }` or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`
+- use `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]` for local paper normalization
+- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown at `raw/tmp/papers/<slug>.md`
 - when the agent supplied a PDF title, treat that title as authoritative for the prepared manifest; fetched/source titles are sanitized fallback metadata only and must not overwrite it
-- do not use PDF metadata or body text as arXiv-ID hints during prepare
 - metadata or filename titles may remain as provisional display labels only; they are not trusted identity or title-search inputs
 - keep notes/web on their original source paths; `/init` reads them directly during scaffolding
 - set each local paper's `canonical_ingest_path` to a prepared `raw/tmp/` path when available; otherwise fall back to the original `raw/papers/...` path
@@ -197,7 +196,7 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 - **No parseable paper in `raw/papers/`**: skip Step 5 entirely; `/init` finishes after the scaffold and provisional pages
 - **`raw/notes/` and `raw/web/` empty**: skip provisional seeding, continue
 - **MinerU prep fails (token unset, API outage, manifest `usable: false`)**: skip that paper, record the warning in `.checkpoints/init-prepare.json`, and continue. Do not silently substitute the raw PDF — `mineru-md` is the contract
-- **No confident PDF title is recovered**: omit `--title`, allow filename/path arXiv-ID recovery only; any metadata-or-filename title is display-only
+- **No confident PDF title is recovered**: omit `--title`; any metadata-or-filename title is display-only
 - **Single paper ingest fails**: record it via checkpoint, skip it, continue the rest, and list it in the report
 - **Current checkout is detached HEAD**: stop before worktree fan-out and ask the user to switch to or create a named branch first
 - **stash pop fails**: keep checkpoint metadata and report the manual recovery step

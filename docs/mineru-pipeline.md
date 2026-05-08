@@ -22,7 +22,6 @@ raw/papers/<file>.pdf
 | `ingest_format` | `"mineru-md"` — flag to skills that this is structured MinerU output, not raw PDF or `.tex` |
 | `title` | best-effort title detected from the cover or the first non-junk heading |
 | `abstract_excerpt` | first ~400 chars after the abstract heading, for skill prompts |
-| `arxiv_id` | recovered from the PDF text if present, else null |
 | `warnings` | non-fatal anomalies (missing abstract, no figures, etc.) |
 | `usable` | boolean — `false` blocks downstream ingest |
 
@@ -44,7 +43,6 @@ uv run python tools/prepare_paper_source.py \
   --raw-root raw \
   --source raw/papers/<file>.pdf \
   [--title "Optional override"] \
-  [--arxiv-id 2401.12345]
 ```
 
 Output is a JSON manifest on stdout (consumed by `/ingest`). Side effects:
@@ -73,7 +71,7 @@ raw/tmp/papers/
     assets/<slug>/<hash>.jpg         # only images that survive the adapter cut
 ```
 
-Frontmatter on `<slug>.md` includes `title`, `source`, `ingestedAt`, `totalPages`, `totalChars`, optional `arxivId`, `skippedSectionHeadings`, `droppedHeadings`, plus structured `sections` and `figures` arrays. `/ingest` mines this for paper-level metadata, concept candidates, figure cross-references, and bibliography-backed citation expansion.
+Frontmatter on `<slug>.md` includes `title`, `source`, `ingestedAt`, `totalPages`, `totalChars`, `skippedSectionHeadings`, `droppedHeadings`, plus structured `sections` and `figures` arrays. `/ingest` mines this for paper-level metadata, concept candidates, figure cross-references, and bibliography-backed citation expansion.
 
 ## What the adapter cleans up
 
@@ -100,4 +98,4 @@ MinerU's raw markdown is flat and noisy. The adapter applies seven passes (mirro
 
 ## Why MinerU instead of the OmegaWiki tex-priority chain?
 
-OmegaWiki's original `prepare_paper_source.py` preferred arXiv `.tex` source when recoverable, falling back to a synthetic `.tex` from PDF text. That works well when most sources are arXiv preprints. For a more general workflow (Zotero PDFs, books, conference papers, scanned reports), MinerU's vision-language extraction gives consistently better section/figure structure than text-only PDF parsing. The trade-off: MinerU is a network dependency (the API) or a heavy local install, and it does not recover paper identity (no automatic arXiv ID lookup) — the adapter only extracts an arXiv ID if it appears verbatim in the PDF text.
+OmegaWiki's original `prepare_paper_source.py` preferred remote source packages when recoverable, falling back to synthetic text from PDF extraction. For a more general workflow (Zotero PDFs, books, conference papers, scanned reports), MinerU's vision-language extraction gives consistently better section/figure structure than text-only PDF parsing. The trade-off: MinerU is a network dependency (the API) or a heavy local install, and it does not recover paper identity automatically; metadata enrichment belongs to `/ingest` and uses DOI/title lookup when available.

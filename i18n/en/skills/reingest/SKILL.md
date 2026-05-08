@@ -37,7 +37,7 @@ Resolve `PYTHON_BIN` using the same logic as `/ingest`; prefer `.venv/bin/python
      --overwrite
    ```
 
-   Pass `--title` or `--arxiv-id` only when confidently recovered from the PDF itself or an existing trusted paper page.
+   Pass `--title` only when confidently recovered from the PDF itself or an existing trusted paper page.
 2. If input is a prepared `raw/tmp/papers/*.md`, use it directly.
 3. Stop if the prep manifest has `usable: false`; report warnings verbatim.
 

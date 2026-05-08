@@ -10,7 +10,7 @@ In INIT MODE:
 
 - the source is always a `canonical_ingest_path` already prepared by `/init` (a `raw/tmp/papers/<slug>.md` path produced by MinerU)
 - `raw/` is strictly read-only — do not write to `raw/tmp/` or anywhere else under `raw/`
-- `fetch_literature.py citations <arxiv-id-or-doi>` and `fetch_literature.py references <arxiv-id-or-doi>` are **skipped** — the parent `/init` does a unified citation sweep at fan-in
+- `fetch_literature.py citations <doi-or-title>` and `fetch_literature.py references <doi-or-title>` are **skipped** — the parent `/init` does a unified citation sweep at fan-in
 - `rebuild-context-brief` and `rebuild-open-questions` are **skipped** — the parent runs them once after all subagents merge
 - conflict-prone topic writes are **skipped** — if multiple parallel ingests all try to append to the same topic, they will merge-conflict. Let the parent handle topic updates after fan-in, or defer them to `/edit`.
 - **skip reverse-link edits to existing pages** — do not append `key_papers` to an existing concept page, do not append to `## Key papers` or `## Related` of an existing paper page, and do not append to an existing people page. Record the relationship via `tools/research_wiki.py add-edge` instead. The parent `/init` rebuilds these backlinks during fan-in.
@@ -42,7 +42,7 @@ When two sibling `/ingest` subagents both need a new concept page with the same 
 - the `/init` parent merges worktree branches sequentially; when the second worktree's ingest writes the same slug, the sequential merge resolves it as a conflict that the parent handles by picking the earlier write and re-running `find-similar-concept` on the later one at fan-in
 - do not try to coordinate across worktrees during ingest — worktrees are isolated by design
 
-If you do notice a slug collision during a direct (non-INIT) ingest — i.e. the paper page already exists with a different arXiv ID — stop and report, per `references/error-handling.md`. Do not write through.
+If you do notice a slug collision during a direct (non-INIT) ingest — i.e. the paper page already exists with a different DOI/title identity — stop and report, per `references/error-handling.md`. Do not write through.
 
 ## What `/ingest` does not do for `/init`
 

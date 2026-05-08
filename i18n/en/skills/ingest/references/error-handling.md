@@ -15,7 +15,7 @@ Open this reference when a step fails. `/ingest` prefers to degrade gracefully: 
 
 ## Slug collisions
 
-- **Generated slug matches an existing page with a different arXiv ID or title**: stop and report. Do not append a numeric suffix silently — a collision between two different papers at the same slug is a signal the wiki has a naming problem that the user should resolve.
+- **Generated slug matches an existing page with a different DOI or title**: stop and report. Do not append a numeric suffix silently — a collision between two different papers at the same slug is a signal the wiki has a naming problem that the user should resolve.
 - **Generated slug matches an existing page with the same paper**: the paper is already ingested. Report and exit.
 - **Within a single ingest, a generated concept or claim slug collides with a different existing page**: append a numeric suffix (`-2`, `-3`, ...) via the tool's built-in collision handling. This is the one case where suffixing is correct — it happens when two genuinely different ideas produce the same slug under the deterministic rule.
 
@@ -43,7 +43,7 @@ If an ingest fails after some writes have landed (paper page written, but concep
 Stop outright when:
 
 - no source can be read at all
-- the paper is already ingested (slug + arXiv ID match an existing page)
+- the paper is already ingested (slug + DOI/title match an existing page)
 - a slug collision would silently overwrite a different existing paper
 
 Continue with a warning when:

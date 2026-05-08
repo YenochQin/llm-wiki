@@ -17,7 +17,7 @@ Use these local references on demand:
 
 ## Inputs
 
-- `--anchor <id>` (repeatable): one or more anchor paper IDs (arXiv IDs or DOIs preferred). Drives the **anchor mode** — the primary use case, including the post-`/ingest` "what to read next" flow.
+- `--anchor <id>` (repeatable): one or more anchor paper identifiers or titles (DOIs preferred when available). Drives the **anchor mode** — the primary use case, including the post-`/ingest` "what to read next" flow.
 - `--negative <id>` (repeatable, optional): IDs to exclude from recommendations. Only meaningful with `--anchor`.
 - `--topic "<str>"`: a topic / query string. Drives the **topic mode** — lighter alternative to `/init`'s planner.
 - `--from-wiki`: derive seeds automatically from the wiki's most recently modified papers. Drives the **wiki mode**.
@@ -37,7 +37,7 @@ Exactly one of `--anchor`, `--topic`, `--from-wiki` must be given.
 
 ### Reads
 
-- `wiki/papers/*.md` — frontmatter `arxiv` (or legacy `arxiv_id`) for dedup against already-ingested papers
+- `wiki/papers/*.md` — frontmatter `external_ids.DOI` and title for dedup against already-ingested papers
 - `wiki/papers/*.md` modification times — for `--from-wiki` anchor selection
 
 ### Writes
@@ -77,7 +77,7 @@ If the user supplied negatives ("not these"), include them via `--negative` in a
 
 ```bash
 "$PYTHON_BIN" tools/discover.py from-anchors \
-  --id <arxiv-id> [--id <arxiv-id>...] [--negative <id>...] \
+  --id <doi-or-title> [--id <doi-or-title>...] [--negative <id-or-title>...] \
   --wiki-root wiki \
   --limit 10 \
   --output-checkpoint .checkpoints/ \
@@ -91,17 +91,17 @@ Or for topic / wiki modes:
 "$PYTHON_BIN" tools/discover.py from-wiki --wiki-root wiki --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key providers used here do not expose a full citing-works graph.
+Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key provider used here does not expose a full citing-works graph.
 
 The tool handles candidate gathering, wiki dedup, ranking, and writes the checkpoint. Always pass `--wiki-root wiki` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
 
-If arXiv or Crossref is unavailable in topic mode, the tool will continue with whatever source responded; check the output and report degraded discovery to the user. If every channel fails, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
+If Crossref is unavailable in topic mode, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
 
 ### Step 3: Present the shortlist
 
 Show the markdown output to the user. For each candidate, the user needs enough to decide whether to ingest:
 
-- title and arXiv ID or DOI
+- title and DOI or provider identifier, when available
 - one-line rationale (already produced by the tool: anchor count, citation count when available, year)
 - abstract excerpt if the tool surfaced one
 
@@ -125,7 +125,7 @@ Do not ingest anything yourself. The user picks.
 
 ### From `/ingest --discover`
 
-When `/ingest` is invoked with the optional `--discover` flag (default off), it calls `/discover` after the final report, with the just-ingested paper's arXiv ID as the single anchor. The shortlist is appended to `/ingest`'s report under a "Related papers you may want to ingest next" heading. `/ingest` never auto-ingests anything from this list.
+When `/ingest` is invoked with the optional `--discover` flag (default off), it calls `/discover` after the final report, using the just-ingested paper's DOI when available, otherwise its title. The shortlist is appended to `/ingest`'s report under a "Related papers you may want to ingest next" heading. `/ingest` never auto-ingests anything from this list.
 
 ### From `/init`
 
@@ -138,14 +138,13 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 - **No writes to `raw/`**: `/discover` does not download papers. The user obtains the PDF (e.g. via Zotero), places it under `raw/papers/`, then runs `/ingest raw/papers/<file>.pdf` afterwards if they want a candidate.
 - **Always dedupe against the wiki**: pass `--wiki-root wiki` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
-- **No-key provider coverage**: anchor mode uses arXiv/Crossref related lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
-- **Rate limits apply**: arXiv requests are intentionally paced; large multi-anchor discovery can be slow.
+- **No-key provider coverage**: anchor mode uses Crossref title/DOI lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
 
 ## Error Handling
 
 - **All seed channels fail**: report the failure, write no shortlist, and do not log a successful run.
 - **No provider returns recommendations for an anchor**: keep going with the remaining anchors; if all anchors return zero, treat as total failure.
-- **`--from-wiki` finds no anchorable papers** (`wiki/papers/` empty or all missing `arxiv_id`): tell the user the wiki is too sparse for wiki-mode discovery and suggest topic mode.
+- **`--from-wiki` finds no anchorable papers** (`wiki/papers/` empty or paper pages are missing both title and DOI): tell the user the wiki is too sparse for wiki-mode discovery and suggest topic mode.
 - **Anchor ID is malformed or unknown**: surface the bad ID in the report and continue with any remaining anchors.
 
 ## Dependencies
@@ -164,4 +163,4 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 
 ### External APIs
 
-- arXiv + Crossref — no-key search, paper metadata, and best-effort reference lookup via `tools/fetch_literature.py`
+- Crossref — no-key search, paper metadata, and best-effort reference lookup via `tools/fetch_literature.py`

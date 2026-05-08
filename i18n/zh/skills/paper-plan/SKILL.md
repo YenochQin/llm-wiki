@@ -239,7 +239,7 @@ Following `shared-references/citation-verification.md`:
 
 1. List all wiki papers referenced via `[[slug]]` in the outline
 2. For each paper, pre-fetch BibTeX:
-   - DBLP first, then CrossRef, then arXiv/Crossref wrapper
+   - DBLP first, then CrossRef, then `tools/fetch_literature.py` CrossRef wrapper
    - Success: record BibTeX key + source
    - Failure: mark `[UNCONFIRMED]`
 3. Generate citation coverage report:

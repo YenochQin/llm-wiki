@@ -284,7 +284,7 @@ Make final adjustments based on Review LLM feedback.
 ## Constraints
 
 - **Each section draws from wiki**: do not generate content from nothing; every technical claim must trace back to a wiki page
-- **BibTeX follows citation-verification.md**: fetch from DBLP/CrossRef/arXiv-Crossref wrapper; do not generate from LLM memory
+- **BibTeX follows citation-verification.md**: fetch from DBLP/CrossRef/`tools/fetch_literature.py` CrossRef wrapper; do not generate from LLM memory
 - **De-AI polish is mandatory**: each section must receive a polish pass after writing; cannot be skipped
 - **Figures follow academic-writing.md**: colorblind-safe, font size >= 8pt, vector format preferred
 - **Anonymous submission**: do not write author names, institutions, or acknowledgements (per venue anonymity requirements)
