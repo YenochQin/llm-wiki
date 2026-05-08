@@ -2,9 +2,9 @@
 """Locate a paper PDF in a local Zotero data directory.
 
 This is a small, read-only helper for `/ingest`: given a Zotero data root and a
-paper identifier (title, DOI, or Zotero item key), inspect `zotero.sqlite` and
-return candidate PDF attachments with enough metadata for the caller to pick or
-prepare the source.
+paper identifier (title, DOI, Zotero item key, or a filename-like attachment
+hint), inspect `zotero.sqlite` and return candidate PDF attachments with enough
+metadata for the caller to pick or prepare the source.
 
 Supported Zotero attachment forms:
   - imported attachments under storage/<attachmentKey>/<filename>.pdf
@@ -58,6 +58,26 @@ def _normalize_doi(value: str) -> str:
     value = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", value)
     value = re.sub(r"^doi:\s*", "", value)
     return value.strip().strip(".")
+
+
+def _looks_like_filename_query(value: str) -> bool:
+    text = value.strip()
+    if not text:
+        return False
+    if any(sep in text for sep in ("/", "\\")):
+        return True
+    lower = text.lower()
+    if lower.endswith(".pdf"):
+        return True
+    base = Path(unquote(text)).name
+    stem = Path(base).stem
+    return bool(
+        re.search(r"\d", base)
+        and (
+            re.search(r"[_-]", stem)
+            or len(_tokens(stem)) <= 3
+        )
+    )
 
 
 def _tokens(value: str) -> set[str]:
@@ -291,12 +311,76 @@ def _score_item(item: ItemRecord, query: str, doi: str, item_key: str) -> tuple[
     return 0.0, ""
 
 
-def _candidate_items(conn: sqlite3.Connection, query: str, doi: str, item_key: str, limit: int) -> list[tuple[ItemRecord, float, str]]:
+def _attachment_name_values(attachment: dict) -> list[str]:
+    values: list[str] = []
+    path = str(attachment.get("path") or "").strip()
+    title = str(attachment.get("title") or "").strip()
+    if path:
+        values.extend([path, Path(path).name, Path(path).stem])
+    if title:
+        values.append(title)
+    return values
+
+
+def _score_attachment_match(attachments: list[dict], query: str) -> tuple[float, str]:
+    q_raw = query.strip()
+    if not q_raw:
+        return 0.0, ""
+    q_norm = _normalize_text(q_raw)
+    q_base = Path(unquote(q_raw)).name
+    q_stem = Path(q_base).stem
+    q_base_norm = _normalize_text(q_base)
+    q_stem_norm = _normalize_text(q_stem)
+    q_tokens = _tokens(q_norm)
+    filename_like = _looks_like_filename_query(q_raw)
+
+    best_score = 0.0
+    best_reason = ""
+    for attachment in attachments:
+        if not attachment.get("exists"):
+            continue
+        for value in _attachment_name_values(attachment):
+            v_norm = _normalize_text(value)
+            if not v_norm:
+                continue
+            score = 0.0
+            reason = ""
+            if q_base_norm and q_base_norm == v_norm:
+                score, reason = 0.99, "attachment-filename-exact"
+            elif q_stem_norm and q_stem_norm == v_norm:
+                score, reason = 0.98, "attachment-stem-exact"
+            elif q_base_norm and (q_base_norm in v_norm or v_norm in q_base_norm):
+                score, reason = 0.90, "attachment-filename-containment"
+            elif q_stem_norm and (q_stem_norm in v_norm or v_norm in q_stem_norm):
+                score, reason = 0.88, "attachment-stem-containment"
+            else:
+                token_score = _jaccard(q_tokens, _tokens(v_norm))
+                if token_score:
+                    score = min(0.85, token_score if filename_like else token_score * 0.8)
+                    reason = "attachment-token-overlap"
+            if score > best_score:
+                best_score = score
+                best_reason = reason
+    return best_score, best_reason
+
+
+def _candidate_items(
+    conn: sqlite3.Connection,
+    zotero_root: Path,
+    query: str,
+    doi: str,
+    item_key: str,
+    limit: int,
+) -> list[tuple[ItemRecord, float, str, list[dict], tuple[float, str]]]:
     scored = []
     for item in _all_parent_items(conn):
+        attachments = _attachments_for_item(conn, zotero_root, item.item_id)
         score, reason = _score_item(item, query, doi, item_key)
+        attachment_score, attachment_reason = _score_attachment_match(attachments, query)
+        if attachment_score > score:
+            score, reason = attachment_score, attachment_reason
         if score >= 0.20:
-            scored.append((item, score, reason))
+            scored.append((item, score, reason, attachments, (attachment_score, attachment_reason)))
     scored.sort(key=lambda x: (-x[1], x[0].title.lower()))
     return scored[:limit]
 
@@ -394,8 +478,19 @@ def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: i
     conn = _connect(db_path)
     try:
         candidates = []
-        for item, score, reason in _candidate_items(conn, query, _normalize_doi(doi), item_key, limit):
-            attachments = _attachments_for_item(conn, zotero_root, item.item_id)
+        for item, score, reason, attachments, attachment_match in _candidate_items(
+            conn, zotero_root, query, _normalize_doi(doi), item_key, limit
+        ):
+            best_attachment_score, best_attachment_reason = attachment_match
+            best_attachment_path = ""
+            if best_attachment_score >= 0.20:
+                for att in attachments:
+                    if not att.get("exists"):
+                        continue
+                    att_score, att_reason = _score_attachment_match([att], query)
+                    if att_score == best_attachment_score and att_reason == best_attachment_reason:
+                        best_attachment_path = str(att.get("path") or "")
+                        break
             candidates.append({
                 "score": round(score, 3),
                 "match_reason": reason,
@@ -407,6 +502,11 @@ def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: i
                 "year": item.year,
                 "creators": item.creators,
                 "attachments": attachments,
+                "best_attachment": {
+                    "path": best_attachment_path,
+                    "score": round(best_attachment_score, 3),
+                    "match_reason": best_attachment_reason,
+                } if best_attachment_path else None,
                 "pdf_paths": [att["path"] for att in attachments if att.get("exists")],
             })
         return {
