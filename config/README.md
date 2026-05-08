@@ -40,6 +40,36 @@ These are the **minimum permissions** for ΩmegaWiki skills to function. Claude 
 
 **To customize:** You can add more permissions (e.g., `Bash(git add:*)` for auto-commit) or remove permissions if you want more manual control. See [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for the full permissions format.
 
+### `zotero-roots.json`
+
+Cross-platform Zotero lookup candidates used by `/ingest` when the user passes
+`--title`, `--doi`, or `--item-key` without an explicit `--zotero-root`.
+
+The file is meant to be synced with the wiki. Put every machine's likely Zotero
+data directory or profile directory in the `roots` list; nonexistent paths are
+ignored. Entries support `~`, Unix environment variables such as
+`$HOME/Zotero`, Windows variables such as `%APPDATA%`, and glob patterns such
+as `~/Library/Application Support/Zotero/Profiles/*`.
+
+Each entry may be either a string path or an object:
+
+```json
+{
+  "roots": [
+    "~/Zotero",
+    {
+      "label": "work laptop profile",
+      "path": "~/Library/Application Support/Zotero/Profiles/*",
+      "enabled": true
+    }
+  ]
+}
+```
+
+`tools/find_zotero_pdf.py` accepts both Zotero data directories containing
+`zotero.sqlite` and `storage/`, and profile directories containing `prefs.js`
+that points to the real data directory.
+
 ### `server.yaml.example`
 
 Remote GPU server configuration for the optional Omega spillover in `omega/tools/remote.py`.

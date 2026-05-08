@@ -1,6 +1,6 @@
 ---
 description: Ingest a paper into the wiki — creates pages (papers + concepts + people + claims) and builds all cross-references and graph edges. Trigger whenever the user says "ingest", "add this paper", drops a `.pdf` or `.md` source, or asks to fold a paper into the knowledge base.
-argument-hint: "(<local-path> | --zotero-root <dir> (--title <str>|--doi <doi>|--item-key <key>)) [--discover]"
+argument-hint: "(<local-path> | [--zotero-root <dir>] (--title <str>|--doi <doi>|--item-key <key>)) [--discover]"
 ---
 
 # /ingest
@@ -20,7 +20,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 ## Inputs
 
 - `source`: one of — local `.pdf`, local `.md` (already-prepared MinerU output or hand-curated source), Zotero lookup arguments, or a `canonical_ingest_path` handed off by `/init` via `.checkpoints/init-sources.json` (see `references/init-mode.md`). The default prepared format produced by `tools/prepare_paper_source.py` is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
-- Zotero lookup form: `--zotero-root <dir>` plus one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`. The root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
+- Zotero lookup form: one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`, optionally plus `--zotero-root <dir>`. If `--zotero-root` is omitted, read `config/zotero-roots.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
 - `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
 ## Outputs
@@ -100,11 +100,11 @@ export PYTHON_BIN
 
    ```bash
    "$PYTHON_BIN" tools/find_zotero_pdf.py \
-     --zotero-root <dir> \
+     [--zotero-root <dir>] \
      [--title "<title>"] [--doi <doi>] [--item-key <key>]
    ```
 
-   Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, or a clearly unambiguous title match. Otherwise report the candidates and ask the user to choose. Feed the selected PDF path into the normal PDF preprocessing step; do not copy it into `raw/papers/`.
+   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, or a clearly unambiguous title match. Otherwise report the candidates and ask the user to choose. Feed the selected PDF path into the normal PDF preprocessing step; do not copy it into `raw/papers/`.
 3. If the source is a local `.md` already under `raw/prepared/papers/` (or otherwise marked as prepared `mineru-md`), use it directly. Legacy `raw/tmp/papers/*.md` inputs may still be read but new prepared outputs must use `raw/prepared/papers/`.
 4. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `raw/prepared/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
 

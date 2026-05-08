@@ -17,7 +17,9 @@ The tool never modifies Zotero files and opens the database in read-only mode.
 from __future__ import annotations
 
 import argparse
+import glob
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -28,6 +30,7 @@ from urllib.parse import unquote, urlparse
 
 ATTACHMENT_LINK_MODE_IMPORTED_FILE = 1
 ATTACHMENT_LINK_MODE_LINKED_FILE = 2
+DEFAULT_CONFIG_PATH = Path("config/zotero-roots.json")
 
 
 @dataclass
@@ -71,6 +74,16 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     return sqlite3.connect(uri, uri=True)
 
 
+def _expand_path_template(value: str) -> str:
+    expanded = os.path.expandvars(value)
+    expanded = re.sub(
+        r"%([A-Za-z_][A-Za-z0-9_]*)%",
+        lambda m: os.environ.get(m.group(1), m.group(0)),
+        expanded,
+    )
+    return os.path.expanduser(expanded)
+
+
 def _unescape_pref_string(value: str) -> str:
     try:
         return bytes(value, "utf-8").decode("unicode_escape")
@@ -99,7 +112,7 @@ def _data_dir_from_prefs(path: Path) -> Path | None:
 
 
 def _resolve_zotero_root(input_root: Path) -> tuple[Path, list[str]]:
-    root = input_root.expanduser().resolve()
+    root = Path(_expand_path_template(str(input_root))).resolve()
     notes: list[str] = []
     if (root / "zotero.sqlite").exists():
         return root, notes
@@ -112,6 +125,59 @@ def _resolve_zotero_root(input_root: Path) -> tuple[Path, list[str]]:
         notes.append(f"resolved nested Zotero data directory: {nested}")
         return nested.resolve(), notes
     return root, notes
+
+
+def _candidate_roots_from_config(config_path: Path) -> tuple[list[Path], list[str]]:
+    notes: list[str] = []
+    if not config_path.exists():
+        return [], [f"zotero roots config not found: {config_path}"]
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [], [f"failed to read zotero roots config {config_path}: {exc}"]
+
+    raw_entries = payload.get("roots", payload) if isinstance(payload, dict) else payload
+    if not isinstance(raw_entries, list):
+        return [], [f"zotero roots config must contain a list or a roots list: {config_path}"]
+
+    roots: list[Path] = []
+    seen: set[str] = set()
+    for entry in raw_entries:
+        if isinstance(entry, str):
+            enabled = True
+            raw_path = entry
+        elif isinstance(entry, dict):
+            enabled = bool(entry.get("enabled", True))
+            raw_path = str(entry.get("path") or "")
+        else:
+            continue
+        if not enabled or not raw_path.strip():
+            continue
+
+        expanded = _expand_path_template(raw_path)
+        matches = sorted(Path(p).resolve() for p in glob.glob(expanded))
+        if not matches:
+            matches = [Path(expanded).resolve()]
+        for path in matches:
+            key = str(path)
+            if key in seen:
+                continue
+            roots.append(path)
+            seen.add(key)
+    notes.append(f"loaded {len(roots)} zotero root candidate(s) from {config_path}")
+    return roots, notes
+
+
+def _discover_zotero_root(config_path: Path) -> tuple[Path | None, list[str]]:
+    roots, notes = _candidate_roots_from_config(config_path)
+    for candidate in roots:
+        resolved, root_notes = _resolve_zotero_root(candidate)
+        notes.extend([f"{candidate}: {note}" for note in root_notes])
+        if (resolved / "zotero.sqlite").exists():
+            notes.append(f"selected Zotero root: {resolved}")
+            return resolved, notes
+    notes.append("no configured Zotero root contains zotero.sqlite")
+    return None, notes
 
 
 def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
@@ -296,16 +362,31 @@ def _attachments_for_item(conn: sqlite3.Connection, zotero_root: Path, parent_it
     return attachments
 
 
-def find(zotero_root: Path, query: str, doi: str, item_key: str, limit: int) -> dict:
-    input_root = zotero_root.expanduser().resolve()
-    zotero_root, notes = _resolve_zotero_root(input_root)
+def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: int, config_path: Path = DEFAULT_CONFIG_PATH) -> dict:
+    if zotero_root is None:
+        input_root = None
+        zotero_root, notes = _discover_zotero_root(config_path)
+        if zotero_root is None:
+            return {
+                "status": "error",
+                "message": "no usable Zotero root found",
+                "input_root": None,
+                "zotero_root": None,
+                "config_path": str(config_path),
+                "notes": notes,
+                "candidates": [],
+            }
+    else:
+        input_root = Path(_expand_path_template(str(zotero_root))).resolve()
+        zotero_root, notes = _resolve_zotero_root(input_root)
     db_path = zotero_root / "zotero.sqlite"
     if not db_path.exists():
         return {
             "status": "error",
             "message": f"zotero.sqlite not found under {zotero_root}",
-            "input_root": str(input_root),
+            "input_root": str(input_root) if input_root is not None else None,
             "zotero_root": str(zotero_root),
+            "config_path": str(config_path),
             "notes": notes,
             "candidates": [],
         }
@@ -329,8 +410,9 @@ def find(zotero_root: Path, query: str, doi: str, item_key: str, limit: int) -> 
             })
         return {
             "status": "ok",
-            "input_root": str(input_root),
+            "input_root": str(input_root) if input_root is not None else None,
             "zotero_root": str(zotero_root),
+            "config_path": str(config_path),
             "notes": notes,
             "query": query,
             "doi": _normalize_doi(doi),
@@ -343,8 +425,10 @@ def find(zotero_root: Path, query: str, doi: str, item_key: str, limit: int) -> 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--zotero-root", required=True, type=Path,
-                        help="Zotero data directory containing zotero.sqlite and storage/, or a profile directory with prefs.js.")
+    parser.add_argument("--zotero-root", type=Path,
+                        help="Zotero data directory containing zotero.sqlite and storage/, or a profile directory with prefs.js. If omitted, config/zotero-roots.json is scanned.")
+    parser.add_argument("--zotero-config", default=DEFAULT_CONFIG_PATH, type=Path,
+                        help="JSON file listing Zotero root/profile candidates (default: config/zotero-roots.json).")
     parser.add_argument("--query", default="", help="Paper title or free-text query.")
     parser.add_argument("--title", default="", help="Paper title. Alias for --query.")
     parser.add_argument("--doi", default="", help="DOI to match.")
@@ -356,7 +440,7 @@ def main() -> None:
     if not (query or args.doi or args.item_key):
         parser.error("provide at least one of --title, --query, --doi, or --item-key")
 
-    result = find(args.zotero_root, query, args.doi, args.item_key, args.limit)
+    result = find(args.zotero_root, query, args.doi, args.item_key, args.limit, args.zotero_config)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if result.get("status") != "ok":
         raise SystemExit(2)

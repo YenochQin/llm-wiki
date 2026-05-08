@@ -1,0 +1,34 @@
+{
+  "roots": [
+    {
+      "label": "macOS default profile candidates",
+      "path": "~/Library/Application Support/Zotero/Profiles/*",
+      "enabled": true
+    },
+    {
+      "label": "macOS default data directory",
+      "path": "~/Zotero",
+      "enabled": true
+    },
+    {
+      "label": "Linux default profile candidates",
+      "path": "~/.zotero/zotero/*",
+      "enabled": true
+    },
+    {
+      "label": "Linux default data directory",
+      "path": "~/Zotero",
+      "enabled": true
+    },
+    {
+      "label": "Windows profile candidates",
+      "path": "%APPDATA%/Zotero/Zotero/Profiles/*",
+      "enabled": true
+    },
+    {
+      "label": "Windows default data directory",
+      "path": "%USERPROFILE%/Zotero",
+      "enabled": true
+    }
+  ]
+}

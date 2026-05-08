@@ -106,7 +106,7 @@ Show the markdown output to the user. For each candidate, the user needs enough 
 Append a short "next step" hint:
 
 ```
-To ingest a candidate: run /ingest --zotero-root <Zotero data dir> --title "<candidate title>" (or --doi <doi>). If the PDF is outside Zotero, pass the local PDF path directly to /ingest.
+To ingest a candidate from configured Zotero libraries: run /ingest --title "<candidate title>" (or --doi <doi>). If the PDF is outside Zotero, pass the local PDF path directly to /ingest.
 ```
 
 Do not ingest anything yourself. The user picks.
@@ -133,7 +133,7 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 
 - **Never auto-ingest**: `/discover` returns a shortlist and stops. Even when called by `/ingest --discover`, the caller surfaces results and the user decides what to ingest.
 - **No writes to `wiki/` other than `log.md`**: paper pages, concepts, claims, graph edges all belong to `/ingest`.
-- **No writes to `raw/`**: `/discover` does not download papers. For Zotero-managed PDFs, the user can run `/ingest --zotero-root <dir> --title "<candidate title>"` or `/ingest --zotero-root <dir> --doi <doi>`; for non-Zotero PDFs, they can pass the local PDF path directly to `/ingest`.
+- **No writes to `raw/`**: `/discover` does not download papers. For Zotero-managed PDFs, the user can run `/ingest --title "<candidate title>"` or `/ingest --doi <doi>` and let `/ingest` scan `config/zotero-roots.json`; for non-Zotero PDFs, they can pass the local PDF path directly to `/ingest`.
 - **Always dedupe against the wiki**: pass `--wiki-root wiki` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
 - **No-key provider coverage**: anchor mode uses Crossref title/DOI lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
