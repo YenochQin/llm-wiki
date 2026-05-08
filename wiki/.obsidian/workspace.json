@@ -183,20 +183,30 @@
       "bases:新建数据库": false
     }
   },
-  "active": "8a6780a55b006453",
+  "active": "e76f3107eac9b72f",
   "lastOpenFiles": [
     "papers/cosmochemistry-planetary-systems.md",
+    "papers/highly-charged-ions-optical-clocks-applications.md",
+    "index.md",
+    "graph/open_questions.md",
+    "graph/context_brief.md",
     "papers/star-planet-composition-connection.md",
+    "people/p-o-schmidt.md",
+    "people/j-r-crespo-lopez-urrutia.md",
+    "people/m-s-safronova.md",
+    "people/m-g-kozlov.md",
+    "claims/hci-enable-enhanced-fundamental-physics-tests.md",
+    "claims/hci-clocks-can-suppress-systematic-shifts.md",
+    "concepts/hci-level-crossing-clock-candidates.md",
+    "concepts/quantum-logic-spectroscopy-for-hci.md",
+    "concepts/highly-charged-ion-optical-clocks.md",
     "concepts/pebble-accretion-cosmochemistry.md",
     "concepts/giant-planet-metallicity-correlation.md",
     "claims/small-planet-density-host-metallicity-correlation.md",
     "claims/pebble-accretion-reproduces-solar-system-chemical.md",
-    "graph/open_questions.md",
-    "graph/context_brief.md",
     "people/martin-bizzarro.md",
     "people/caroline-dorn.md",
     "people/anders-johansen.md",
-    "log.md",
-    "index.md"
+    "log.md"
   ]
 }
