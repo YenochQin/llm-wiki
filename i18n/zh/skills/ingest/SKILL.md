@@ -16,6 +16,7 @@ Use these local references on demand:
 - `references/cross-references.md` — forward/reverse link matrix and paper-to-paper edge-type selection
 - `references/init-mode.md` — manifest-driven handoff from `/init` and parallel-safety conventions
 - `references/error-handling.md` — source parse, API, and slug-collision fallbacks
+- `references/content-quality-gate.md` — report-derived quality floor for paper/concept/claim pages; open before drafting Step 3/4 outputs
 
 Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatter or body sections, and `docs/runtime-support-files.en.md` for `index.md`, `log.md`, and `graph/` formats.
 
@@ -31,6 +32,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 - One fully-wired paper page plus linked entities (concepts, claims, people)
 - Graph edges and citations appended via `tools/research_wiki.py`
 - Terminal summary with page counts and suggested follow-up ingests
+- A minimum viable ingest normally touches the paper page, at least one concept or existing concept update, at least one claim or existing claim update, author/person handling, `index.md`, `log.md`, and graph/context files. If the source genuinely cannot support a claim or concept, say why in the log and final report.
 
 ## Wiki Interaction
 
@@ -141,7 +143,7 @@ Raw persistence rule: never copy or duplicate a file already under `wiki/sources
 
 ### Step 3: Write the paper page
 
-Open `docs/runtime-page-templates.en.md` for the paper template. Fill every required frontmatter field; leave `cited_by` empty for now (step 5 backfills it).
+Open `docs/runtime-page-templates.en.md` for the paper template and `references/content-quality-gate.md` for the content floor. Fill every required frontmatter field; leave `cited_by` empty for now (step 5 backfills it).
 
 Before writing, run a **shape check** on the frontmatter you are about to emit — no more than this:
 
@@ -154,6 +156,13 @@ Before writing, run a **shape check** on the frontmatter you are about to emit �
 The shape check is intentionally narrow. Backlink symmetry, dangling-node detection, and cross-entity consistency are `/check`'s job, not this skill's.
 
 Body sections to populate: Problem, Key idea, Research classification, Method, Results, Limitations, Open questions, My take, Related.
+
+Paper page content must be both structured and source-faithful:
+
+- Preserve the paper's own section logic. Use the `sections` frontmatter as the outline anchor; when useful, name source sections, figures, tables, algorithms, equations, or examples in bullets.
+- For mathematical or technical papers, keep important equations in LaTeX. Do not replace formulas with vague prose or ASCII pseudocode when the source gives formal notation.
+- `## Method` and `## Results` must contain concrete mechanisms, procedures, empirical findings, theoretical results, or chapter-level takeaways. Avoid generic summaries that could fit any paper in the field.
+- `## Related` must list the concepts, claims, foundations, topics, and people linked during this ingest, so the paper is navigable even before graph files are rebuilt.
 
 `## Research classification` must explicitly describe:
 
@@ -170,7 +179,10 @@ Follow `references/dedup-policy.md`. In short:
 2. Prefer merging into the top result. Create a new page only when the tool returns no acceptable candidate and the paper's importance justifies it.
 3. For each entity you write or edit, write the reverse link in the same turn. The obligation matrix lives in `references/cross-references.md`.
 4. Create a `wiki/people/{slug}.md` only for papers with importance ≥ 4. Otherwise append to existing author pages only.
-5. For every concept page created or materially edited, add or refresh `## Source excerpts`: one short exact original-language blockquote per grounding paper, each linked to that paper's prepared MinerU markdown (`../sources/papers/<paper-slug>.md`). If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
+5. For every ingest whose source supports an arguable proposition, create or update at least one claim. A missing `claims/` layer is a failed ingest unless the source is purely bibliographic, editorial, or otherwise has no defensible claim; record that exception in the log and final report.
+6. For every concept page created or materially edited, add or refresh `## Source excerpts`: one short exact original-language blockquote per grounding paper, each linked to that paper's prepared MinerU markdown (`../sources/papers/<paper-slug>.md`). If the source contains formulas or precise definitions for the concept, include a short formula/definition excerpt rather than only paraphrase. If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
+7. For concept pages, fill the reusable-knowledge sections, not just a definition: `## Intuition`, `## Formal notation`, `## Variants`, `## Comparison`, `## When to use`, `## Known limitations`, `## Open problems`, `## Key papers`, and `## My understanding`. If a section truly does not apply, write a one-line scoped reason.
+8. For claim pages, include `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. Keep confidence conservative: reserve ≥0.85 for claims with direct, strong evidence and clear scope; avoid wording like "necessary and sufficient" unless the paper proves exactly that.
 
 ### Step 5: Paper-to-paper edges and `cited_by`
 
@@ -193,7 +205,11 @@ Skip this whole step in INIT MODE — the parent `/init` handles it at fan-in.
    - importance < 4 → append under `## SOTA tracker` or `## Recent work` by year
    - if the paper directly addresses a listed open problem, annotate that line on the topic page
 2. Do not create new topic pages from `/ingest` — topic creation belongs to `/init` and `/edit`.
-3. Append new or edited page entries to `wiki/index.md` under their category headings. See `docs/runtime-support-files.en.md` for the exact format.
+3. Rebuild or append new/edited page entries to `wiki/index.md` using the repository-supported format. The index must remain useful to both humans and tools: keep `# Wiki Index`, entity category headings, slugs, titles when available, and key metadata such as importance/status/confidence/tags/research modes. A pure opaque dump or a malformed half-YAML index is not acceptable. See `docs/runtime-support-files.en.md` and prefer:
+
+   ```bash
+   "$PYTHON_BIN" tools/research_wiki.py rebuild-index wiki/
+   ```
 
 ### Step 7: Log and rebuild
 
@@ -204,6 +220,7 @@ Skip this whole step in INIT MODE — the parent `/init` handles it at fan-in.
 Unless in INIT MODE:
 
 ```bash
+"$PYTHON_BIN" tools/research_wiki.py rebuild-index wiki/
 "$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/
 "$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/
 ```
@@ -215,6 +232,8 @@ Emit one compact summary covering: pages created, pages updated, graph edges add
 ```
 Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges
 ```
+
+If the ingest falls below the normal minimum viable output (paper + concept/update + claim/update + index + log + graph), include a one-line reason rather than silently shipping a thin wiki.
 
 ### Step 9: Optional discovery (only if `--discover` is set)
 
@@ -264,6 +283,7 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
   - `--confidence high|medium|low` is required for paper-paper and paper-concept semantic edges.
 - `"$PYTHON_BIN" tools/research_wiki.py add-citation wiki/ --from papers/<citing> --to papers/<cited> --source literature_api`
 - `"$PYTHON_BIN" tools/research_wiki.py log wiki/ "<message>"`
+- `"$PYTHON_BIN" tools/research_wiki.py rebuild-index wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/`
 - `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]`
