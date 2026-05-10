@@ -49,7 +49,10 @@ def _config(name: str, default: str = "") -> str:
 
 def _existing_outputs(cache_dir: Path) -> tuple[Path, Path] | None:
     md_candidates = sorted(p for p in cache_dir.glob("*.md") if p.name != "full.md")
-    json_candidates = sorted(p for p in cache_dir.glob("*.json") if p.name != "manifest.json")
+    json_candidates = sorted(
+        p for p in cache_dir.glob("*.json")
+        if p.name != "manifest.json" and not p.name.endswith("_content_list_v2.json")
+    )
     if md_candidates and json_candidates:
         return md_candidates[0], json_candidates[0]
     return None
@@ -330,6 +333,7 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
         "layout.pdf",
         "spans.pdf",
         "content_list_v2.json",
+        "*_content_list_v2.json",
     ]
     for pattern in debug_globs:
         for path in cache_dir.glob(pattern):

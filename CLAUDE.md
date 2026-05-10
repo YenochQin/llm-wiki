@@ -32,6 +32,7 @@
 - 需要 graph 派生文件、`index.md` 或 `log.md` 细节时，打开 `docs/runtime-support-files.en.md`
 - `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
 - `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
+- `skills/` 是 `setup.sh` 创建的符号链接，指向 `i18n/{lang}/skills/`；修改 skill 内容应编辑 `i18n/` 下的原件
 
 ### `raw/` 和 `config/`
 
@@ -142,6 +143,7 @@
 - Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
 - 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；`active_profile: auto` 会按系统选择 `macos`、`windows` 或 `linux`，也可用 `LLM_WIKI_PATH_PROFILE` 临时指定；未配置时回退到仓库内 `wiki/` 和 `raw/`
 - 可选 MinerU 本地后端需显式启用：`uv sync --extra local`（首次会下载数 GB 模型权重）
+- 本项目没有测试套件（无 `tests/`、无 `test_*.py`），也没有 Python 代码的 lint/format 配置（无 ruff、black、mypy）；`tools/lint.py` 是 wiki 内容 linter，不是 Python 代码 linter
 
 ---
 
@@ -163,6 +165,8 @@
 - **MinerU API token**：`MINERU_API_TOKEN` 环境变量驱动默认云端后端。没有它 PDF ingest 会失败；离线可安装本地后端（`uv sync --extra local`）。
 - **文献检索**：`tools/fetch_literature.py` 使用无需 API key 的 Crossref 搜索和元数据检索。由于公开源暴露的 citation graph 较少，引用图覆盖是 best-effort。
 - **仓库和 wiki 可分离**：使用 `tools/separate_wiki_repository.py` 将 `wiki/`、`raw/` 复制/移动到外部绝对路径并写入 `config/paths.json`；使用 `tools/clean_wiki_repository.py` 清理仓库内残留的 `wiki/`、`raw/`。清理脚本默认 dry-run，只有 `--yes` 才会删除。
+- **Zotero 集成**：`tools/find_zotero_pdf.py` 和 `tools/_zotero_snapshot.py` 支持从本地 Zotero 数据库按 `--title`、`--doi`、`--item-key` 查找 PDF；Zotero 根目录通过 `config/zotero-roots.json` 或 `--zotero-root` 指定。`/ingest` 可利用此功能自动定位本地 PDF。
+- **`tools/_schemas.py` 双向同步**：该模块是实体 schema（目录、边类型、必需字段、枚举值）的机器可消费副本。修改此文件时，必须同步更新 `i18n/*/CLAUDE.md` 中对应的人可读规范，反之亦然。
 
 ---
 
@@ -175,6 +179,7 @@
 | `/init` | `skills/init/SKILL.md` | 手动 |
 | `/prefill` | `skills/prefill/SKILL.md` | 手动（`[domain] [--add concept]`） |
 | `/ingest` | `skills/ingest/SKILL.md` | 手动 |
+| `/reingest` | `skills/reingest/SKILL.md` | 手动（重新 ingest 已有论文页面） |
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |
 | `/ask` | `skills/ask/SKILL.md` | 手动 |
 | `/edit` | `skills/edit/SKILL.md` | 手动 |

@@ -465,7 +465,7 @@ def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: i
     else:
         input_root = Path(_expand_path_template(str(zotero_root))).resolve()
         zotero_root, notes = _resolve_zotero_root(input_root)
-    snapshot_root, snapshot_notes = _prepare_zotero_snapshot(zotero_root)
+    snapshot_root, snapshot_notes = prepare_snapshot(Path.cwd(), zotero_root)
     notes.extend(snapshot_notes)
     db_path = snapshot_root / "zotero.sqlite"
     if not db_path.exists():

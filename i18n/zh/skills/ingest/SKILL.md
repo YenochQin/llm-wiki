@@ -24,6 +24,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 - `source`: one of — local `.pdf`, local `.md` (already-prepared MinerU output or hand-curated source), Zotero lookup arguments, or a `canonical_ingest_path` handed off by `/init` via `.checkpoints/init-sources.json` (see `references/init-mode.md`). The default prepared format produced by `tools/prepare_paper_source.py` is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
 - Zotero lookup form: one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`, optionally plus `--zotero-root <dir>`. If `--zotero-root` is omitted, read `config/zotero-roots.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
+- Zotero metadata enrichment is optional: after a Zotero lookup selects an `item_key`, try `tools/fetch_zotero_metadata.py --item-key <key>` to read richer metadata from Zotero Desktop's local API. If Zotero Desktop is closed or local API access is disabled, continue with the existing SQLite/Crossref path.
 - If the user passes a chapter-like filename such as `978-0-387-35069-1_6.pdf`, treat it as a Zotero attachment hint first: resolve the parent Zotero item, then pick the matching attachment by filename/path if the helper returns one. Only fall back to the local `raw/papers/` or other local path branches when Zotero lookup fails or the user explicitly provides a local file path.
 - `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
@@ -110,8 +111,15 @@ export PYTHON_BIN
    ```
 
    If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the normal PDF preprocessing step; do not copy it into `raw/papers/`.
-3. If the source is a local `.md` already under `wiki/sources/papers/` (or otherwise marked as prepared `mineru-md`), use it directly. Legacy `raw/tmp/papers/*.md` inputs may still be read but new prepared outputs must use `wiki/sources/papers/`.
-4. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `wiki/sources/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
+3. If the selected Zotero candidate has an `item_key`, try:
+
+   ```bash
+   "$PYTHON_BIN" tools/fetch_zotero_metadata.py --item-key <key>
+   ```
+
+   Treat a successful response as authoritative bibliographic metadata from the user's local library. Use it to prefer `title`, `doi`, `year`, `venue`, `creators`/authors, `abstract`, `tags`, `url`, `zotero_select`, and `external_ids.zotero_key`. If the command fails, note the fallback only if it affects the report; do not block ingest.
+4. If the source is a local `.md` already under `wiki/sources/papers/` (or otherwise marked as prepared `mineru-md`), use it directly. Legacy `raw/tmp/papers/*.md` inputs may still be read but new prepared outputs must use `wiki/sources/papers/`.
+5. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `wiki/sources/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
 
 Raw persistence rule: never copy or duplicate a file already under `wiki/sources/` or `raw/papers/` into a different raw subtree.
 
@@ -124,15 +132,17 @@ Raw persistence rule: never copy or duplicate a file already under `wiki/sources
    ```
 
 2. Stop-if-exists: if `wiki/papers/{slug}.md` already exists and the title or DOI matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
-3. When a DOI or confident title is available, query the no-key literature lookup:
+3. When Zotero Local API metadata is available, prefer it for identity fields (`title`, `doi`, `year`, `venue`, authors/creators, abstract, tags, URL, and `external_ids`). Still use Crossref for citation/reference expansion and for filling fields Zotero did not provide.
+4. When a DOI or confident title is available, query the no-key literature lookup:
 
    ```bash
    "$PYTHON_BIN" tools/fetch_literature.py paper <doi-or-title>
    ```
 
    Use the result for `venue`, `year`, `external_ids`, citation count when available, and the evidence behind the `importance` score (1-5). If citation counts are unavailable, default `importance` to 3 and mark it provisional.
-4. Use the `mineru-md` frontmatter (`sections`, `figures`, `abstract_excerpt`) as your structural anchor when summarizing. The frontmatter already gives you a clean section list and figure inventory; do not re-parse the body to recover them.
-5. Before drafting the paper page, classify the source form, research direction, and object:
+5. Merge bibliographic metadata conservatively: Zotero wins for user-curated identity fields; Crossref may fill missing `external_ids`, venue/year gaps, and citation-derived importance evidence; MinerU remains the source of record for paper content and section structure.
+6. Use the `mineru-md` frontmatter (`sections`, `figures`, `abstract_excerpt`) as your structural anchor when summarizing. The frontmatter already gives you a clean section list and figure inventory; do not re-parse the body to recover them.
+7. Before drafting the paper page, classify the source form, research direction, and object:
    - `paper_type`: choose one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`. Use `review` for review/survey articles, but do not put `review` in `research_modes`.
    - `research_modes`: choose one or more of `theory`, `computation`, `experiment`. For review papers, classify by the evidence types being synthesized, not by `review`.
    - `theory_tags`: concrete theory/model/mechanism/framework names used, compared, or tested.
@@ -160,7 +170,7 @@ Body sections to populate: Problem, Key idea, Research classification, Method, R
 Paper page content must be both structured and source-faithful:
 
 - Preserve the paper's own section logic. Use the `sections` frontmatter as the outline anchor; when useful, name source sections, figures, tables, algorithms, equations, or examples in bullets.
-- For mathematical or technical papers, keep important equations in LaTeX. Do not replace formulas with vague prose or ASCII pseudocode when the source gives formal notation.
+- For mathematical or technical papers, keep important equations in LaTeX. Use `$...$` for inline math and `$$...$$` for display math — this is the Obsidian rendering standard. Do not use code fences for equations or `\(` `\)` notation. Do not replace formulas with vague prose or ASCII pseudocode when the source gives formal notation.
 - `## Method` and `## Results` must contain concrete mechanisms, procedures, empirical findings, theoretical results, or chapter-level takeaways. Avoid generic summaries that could fit any paper in the field.
 - `## Related` must list the concepts, claims, foundations, topics, and people linked during this ingest, so the paper is navigable even before graph files are rebuilt.
 
@@ -179,9 +189,9 @@ Follow `references/dedup-policy.md`. In short:
 2. Prefer merging into the top result. Create a new page only when the tool returns no acceptable candidate and the paper's importance justifies it.
 3. For each entity you write or edit, write the reverse link in the same turn. The obligation matrix lives in `references/cross-references.md`.
 4. Create a `wiki/people/{slug}.md` only for papers with importance ≥ 4. Otherwise append to existing author pages only.
-5. For every ingest whose source supports an arguable proposition, create or update at least one claim. A missing `claims/` layer is a failed ingest unless the source is purely bibliographic, editorial, or otherwise has no defensible claim; record that exception in the log and final report.
-6. For every concept page created or materially edited, add or refresh `## Source excerpts`: one short exact original-language blockquote per grounding paper, each linked to that paper's prepared MinerU markdown (`../sources/papers/<paper-slug>.md`). If the source contains formulas or precise definitions for the concept, include a short formula/definition excerpt rather than only paraphrase. If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
-7. For concept pages, fill the reusable-knowledge sections, not just a definition: `## Intuition`, `## Formal notation`, `## Variants`, `## Comparison`, `## When to use`, `## Known limitations`, `## Open problems`, `## Key papers`, and `## My understanding`. If a section truly does not apply, write a one-line scoped reason.
+5. For every paper with importance ≥ 4, create or update at least one claim. A missing `claims/` layer for a high-importance paper is a failed ingest unless the source is purely bibliographic, editorial, or otherwise has no defensible claim; record that exception in the log and final report. The "at most N" entity limits in the Constraints section are upper bounds, not targets — zero claims for an importance ≥ 4 paper violates this floor.
+6. For every concept page created or materially edited, add or refresh `## Source excerpts` with at least **two substantively different excerpts** per concept page when the source covers the concept in multiple passages. Each excerpt must be an exact original-language blockquote linked to that paper's prepared MinerU markdown (`../sources/papers/<paper-slug>.md`). If the source contains formulas or precise definitions for the concept, include a short formula/definition excerpt rather than only paraphrase. Do not cherry-pick a generic opening sentence — the excerpts should collectively demonstrate the concept's formal structure. If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
+7. For concept pages, fill the reusable-knowledge sections, not just a definition: `## Intuition`, `## Formal notation`, `## Variants`, `## Comparison`, `## When to use`, `## Known limitations`, `## Open problems`, `## Key papers`, and `## My understanding`. **All listed sections are mandatory** — omit none silently. If a section truly does not apply, write a one-line scoped reason. `## Comparison` must include a compact table when two or more variants, neighboring concepts, or methods are worth contrasting. `## When to use` must give concrete applicability conditions (quantitative thresholds, physical regimes, specific task types), not purely qualitative "use when working with [topic]" formulations. `## Formal notation` must use `$`/`$$` LaTeX notation, never code fences or `\(` `\)`.
 8. For claim pages, include `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. Keep confidence conservative: reserve ≥0.85 for claims with direct, strong evidence and clear scope; avoid wording like "necessary and sufficient" unless the paper proves exactly that.
 
 ### Step 5: Paper-to-paper edges and `cited_by`
@@ -213,6 +223,8 @@ Skip this whole step in INIT MODE — the parent `/init` handles it at fan-in.
 
 ### Step 7: Log and rebuild
 
+Verify `wiki/graph/` exists before writing to it; create the directory if missing.
+
 ```bash
 "$PYTHON_BIN" tools/research_wiki.py log wiki/ "ingest | added papers/<slug> | updated: <list>"
 ```
@@ -234,6 +246,17 @@ Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges
 ```
 
 If the ingest falls below the normal minimum viable output (paper + concept/update + claim/update + index + log + graph), include a one-line reason rather than silently shipping a thin wiki.
+
+**Self-check** (run before finalizing the report):
+1. `wiki/papers/{slug}.md` exists and frontmatter YAML parses.
+2. At least one concept page created or materially updated with all mandatory body sections.
+3. At least one claim exists for importance ≥ 4 papers, or the report names the exception.
+4. `wiki/graph/edges.jsonl` has at least one edge involving the new paper.
+5. `wiki/log.md` has a new `## [today]` entry.
+6. `wiki/index.md` includes the new paper and all new entities.
+7. LaTeX in all written pages uses `$`/`$$` exclusively — no code-fence equations, no `\(` `\)`.
+
+If any check fails, fix it before emitting the report.
 
 ### Step 9: Optional discovery (only if `--discover` is set)
 
@@ -262,8 +285,9 @@ Append the markdown output to the report under a heading like "Related papers yo
 - Source format: `mineru-md` is the canonical prepared format. Never ingest from a raw PDF — always go through `tools/prepare_paper_source.py` first so downstream extraction sees structured markdown with frontmatter (`sections`, `figures`). If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than ingesting from the raw PDF text.
 - Ingest is conservative about new entities:
   - importance < 4: at most **1** new concept and **1** new claim per paper
-  - importance ≥ 4: at most **3** new concepts and **2** new claims per paper
+  - importance ≥ 4: **at least 1** and at most **3** new concepts; **at least 1** and at most **2** new claims per paper
   - Any further candidates must be merged into their nearest `find-similar-*` result, or left out for `/check` to flag. Rationale and matching rules: `references/dedup-policy.md`.
+- LaTeX notation: use `$...$` for inline math and `$$...$$` for display math in all wiki pages. Code fences for equations and `\(` `\)` notation are not Obsidian-compatible and must not appear.
 - `/ingest` runs a shape check on its own output (required keys, enum ranges, YAML parses) and stops there. Backlink symmetry, dangling nodes, and full semantic audits belong to `/check`. Do not re-implement them here.
 - Assume another `/ingest` may run concurrently in a sibling worktree. All shared-file writes (`graph/edges.jsonl`, `graph/citations.jsonl`, `index.md`, `log.md`) must go through `tools/research_wiki.py` or use append-only semantics. See `references/init-mode.md`.
 - In INIT MODE, skip `fetch_literature.py citations`, `fetch_literature.py references`, and the `rebuild-*` commands — the parent `/init` runs them once after fan-in.
@@ -286,6 +310,7 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-index wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/`
+- `"$PYTHON_BIN" tools/fetch_zotero_metadata.py --item-key <key>` — optional after Zotero PDF lookup succeeds and only if Zotero Desktop Local API is reachable
 - `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]`
 - `"$PYTHON_BIN" tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
 - `"$PYTHON_BIN" tools/discover.py from-anchors --id <doi-or-title> --wiki-root wiki --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
@@ -303,4 +328,5 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 ### External APIs
 
 - Crossref (via `tools/fetch_literature.py`) — no-key metadata, search, and best-effort reference lookup
+- Zotero Desktop Local API (via `tools/fetch_zotero_metadata.py`) — optional local metadata enrichment when Zotero is running at `http://127.0.0.1:23119/api` or `ZOTERO_LOCAL_API`
 - MinerU (via `tools/_mineru.py` + `tools/prepare_paper_source.py`; cloud API by default, local backend opt-in)

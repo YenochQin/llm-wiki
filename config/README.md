@@ -120,6 +120,11 @@ Each entry may be either a string path or an object:
 `zotero.sqlite` and `storage/`, and profile directories containing `prefs.js`
 that points to the real data directory.
 
+Optional richer metadata comes from Zotero Desktop's local API. Keep Zotero
+Desktop open and enable local API access, then `tools/fetch_zotero_metadata.py`
+can read `http://127.0.0.1:23119/api` by item key. Override the endpoint with
+`ZOTERO_LOCAL_API` only when Zotero is exposed at a different local address.
+
 ## All Done by `setup.sh`
 
 If you ran `setup.sh`, these files are already copied to the right locations. You only need to edit `~/.config/llm-wiki/.env` if you want to add API keys.

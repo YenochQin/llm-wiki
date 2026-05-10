@@ -21,6 +21,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 - `source`: one of — local `.pdf`, local `.md` (already-prepared MinerU output or hand-curated source), Zotero lookup arguments, or a `canonical_ingest_path` handed off by `/init` via `.checkpoints/init-sources.json` (see `references/init-mode.md`). The default prepared format produced by `tools/prepare_paper_source.py` is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
 - Zotero lookup form: one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`, optionally plus `--zotero-root <dir>`. If `--zotero-root` is omitted, read `config/zotero-roots.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
+- Zotero metadata enrichment is optional: after a Zotero lookup selects an `item_key`, try `tools/fetch_zotero_metadata.py --item-key <key>` to read richer metadata from Zotero Desktop's local API. If Zotero Desktop is closed or local API access is disabled, continue with the existing SQLite/Crossref path.
 - If the user passes a chapter-like filename such as `978-0-387-35069-1_6.pdf`, treat it as a Zotero attachment hint first: resolve the parent Zotero item, then pick the matching attachment by filename/path if the helper returns one. Only fall back to the local `raw/papers/` or other local path branches when Zotero lookup fails or the user explicitly provides a local file path.
 - `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
@@ -106,8 +107,15 @@ export PYTHON_BIN
    ```
 
    If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the normal PDF preprocessing step; do not copy it into `raw/papers/`.
-3. If the source is a local `.md` already under `wiki/sources/papers/` (or otherwise marked as prepared `mineru-md`), use it directly. Legacy `raw/tmp/papers/*.md` inputs may still be read but new prepared outputs must use `wiki/sources/papers/`.
-4. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `wiki/sources/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
+3. If the selected Zotero candidate has an `item_key`, try:
+
+   ```bash
+   "$PYTHON_BIN" tools/fetch_zotero_metadata.py --item-key <key>
+   ```
+
+   Treat a successful response as authoritative bibliographic metadata from the user's local library. Use it to prefer `title`, `doi`, `year`, `venue`, `creators`/authors, `abstract`, `tags`, `url`, `zotero_select`, and `external_ids.zotero_key`. If the command fails, note the fallback only if it affects the report; do not block ingest.
+4. If the source is a local `.md` already under `wiki/sources/papers/` (or otherwise marked as prepared `mineru-md`), use it directly. Legacy `raw/tmp/papers/*.md` inputs may still be read but new prepared outputs must use `wiki/sources/papers/`.
+5. If the source is a local `.pdf` (or a `.md` that has not been prepared), run the preprocessing pipeline in `references/pdf-preprocessing.md` to produce a prepared MinerU markdown file under `wiki/sources/papers/` before continuing. The prep tool returns a JSON manifest whose `canonical_ingest_path` is the prepared `.md` and whose `ingest_format` is `mineru-md`.
 
 Raw persistence rule: never copy or duplicate a file already under `wiki/sources/` or `raw/papers/` into a different raw subtree.
 
@@ -120,15 +128,17 @@ Raw persistence rule: never copy or duplicate a file already under `wiki/sources
    ```
 
 2. Stop-if-exists: if `wiki/papers/{slug}.md` already exists and the title or DOI matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
-3. When a DOI or confident title is available, query the no-key literature lookup:
+3. When Zotero Local API metadata is available, prefer it for identity fields (`title`, `doi`, `year`, `venue`, authors/creators, abstract, tags, URL, and `external_ids`). Still use Crossref for citation/reference expansion and for filling fields Zotero did not provide.
+4. When a DOI or confident title is available, query the no-key literature lookup:
 
    ```bash
    "$PYTHON_BIN" tools/fetch_literature.py paper <doi-or-title>
    ```
 
    Use the result for `venue`, `year`, `external_ids`, citation count when available, and the evidence behind the `importance` score (1-5). If citation counts are unavailable, default `importance` to 3 and mark it provisional.
-4. Use the `mineru-md` frontmatter (`sections`, `figures`, `abstract_excerpt`) as your structural anchor when summarizing. The frontmatter already gives you a clean section list and figure inventory; do not re-parse the body to recover them.
-5. Before drafting the paper page, classify the source form:
+5. Merge bibliographic metadata conservatively: Zotero wins for user-curated identity fields; Crossref may fill missing `external_ids`, venue/year gaps, and citation-derived importance evidence; MinerU remains the source of record for paper content and section structure.
+6. Use the `mineru-md` frontmatter (`sections`, `figures`, `abstract_excerpt`) as your structural anchor when summarizing. The frontmatter already gives you a clean section list and figure inventory; do not re-parse the body to recover them.
+7. Before drafting the paper page, classify the source form:
    - `paper_type`: choose one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`. Use `review` for review/survey articles, but do not put `review` in `research_modes`.
 
 ### Step 3: Write the paper page
@@ -250,6 +260,7 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `"$PYTHON_BIN" tools/research_wiki.py log wiki/ "<message>"`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/`
 - `"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/`
+- `"$PYTHON_BIN" tools/fetch_zotero_metadata.py --item-key <key>` — optional after Zotero PDF lookup succeeds and only if Zotero Desktop Local API is reachable
 - `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]`
 - `"$PYTHON_BIN" tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
 - `"$PYTHON_BIN" tools/discover.py from-anchors --id <doi-or-title> --wiki-root wiki --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
@@ -267,4 +278,5 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 ### External APIs
 
 - Crossref (via `tools/fetch_literature.py`) — no-key metadata, search, and best-effort reference lookup
+- Zotero Desktop Local API (via `tools/fetch_zotero_metadata.py`) — optional local metadata enrichment when Zotero is running at `http://127.0.0.1:23119/api` or `ZOTERO_LOCAL_API`
 - MinerU (via `tools/_mineru.py` + `tools/prepare_paper_source.py`; cloud API by default, local backend opt-in)

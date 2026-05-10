@@ -32,6 +32,7 @@ Keep this mental map in immediate context:
 - Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log.md` format
 - `SKILL.md` is the immediate entrypoint for a skill; some larger skills may also provide local on-demand reference files under their skill directory
 - `/init` is the first concrete example of this pattern: read `skills/init/SKILL.md` first, then open `skills/init/references/*` only when needed
+- `skills/` is a symlink created by `setup.sh`, pointing to `i18n/{lang}/skills/`; edit skill content in `i18n/`, not the symlink target
 
 ### `raw/` and `config/`
 
@@ -142,6 +143,7 @@ Standard log line:
 - Python tools auto-load API keys from process env first, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`) via `tools/_env.py`; project-root `.env` and `~/.env` are legacy fallbacks only
 - Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`) to set external `wiki_root` / `raw_root`; `active_profile: auto` chooses `macos`, `windows`, or `linux` from the current OS, and `LLM_WIKI_PATH_PROFILE` can override it temporarily; without config, tools fall back to in-repo `wiki/` and `raw/`
 - the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
+- no test suite exists (no `tests/` directory, no `test_*.py` files) and no Python code lint/format is configured (no ruff, black, mypy); `tools/lint.py` is a wiki-content linter, not a Python code linter
 
 ---
 
@@ -163,6 +165,8 @@ Standard log line:
 - **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
 - **Literature lookup**: `tools/fetch_literature.py` uses no-key Crossref search and metadata. Citation graph coverage is best-effort because public sources expose fewer citation edges than key-gated services.
 - **Repository and wiki can be separated**: use `tools/separate_wiki_repository.py` to copy/move `wiki/` and `raw/` to external absolute paths and write `config/paths.json`; use `tools/clean_wiki_repository.py` to remove leftover in-repo `wiki/` and `raw/`. Cleanup is dry-run by default and deletes only with `--yes`.
+- **Zotero integration**: `tools/find_zotero_pdf.py` and `tools/_zotero_snapshot.py` look up PDFs in local Zotero databases by `--title`, `--doi`, or `--item-key`; Zotero roots are configured via `config/zotero-roots.json` or `--zotero-root`. `/ingest` can use this to auto-locate local PDFs.
+- **`tools/_schemas.py` bidirectional sync**: this module is the machine-consumable copy of entity schemas (directories, edge types, required fields, enums). Changes here must be synced to the human-readable spec in `i18n/*/CLAUDE.md`, and vice versa.
 
 ---
 
@@ -175,6 +179,7 @@ Standard log line:
 | `/init` | `skills/init/SKILL.md` | manual |
 | `/prefill` | `skills/prefill/SKILL.md` | manual (`[domain] [--add concept]`) |
 | `/ingest` | `skills/ingest/SKILL.md` | manual |
+| `/reingest` | `skills/reingest/SKILL.md` | manual (re-ingest an existing paper page) |
 | `/discover` | `skills/discover/SKILL.md` | manual / internal (called by `/ingest --discover`) |
 | `/ask` | `skills/ask/SKILL.md` | manual |
 | `/edit` | `skills/edit/SKILL.md` | manual |
