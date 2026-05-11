@@ -1,4 +1,4 @@
-"""Single source of truth for ΩmegaWiki entity schemas.
+"""Single source of truth for LLM-Wiki entity schemas.
 
 Centralizes the constants that lint.py and research_wiki.py both need:
 entity directories, valid edge types, required frontmatter fields per
@@ -15,8 +15,14 @@ from __future__ import annotations
 # All 9 entity directories (Summary lives at the wiki root, not under entities,
 # but lint treats it as an entity directory because it has frontmatter pages).
 ENTITY_DIRS = [
-    "papers", "concepts", "topics", "people",
-    "ideas", "experiments", "claims", "Summary",
+    "papers",
+    "concepts",
+    "topics",
+    "people",
+    "ideas",
+    "experiments",
+    "claims",
+    "Summary",
     "foundations",
 ]
 
@@ -92,7 +98,6 @@ EDGE_TYPE_SPECS: dict[str, dict[str, str]] = {
         "confidence": CONFIDENCE_REQUIRED,
         "workflow": "ingest",
     },
-
     # /ingest paper-concept semantic judgments.
     "introduces_concept": {
         "from_kind": "papers",
@@ -122,7 +127,6 @@ EDGE_TYPE_SPECS: dict[str, dict[str, str]] = {
         "confidence": CONFIDENCE_REQUIRED,
         "workflow": "ingest",
     },
-
     # Other semantic/provenance workflows. Endpoint constraints stay broad here
     # because older skills use these across claims, ideas, experiments, papers,
     # concepts, outputs, and foundations.
@@ -180,7 +184,11 @@ EDGE_TYPE_SPECS: dict[str, dict[str, str]] = {
 # Accepted only for backwards compatibility; lint reports endpoint-specific
 # migration warnings when these appear on old /ingest-shaped endpoints.
 LEGACY_EDGE_TYPES = {"extends", "supersedes"}
-LEGACY_PAPER_PAPER_EDGE_TYPES = LEGACY_EDGE_TYPES | {"inspired_by", "contradicts", "supports"}
+LEGACY_PAPER_PAPER_EDGE_TYPES = LEGACY_EDGE_TYPES | {
+    "inspired_by",
+    "contradicts",
+    "supports",
+}
 LEGACY_PAPER_CONCEPT_EDGE_TYPES = {"supports", "extends"}
 
 
@@ -188,11 +196,14 @@ def _spec_matches(spec: dict[str, str], key: str, value: str | None) -> bool:
     return value is None or spec.get(key) == value
 
 
-def edge_types_matching(*, from_kind: str | None = None,
-                        to_kind: str | None = None,
-                        direction: str | None = None,
-                        confidence: str | None = None,
-                        workflow: str | None = None) -> set[str]:
+def edge_types_matching(
+    *,
+    from_kind: str | None = None,
+    to_kind: str | None = None,
+    direction: str | None = None,
+    confidence: str | None = None,
+    workflow: str | None = None,
+) -> set[str]:
     """Return edge types whose registry metadata matches all provided filters."""
     matches: set[str] = set()
     for edge_type, spec in EDGE_TYPE_SPECS.items():
@@ -243,8 +254,7 @@ def edge_endpoint_matches(edge_type: str, from_kind: str, to_kind: str) -> bool:
     return from_ok and to_ok
 
 
-def edge_is_legacy_for_endpoint(edge_type: str, from_kind: str,
-                                to_kind: str) -> bool:
+def edge_is_legacy_for_endpoint(edge_type: str, from_kind: str, to_kind: str) -> bool:
     """Return True for legacy edge types on endpoint pairs /ingest no longer writes."""
     if from_kind == "papers" and to_kind == "papers":
         return edge_type in LEGACY_PAPER_PAPER_EDGE_TYPES
@@ -253,11 +263,14 @@ def edge_is_legacy_for_endpoint(edge_type: str, from_kind: str,
     return False
 
 
-def edge_legacy_replacement_message(edge_type: str, from_kind: str,
-                                    to_kind: str) -> str:
+def edge_legacy_replacement_message(
+    edge_type: str, from_kind: str, to_kind: str
+) -> str:
     """Human-facing migration hint for legacy edge endpoint pairs."""
     if from_kind == "papers" and to_kind == "papers":
-        return f"Legacy paper-paper edge {edge_type!r}; use the new paper relation types"
+        return (
+            f"Legacy paper-paper edge {edge_type!r}; use the new paper relation types"
+        )
     if from_kind == "papers" and to_kind == "concepts":
         return (
             f"Legacy paper-concept edge {edge_type!r}; use introduces_concept, "
@@ -280,27 +293,59 @@ VALID_EDGE_TYPES = set(EDGE_TYPE_SPECS) | LEGACY_EDGE_TYPES
 
 # Required frontmatter fields per entity type (lint.py reports a 🔴 if missing).
 REQUIRED_FIELDS = {
-    "papers": ["title", "slug", "paper_type", "tags", "research_modes", "research_object_tags", "importance"],
+    "papers": [
+        "title",
+        "slug",
+        "paper_type",
+        "tags",
+        "research_modes",
+        "research_object_tags",
+        "importance",
+    ],
     "concepts": ["title", "tags", "maturity", "key_papers"],
     "topics": ["title", "tags"],
     "people": ["name", "tags"],
     "Summary": ["title", "scope", "key_topics"],
     "ideas": ["title", "slug", "status", "origin", "tags", "priority"],
     "experiments": ["title", "slug", "status", "target_claim", "hypothesis", "tags"],
-    "claims": ["title", "slug", "status", "confidence", "tags", "source_papers", "evidence"],
+    "claims": [
+        "title",
+        "slug",
+        "status",
+        "confidence",
+        "tags",
+        "source_papers",
+        "evidence",
+    ],
     "foundations": ["title", "slug", "domain", "status"],
 }
 
 # Valid enum values per entity-qualified field. Format: "{entity}.{field}".
 VALID_VALUES = {
     "papers.importance": {"1", "2", "3", "4", "5"},
-    "papers.paper_type": {"paper", "review", "book", "degree_thesis", "preprint", "report", "chapter", "dataset", "other"},
+    "papers.paper_type": {
+        "paper",
+        "review",
+        "book",
+        "degree_thesis",
+        "preprint",
+        "report",
+        "chapter",
+        "dataset",
+        "other",
+    },
     "concepts.maturity": {"stable", "active", "emerging", "deprecated"},
     "ideas.status": {"proposed", "in_progress", "tested", "validated", "failed"},
     "ideas.priority": {"1", "2", "3", "4", "5"},
     "experiments.status": {"planned", "running", "completed", "abandoned"},
     "experiments.outcome": {"succeeded", "failed", "inconclusive", ""},
-    "claims.status": {"proposed", "weakly_supported", "supported", "challenged", "deprecated"},
+    "claims.status": {
+        "proposed",
+        "weakly_supported",
+        "supported",
+        "challenged",
+        "deprecated",
+    },
     "foundations.status": {"mainstream", "historical"},
 }
 
@@ -310,7 +355,13 @@ VALID_VALUES = {
 # fixing that is a separate concern from centralizing the schema — see
 # devlog for the discussion. Preserved as-is here.
 FIELD_DEFAULTS = {
-    "papers": {"paper_type": "paper", "tags": "[]", "research_modes": "[]", "research_object_tags": "[]", "importance": "3"},
+    "papers": {
+        "paper_type": "paper",
+        "tags": "[]",
+        "research_modes": "[]",
+        "research_object_tags": "[]",
+        "importance": "3",
+    },
     "concepts": {"tags": "[]", "maturity": "active", "key_papers": "[]"},
     "topics": {"tags": "[]"},
     "people": {"tags": "[]"},

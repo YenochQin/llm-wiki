@@ -1,12 +1,10 @@
 # /ingest PDF Preprocessing
 
-Open this reference when `/ingest` has selected a Zotero PDF attachment and needs to convert it into structured markdown before ingest can proceed. Direct local PDFs and PDF directories belong to `/ingest-local-pdf`.
+Open this reference when `/ingest` has selected a Zotero PDF attachment and needs to convert it into structured markdown before ingest can proceed.
 
 ## Why preprocessing exists
 
 A PDF attachment is a poor ingest source by itself: text extraction varies, equations and captions are easy to miss, and figure regions are not addressable. The MinerU pipeline turns the Zotero-selected PDF into a structured markdown file with a YAML frontmatter that already lists `sections`, `figures`, and a clean body where heading depth tracks dotted section numbers. The rest of `/ingest` then works from one uniform input shape.
-
-This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when `/init` batch-processes local PDFs, but the source path here comes from `tools/find_zotero_pdf.py`, not from a user-specified local path.
 
 ## Pipeline
 

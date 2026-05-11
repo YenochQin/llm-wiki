@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wiki lint helper — structural checks for ΩmegaWiki.
+"""Wiki lint helper — structural checks for LLM-Wiki.
 
 Checks performed:
   1. Broken wikilinks: [[slug]] target file does not exist
@@ -47,8 +47,8 @@ from _schemas import (
     VALID_VALUES,
     edge_endpoint_matches,
     edge_expected_endpoint,
-    edge_is_symmetric,
     edge_is_legacy_for_endpoint,
+    edge_is_symmetric,
     edge_legacy_replacement_message,
     edge_requires_confidence,
 )
@@ -58,14 +58,21 @@ FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 
 
 class LintIssue:
-    def __init__(self, level: str, category: str, file: str, message: str,
-                 fixable: bool = False, suggestion: str = ""):
-        self.level = level      # 🔴 🟡 🔵
+    def __init__(
+        self,
+        level: str,
+        category: str,
+        file: str,
+        message: str,
+        fixable: bool = False,
+        suggestion: str = "",
+    ):
+        self.level = level  # 🔴 🟡 🔵
         self.category = category
         self.file = file
         self.message = message
-        self.fixable = fixable          # can --fix auto-repair this?
-        self.suggestion = suggestion    # human-readable suggestion for non-fixable issues
+        self.fixable = fixable  # can --fix auto-repair this?
+        self.suggestion = suggestion  # human-readable suggestion for non-fixable issues
 
     def __str__(self):
         return f"{self.level} [{self.category}] {self.file}: {self.message}"
@@ -86,6 +93,7 @@ class LintIssue:
 
 class FixResult:
     """Records a single auto-fix that was applied (or would be applied in dry-run)."""
+
     def __init__(self, file: str, action: str):
         self.file = file
         self.action = action
@@ -112,7 +120,9 @@ def extract_frontmatter(content: str) -> dict:
             continue
         # Detect list continuation (indented "- item")
         if current_list_key and stripped.startswith("- "):
-            fm.setdefault(current_list_key, []).append(stripped[2:].strip().strip('"').strip("'"))
+            fm.setdefault(current_list_key, []).append(
+                stripped[2:].strip().strip('"').strip("'")
+            )
             continue
         # Detect nested key (indented key: value under a parent)
         if line.startswith("  ") and ":" in stripped and current_key:
@@ -125,7 +135,11 @@ def extract_frontmatter(content: str) -> dict:
                 current_list_key = key
             elif value.startswith("[") and value.endswith("]"):
                 inner = value[1:-1].strip()
-                fm[key] = [x.strip().strip('"').strip("'") for x in inner.split(",") if x.strip()]
+                fm[key] = [
+                    x.strip().strip('"').strip("'")
+                    for x in inner.split(",")
+                    if x.strip()
+                ]
                 current_list_key = None
             else:
                 fm[key] = value
@@ -177,13 +191,22 @@ def check_missing_fields(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
                     suggestion = f"Add '{field}: {FIELD_DEFAULTS[page_type][field]}' to frontmatter"
                 else:
                     suggestion = f"Add required field '{field}' to frontmatter (needs manual value)"
-                issues.append(LintIssue("🔴", "missing-field", rel,
-                                        f"Missing required field: {field}",
-                                        fixable=fixable, suggestion=suggestion))
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "missing-field",
+                        rel,
+                        f"Missing required field: {field}",
+                        fixable=fixable,
+                        suggestion=suggestion,
+                    )
+                )
     return issues
 
 
-def check_paper_classification(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]:
+def check_paper_classification(
+    wiki_dir: Path, pages: dict[str, Path]
+) -> list[LintIssue]:
     """Check paper-specific theory/computation/experiment classification fields."""
     issues = []
     valid_modes = {"theory", "computation", "experiment"}
@@ -201,31 +224,67 @@ def check_paper_classification(wiki_dir: Path, pages: dict[str, Path]) -> list[L
         fm = extract_frontmatter(content)
         modes = fm.get("research_modes", [])
         if not isinstance(modes, list):
-            issues.append(LintIssue("🔴", "paper-classification", rel,
-                                    "research_modes must be a YAML list containing theory, computation, and/or experiment"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "paper-classification",
+                    rel,
+                    "research_modes must be a YAML list containing theory, computation, and/or experiment",
+                )
+            )
             continue
         unknown = [m for m in modes if str(m) not in valid_modes]
         if unknown:
-            issues.append(LintIssue("🔴", "paper-classification", rel,
-                                    f"research_modes has invalid values: {unknown}; valid: theory, computation, experiment"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "paper-classification",
+                    rel,
+                    f"research_modes has invalid values: {unknown}; valid: theory, computation, experiment",
+                )
+            )
         if not modes:
-            issues.append(LintIssue("🔴", "paper-classification", rel,
-                                    "research_modes is empty; classify as theory, computation, and/or experiment"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "paper-classification",
+                    rel,
+                    "research_modes is empty; classify as theory, computation, and/or experiment",
+                )
+            )
         objects = fm.get("research_object_tags", [])
         if not isinstance(objects, list) or not objects:
-            issues.append(LintIssue("🔴", "paper-classification", rel,
-                                    "research_object_tags must be a non-empty YAML list"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "paper-classification",
+                    rel,
+                    "research_object_tags must be a non-empty YAML list",
+                )
+            )
         for mode in modes:
             field = detail_fields.get(str(mode))
             if not field:
                 continue
             detail = fm.get(field, [])
             if not isinstance(detail, list) or not detail:
-                issues.append(LintIssue("🔴", "paper-classification", rel,
-                                        f"{field} must be a non-empty YAML list because research_modes includes {mode}"))
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "paper-classification",
+                        rel,
+                        f"{field} must be a non-empty YAML list because research_modes includes {mode}",
+                    )
+                )
         if "## Research classification" not in content:
-            issues.append(LintIssue("🔴", "paper-classification", rel,
-                                    "Missing body section: ## Research classification"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "paper-classification",
+                    rel,
+                    "Missing body section: ## Research classification",
+                )
+            )
 
     return issues
 
@@ -241,7 +300,9 @@ def _extract_section(content: str, heading: str) -> str:
     return content[start:end]
 
 
-def check_concept_source_excerpts(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]:
+def check_concept_source_excerpts(
+    wiki_dir: Path, pages: dict[str, Path]
+) -> list[LintIssue]:
     """Require concept pages to carry source excerpts linked to prepared markdown."""
     issues = []
     for slug, fpath in pages.items():
@@ -251,22 +312,42 @@ def check_concept_source_excerpts(wiki_dir: Path, pages: dict[str, Path]) -> lis
         rel = str(fpath.relative_to(wiki_dir))
         section = _extract_section(content, "Source excerpts")
         if not section:
-            issues.append(LintIssue("🔴", "concept-source-excerpts", rel,
-                                    "Missing body section: ## Source excerpts",
-                                    suggestion="Add brief original-language excerpts linked to wiki/sources/papers/<slug>.md"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "concept-source-excerpts",
+                    rel,
+                    "Missing body section: ## Source excerpts",
+                    suggestion="Add brief original-language excerpts linked to wiki/sources/papers/<slug>.md",
+                )
+            )
             continue
         if "wiki/sources/papers/" not in section and "sources/papers/" not in section:
-            issues.append(LintIssue("🟡", "concept-source-excerpts", rel,
-                                    "Source excerpts section has no wiki source markdown link",
-                                    suggestion="Link each excerpt to ../sources/papers/<paper-slug>.md"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "concept-source-excerpts",
+                    rel,
+                    "Source excerpts section has no wiki source markdown link",
+                    suggestion="Link each excerpt to ../sources/papers/<paper-slug>.md",
+                )
+            )
         if ">" not in section:
-            issues.append(LintIssue("🟡", "concept-source-excerpts", rel,
-                                    "Source excerpts section has no blockquoted original excerpt",
-                                    suggestion="Add at least one short blockquote copied from the prepared markdown"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "concept-source-excerpts",
+                    rel,
+                    "Source excerpts section has no blockquoted original excerpt",
+                    suggestion="Add at least one short blockquote copied from the prepared markdown",
+                )
+            )
     return issues
 
 
-def check_broken_links(wiki_dir: Path, pages: dict[str, Path]) -> tuple[list[LintIssue], dict[str, set]]:
+def check_broken_links(
+    wiki_dir: Path, pages: dict[str, Path]
+) -> tuple[list[LintIssue], dict[str, set]]:
     """Check wikilinks and track incoming links."""
     issues = []
     incoming: dict[str, set[str]] = {slug: set() for slug in pages}
@@ -280,15 +361,22 @@ def check_broken_links(wiki_dir: Path, pages: dict[str, Path]) -> tuple[list[Lin
             if target in pages:
                 incoming.setdefault(target, set()).add(slug)
             else:
-                issues.append(LintIssue("🟡", "broken-link", rel,
-                                        f"[[{target}]] → file not found",
-                                        suggestion=f"Remove [[{target}]] or create a page for it"))
+                issues.append(
+                    LintIssue(
+                        "🟡",
+                        "broken-link",
+                        rel,
+                        f"[[{target}]] → file not found",
+                        suggestion=f"Remove [[{target}]] or create a page for it",
+                    )
+                )
 
     return issues, incoming
 
 
-def check_orphan_pages(wiki_dir: Path, pages: dict[str, Path],
-                       incoming: dict[str, set]) -> list[LintIssue]:
+def check_orphan_pages(
+    wiki_dir: Path, pages: dict[str, Path], incoming: dict[str, set]
+) -> list[LintIssue]:
     """Find pages with zero incoming links.
 
     Foundations are NOT exempt: under correct usage every foundation should
@@ -315,10 +403,16 @@ def check_field_values(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue
 
         # Check enum fields
         enum_checks = {
-            "papers": [("paper_type", "papers.paper_type"), ("importance", "papers.importance")],
+            "papers": [
+                ("paper_type", "papers.paper_type"),
+                ("importance", "papers.importance"),
+            ],
             "concepts": [("maturity", "concepts.maturity")],
             "ideas": [("status", "ideas.status"), ("priority", "ideas.priority")],
-            "experiments": [("status", "experiments.status"), ("outcome", "experiments.outcome")],
+            "experiments": [
+                ("status", "experiments.status"),
+                ("outcome", "experiments.outcome"),
+            ],
             "claims": [("status", "claims.status")],
             "foundations": [("status", "foundations.status")],
         }
@@ -326,8 +420,14 @@ def check_field_values(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue
         for field, valid_key in enum_checks.get(page_type, []):
             val = extract_frontmatter_value(content, field)
             if val is not None and val not in VALID_VALUES[valid_key]:
-                issues.append(LintIssue("🔴", "invalid-value", rel,
-                                        f"{field}={val!r} not in {VALID_VALUES[valid_key]}"))
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "invalid-value",
+                        rel,
+                        f"{field}={val!r} not in {VALID_VALUES[valid_key]}",
+                    )
+                )
 
         # Claim confidence range check
         if page_type == "claims":
@@ -336,16 +436,30 @@ def check_field_values(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue
                 try:
                     conf = float(val)
                     if not (0.0 <= conf <= 1.0):
-                        issues.append(LintIssue("🔴", "invalid-value", rel,
-                                                f"confidence={conf} out of range [0.0, 1.0]"))
+                        issues.append(
+                            LintIssue(
+                                "🔴",
+                                "invalid-value",
+                                rel,
+                                f"confidence={conf} out of range [0.0, 1.0]",
+                            )
+                        )
                 except ValueError:
-                    issues.append(LintIssue("🔴", "invalid-value", rel,
-                                            f"confidence={val!r} is not a number"))
+                    issues.append(
+                        LintIssue(
+                            "🔴",
+                            "invalid-value",
+                            rel,
+                            f"confidence={val!r} is not a number",
+                        )
+                    )
 
     return issues
 
 
-def check_idea_failure_reason(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]:
+def check_idea_failure_reason(
+    wiki_dir: Path, pages: dict[str, Path]
+) -> list[LintIssue]:
     """Check that failed ideas have failure_reason filled."""
     issues = []
     for slug, fpath in pages.items():
@@ -357,13 +471,21 @@ def check_idea_failure_reason(wiki_dir: Path, pages: dict[str, Path]) -> list[Li
         if status == "failed":
             reason = extract_frontmatter_value(content, "failure_reason")
             if not reason:
-                issues.append(LintIssue("🔴", "missing-failure-reason", rel,
-                                        "status=failed but failure_reason is empty "
-                                        "(anti-repetition memory requires recording why)"))
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "missing-failure-reason",
+                        rel,
+                        "status=failed but failure_reason is empty "
+                        "(anti-repetition memory requires recording why)",
+                    )
+                )
     return issues
 
 
-def check_experiment_claim_link(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]:
+def check_experiment_claim_link(
+    wiki_dir: Path, pages: dict[str, Path]
+) -> list[LintIssue]:
     """Check that experiments have valid target_claim references."""
     issues = []
     for slug, fpath in pages.items():
@@ -375,8 +497,14 @@ def check_experiment_claim_link(wiki_dir: Path, pages: dict[str, Path]) -> list[
         if target:
             claim_path = wiki_dir / "claims" / f"{target}.md"
             if not claim_path.exists():
-                issues.append(LintIssue("🟡", "broken-claim-ref", rel,
-                                        f"target_claim={target!r} but claims/{target}.md not found"))
+                issues.append(
+                    LintIssue(
+                        "🟡",
+                        "broken-claim-ref",
+                        rel,
+                        f"target_claim={target!r} but claims/{target}.md not found",
+                    )
+                )
     return issues
 
 
@@ -405,10 +533,19 @@ def check_xref_asymmetry(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
                     ref_path = wiki_dir / "papers" / f"{ref}.md"
                     if ref_path.exists():
                         ref_content = ref_path.read_text(encoding="utf-8")
-                        if f"[[{slug}]]" not in ref_content and f"[[{slug}|" not in ref_content:
-                            issues.append(LintIssue("🟡", "xref-asymmetry", rel,
-                                                    f"key_papers has {ref} but papers/{ref}.md doesn't link back to [[{slug}]]",
-                                                    fixable=True))
+                        if (
+                            f"[[{slug}]]" not in ref_content
+                            and f"[[{slug}|" not in ref_content
+                        ):
+                            issues.append(
+                                LintIssue(
+                                    "🟡",
+                                    "xref-asymmetry",
+                                    rel,
+                                    f"key_papers has {ref} but papers/{ref}.md doesn't link back to [[{slug}]]",
+                                    fixable=True,
+                                )
+                            )
 
         # papers → people (author refs) ↔ people Key papers
         if page_type == "papers":
@@ -417,10 +554,19 @@ def check_xref_asymmetry(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
                 target_path = wiki_dir / "people" / f"{target}.md"
                 if target_path.exists():
                     ref_content = target_path.read_text(encoding="utf-8")
-                    if f"[[{slug}]]" not in ref_content and f"[[{slug}|" not in ref_content:
-                        issues.append(LintIssue("🟡", "xref-asymmetry", rel,
-                                                f"links to people/{target} but person doesn't link back to [[{slug}]]",
-                                                fixable=True))
+                    if (
+                        f"[[{slug}]]" not in ref_content
+                        and f"[[{slug}|" not in ref_content
+                    ):
+                        issues.append(
+                            LintIssue(
+                                "🟡",
+                                "xref-asymmetry",
+                                rel,
+                                f"links to people/{target} but person doesn't link back to [[{slug}]]",
+                                fixable=True,
+                            )
+                        )
 
         # claims source_papers ↔ papers Related
         if page_type == "claims":
@@ -432,10 +578,19 @@ def check_xref_asymmetry(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
                     ref_path = wiki_dir / "papers" / f"{ref}.md"
                     if ref_path.exists():
                         ref_content = ref_path.read_text(encoding="utf-8")
-                        if f"[[{slug}]]" not in ref_content and f"[[{slug}|" not in ref_content:
-                            issues.append(LintIssue("🟡", "xref-asymmetry", rel,
-                                                    f"source_papers has {ref} but papers/{ref}.md doesn't link back to [[{slug}]]",
-                                                    fixable=True))
+                        if (
+                            f"[[{slug}]]" not in ref_content
+                            and f"[[{slug}|" not in ref_content
+                        ):
+                            issues.append(
+                                LintIssue(
+                                    "🟡",
+                                    "xref-asymmetry",
+                                    rel,
+                                    f"source_papers has {ref} but papers/{ref}.md doesn't link back to [[{slug}]]",
+                                    fixable=True,
+                                )
+                            )
 
         # ideas origin_gaps ↔ claims Linked ideas
         if page_type == "ideas":
@@ -447,10 +602,19 @@ def check_xref_asymmetry(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
                     ref_path = wiki_dir / "claims" / f"{ref}.md"
                     if ref_path.exists():
                         ref_content = ref_path.read_text(encoding="utf-8")
-                        if f"[[{slug}]]" not in ref_content and f"[[{slug}|" not in ref_content:
-                            issues.append(LintIssue("🟡", "xref-asymmetry", rel,
-                                                    f"origin_gaps has {ref} but claims/{ref}.md doesn't link back to [[{slug}]]",
-                                                    fixable=True))
+                        if (
+                            f"[[{slug}]]" not in ref_content
+                            and f"[[{slug}|" not in ref_content
+                        ):
+                            issues.append(
+                                LintIssue(
+                                    "🟡",
+                                    "xref-asymmetry",
+                                    rel,
+                                    f"origin_gaps has {ref} but claims/{ref}.md doesn't link back to [[{slug}]]",
+                                    fixable=True,
+                                )
+                            )
 
         # experiments target_claim ↔ claims evidence
         if page_type == "experiments":
@@ -460,9 +624,15 @@ def check_xref_asymmetry(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
                 if ref_path.exists():
                     ref_content = ref_path.read_text(encoding="utf-8")
                     if slug not in ref_content:
-                        issues.append(LintIssue("🟡", "xref-asymmetry", rel,
-                                                f"target_claim={target} but claims/{target}.md doesn't reference this experiment",
-                                                fixable=True))
+                        issues.append(
+                            LintIssue(
+                                "🟡",
+                                "xref-asymmetry",
+                                rel,
+                                f"target_claim={target} but claims/{target}.md doesn't reference this experiment",
+                                fixable=True,
+                            )
+                        )
 
     return issues
 
@@ -471,16 +641,20 @@ def _node_kind(node_id: str) -> str:
     return node_id.split("/", 1)[0] if "/" in node_id else ""
 
 
-def _check_graph_node_exists(wiki_dir: Path, node_id: str,
-                             file_label: str, line_num: int,
-                             endpoint: str) -> LintIssue | None:
+def _check_graph_node_exists(
+    wiki_dir: Path, node_id: str, file_label: str, line_num: int, endpoint: str
+) -> LintIssue | None:
     if "/" not in node_id:
         return None
     entity_dir, node_slug = node_id.split("/", 1)
     node_path = wiki_dir / entity_dir / f"{node_slug}.md"
     if not node_path.exists():
-        return LintIssue("🟡", "dangling-edge", f"{file_label}:{line_num}",
-                         f"{endpoint}={node_id!r} but file not found")
+        return LintIssue(
+            "🟡",
+            "dangling-edge",
+            f"{file_label}:{line_num}",
+            f"{endpoint}={node_id!r} but file not found",
+        )
     return None
 
 
@@ -505,14 +679,26 @@ def check_graph_edges(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]
         try:
             edge = json_module.loads(line)
         except json_module.JSONDecodeError:
-            issues.append(LintIssue("🔴", "invalid-edge", f"graph/edges.jsonl:{line_num}",
-                                    "Invalid JSON"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "invalid-edge",
+                    f"graph/edges.jsonl:{line_num}",
+                    "Invalid JSON",
+                )
+            )
             continue
 
         for field in ("from", "to", "type"):
             if field not in edge:
-                issues.append(LintIssue("🔴", "invalid-edge", f"graph/edges.jsonl:{line_num}",
-                                        f"Missing required field: {field}"))
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "invalid-edge",
+                        f"graph/edges.jsonl:{line_num}",
+                        f"Missing required field: {field}",
+                    )
+                )
 
         edge_type = edge.get("type", "")
         from_id = edge.get("from", "")
@@ -521,53 +707,99 @@ def check_graph_edges(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue]
         to_kind = _node_kind(str(to_id))
 
         if "type" in edge and edge_type not in valid_types:
-            issues.append(LintIssue("🟡", "unknown-edge-type", f"graph/edges.jsonl:{line_num}",
-                                    f"Unknown edge type: {edge_type}"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "unknown-edge-type",
+                    f"graph/edges.jsonl:{line_num}",
+                    f"Unknown edge type: {edge_type}",
+                )
+            )
         elif edge_type:
             # Endpoint-aware semantic edge checks. Legacy edge types stay readable
             # but get migration warnings on old /ingest-shaped endpoints.
             if not edge_endpoint_matches(edge_type, from_kind, to_kind):
                 expected_from = edge_expected_endpoint(edge_type, "from")
                 expected_to = edge_expected_endpoint(edge_type, "to")
-                issues.append(LintIssue("🟡", "invalid-edge-endpoint",
-                                        f"graph/edges.jsonl:{line_num}",
-                                        f"{edge_type} should connect {expected_from}/* -> {expected_to}/*"))
-            if (edge_expected_endpoint(edge_type, "from") == "papers"
-                    and edge_expected_endpoint(edge_type, "to") == "papers"
-                    and str(from_id) == str(to_id)):
-                issues.append(LintIssue("🟡", "self-edge",
-                                        f"graph/edges.jsonl:{line_num}",
-                                        f"{edge_type} should not connect a paper to itself"))
+                issues.append(
+                    LintIssue(
+                        "🟡",
+                        "invalid-edge-endpoint",
+                        f"graph/edges.jsonl:{line_num}",
+                        f"{edge_type} should connect {expected_from}/* -> {expected_to}/*",
+                    )
+                )
+            if (
+                edge_expected_endpoint(edge_type, "from") == "papers"
+                and edge_expected_endpoint(edge_type, "to") == "papers"
+                and str(from_id) == str(to_id)
+            ):
+                issues.append(
+                    LintIssue(
+                        "🟡",
+                        "self-edge",
+                        f"graph/edges.jsonl:{line_num}",
+                        f"{edge_type} should not connect a paper to itself",
+                    )
+                )
             if edge_is_symmetric(edge_type):
                 if edge.get("symmetric") is not True:
-                    issues.append(LintIssue("🟡", "missing-symmetric-marker",
-                                            f"graph/edges.jsonl:{line_num}",
-                                            f"{edge_type} should include symmetric: true"))
+                    issues.append(
+                        LintIssue(
+                            "🟡",
+                            "missing-symmetric-marker",
+                            f"graph/edges.jsonl:{line_num}",
+                            f"{edge_type} should include symmetric: true",
+                        )
+                    )
                 if str(from_id) > str(to_id):
-                    issues.append(LintIssue("🟡", "noncanonical-symmetric-edge",
-                                            f"graph/edges.jsonl:{line_num}",
-                                            "symmetric paper edge endpoints should be sorted"))
+                    issues.append(
+                        LintIssue(
+                            "🟡",
+                            "noncanonical-symmetric-edge",
+                            f"graph/edges.jsonl:{line_num}",
+                            "symmetric paper edge endpoints should be sorted",
+                        )
+                    )
             confidence = edge.get("confidence", "")
             if edge_requires_confidence(edge_type):
                 if not confidence:
-                    issues.append(LintIssue("🟡", "missing-edge-confidence",
-                                            f"graph/edges.jsonl:{line_num}",
-                                            f"{edge_type} should include confidence high|medium|low"))
+                    issues.append(
+                        LintIssue(
+                            "🟡",
+                            "missing-edge-confidence",
+                            f"graph/edges.jsonl:{line_num}",
+                            f"{edge_type} should include confidence high|medium|low",
+                        )
+                    )
                 elif confidence not in EDGE_CONFIDENCE_VALUES:
-                    issues.append(LintIssue("🟡", "invalid-edge-confidence",
-                                            f"graph/edges.jsonl:{line_num}",
-                                            f"confidence={confidence!r} not in {EDGE_CONFIDENCE_VALUES}"))
+                    issues.append(
+                        LintIssue(
+                            "🟡",
+                            "invalid-edge-confidence",
+                            f"graph/edges.jsonl:{line_num}",
+                            f"confidence={confidence!r} not in {EDGE_CONFIDENCE_VALUES}",
+                        )
+                    )
                 if not str(edge.get("evidence", "")).strip():
-                    issues.append(LintIssue("🟡", "missing-edge-evidence",
-                                            f"graph/edges.jsonl:{line_num}",
-                                            f"{edge_type} should include evidence text"))
+                    issues.append(
+                        LintIssue(
+                            "🟡",
+                            "missing-edge-evidence",
+                            f"graph/edges.jsonl:{line_num}",
+                            f"{edge_type} should include evidence text",
+                        )
+                    )
 
             if edge_is_legacy_for_endpoint(edge_type, from_kind, to_kind):
-                issues.append(LintIssue("🟡", "legacy-edge-type",
-                                        f"graph/edges.jsonl:{line_num}",
-                                        edge_legacy_replacement_message(
-                                            edge_type, from_kind, to_kind
-                                        )))
+                issues.append(
+                    LintIssue(
+                        "🟡",
+                        "legacy-edge-type",
+                        f"graph/edges.jsonl:{line_num}",
+                        edge_legacy_replacement_message(edge_type, from_kind, to_kind),
+                    )
+                )
 
         # Check from/to nodes exist (strip directory prefix for slug lookup)
         for endpoint in ("from", "to"):
@@ -604,55 +836,99 @@ def check_graph_citations(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIs
         try:
             citation = json_module.loads(line)
         except json_module.JSONDecodeError:
-            issues.append(LintIssue("🔴", "invalid-citation",
-                                    f"graph/citations.jsonl:{line_num}",
-                                    "Invalid JSON"))
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "invalid-citation",
+                    f"graph/citations.jsonl:{line_num}",
+                    "Invalid JSON",
+                )
+            )
             continue
 
         for field in ("from", "to", "type", "source", "date"):
             if field not in citation:
-                issues.append(LintIssue("🔴", "invalid-citation",
-                                        f"graph/citations.jsonl:{line_num}",
-                                        f"Missing required field: {field}"))
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "invalid-citation",
+                        f"graph/citations.jsonl:{line_num}",
+                        f"Missing required field: {field}",
+                    )
+                )
 
         from_id = str(citation.get("from", ""))
         to_id = str(citation.get("to", ""))
         if _node_kind(from_id) != "papers" or _node_kind(to_id) != "papers":
-            issues.append(LintIssue("🟡", "invalid-citation-endpoint",
-                                    f"graph/citations.jsonl:{line_num}",
-                                    "cites should connect papers/* -> papers/*"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "invalid-citation-endpoint",
+                    f"graph/citations.jsonl:{line_num}",
+                    "cites should connect papers/* -> papers/*",
+                )
+            )
 
         if citation.get("type") not in CITATION_EDGE_TYPES:
-            issues.append(LintIssue("🟡", "unknown-citation-type",
-                                    f"graph/citations.jsonl:{line_num}",
-                                    f"Unknown citation type: {citation.get('type')}"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "unknown-citation-type",
+                    f"graph/citations.jsonl:{line_num}",
+                    f"Unknown citation type: {citation.get('type')}",
+                )
+            )
         if citation.get("source") not in CITATION_SOURCES:
-            issues.append(LintIssue("🟡", "unknown-citation-source",
-                                    f"graph/citations.jsonl:{line_num}",
-                                    f"Unknown citation source: {citation.get('source')}"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "unknown-citation-source",
+                    f"graph/citations.jsonl:{line_num}",
+                    f"Unknown citation source: {citation.get('source')}",
+                )
+            )
         if "confidence" in citation:
-            issues.append(LintIssue("🟡", "invalid-citation-field",
-                                    f"graph/citations.jsonl:{line_num}",
-                                    "Citation rows should not include confidence"))
-        if "date" in citation and not re.match(r"^\d{4}-\d{2}-\d{2}$",
-                                                str(citation.get("date", ""))):
-            issues.append(LintIssue("🟡", "invalid-citation-date",
-                                    f"graph/citations.jsonl:{line_num}",
-                                    "Citation date should be YYYY-MM-DD"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "invalid-citation-field",
+                    f"graph/citations.jsonl:{line_num}",
+                    "Citation rows should not include confidence",
+                )
+            )
+        if "date" in citation and not re.match(
+            r"^\d{4}-\d{2}-\d{2}$", str(citation.get("date", ""))
+        ):
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "invalid-citation-date",
+                    f"graph/citations.jsonl:{line_num}",
+                    "Citation date should be YYYY-MM-DD",
+                )
+            )
 
         key = (from_id, to_id)
         if key in seen:
-            issues.append(LintIssue("🟡", "duplicate-citation",
-                                    f"graph/citations.jsonl:{line_num}",
-                                    f"Duplicate citation {from_id} -> {to_id}"))
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "duplicate-citation",
+                    f"graph/citations.jsonl:{line_num}",
+                    f"Duplicate citation {from_id} -> {to_id}",
+                )
+            )
         seen.add(key)
 
         for endpoint in ("from", "to"):
             if endpoint not in citation:
                 continue
             issue = _check_graph_node_exists(
-                wiki_dir, str(citation[endpoint]), "graph/citations.jsonl",
-                line_num, endpoint
+                wiki_dir,
+                str(citation[endpoint]),
+                "graph/citations.jsonl",
+                line_num,
+                endpoint,
             )
             if issue:
                 issues.append(issue)
@@ -680,8 +956,14 @@ def check_content_quality(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIs
                             referenced = True
                             break
                 if not referenced:
-                    issues.append(LintIssue("🔵", "quality", rel,
-                                            "importance=5 but no concept page references this paper"))
+                    issues.append(
+                        LintIssue(
+                            "🔵",
+                            "quality",
+                            rel,
+                            "importance=5 but no concept page references this paper",
+                        )
+                    )
 
         # concepts with maturity=stable but only 1 key_paper
         if page_type == "concepts":
@@ -689,22 +971,35 @@ def check_content_quality(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIs
             if mat == "stable":
                 match = re.search(r"key_papers:\s*\[(.*?)\]", content)
                 if match:
-                    papers_list = [p.strip().strip(",") for p in match.group(1).split() if p.strip().strip(",")]
+                    papers_list = [
+                        p.strip().strip(",")
+                        for p in match.group(1).split()
+                        if p.strip().strip(",")
+                    ]
                     if len(papers_list) <= 1:
-                        issues.append(LintIssue("🔵", "quality", rel,
-                                                "maturity=stable but only 1 key_paper (consider adding more)"))
+                        issues.append(
+                            LintIssue(
+                                "🔵",
+                                "quality",
+                                rel,
+                                "maturity=stable but only 1 key_paper (consider adding more)",
+                            )
+                        )
 
         # topics with empty open_problems
         if page_type == "topics":
             if "## Open problems" in content:
                 idx = content.index("## Open problems")
                 # Get text until next ## or end
-                rest = content[idx + len("## Open problems"):]
+                rest = content[idx + len("## Open problems") :]
                 next_section = rest.find("\n## ")
                 section_text = rest[:next_section] if next_section != -1 else rest
                 if section_text.strip() == "" or section_text.strip() == "—":
-                    issues.append(LintIssue("🔵", "quality", rel,
-                                            "Open problems section is empty"))
+                    issues.append(
+                        LintIssue(
+                            "🔵", "quality", rel, "Open problems section is empty"
+                        )
+                    )
 
     return issues
 
@@ -735,6 +1030,7 @@ def lint(wiki_dir: Path) -> list[LintIssue]:
 # Auto-fix functions
 # ---------------------------------------------------------------------------
 
+
 def _append_to_section(fpath: Path, section_heading: str, line_to_add: str) -> bool:
     """Append a line to a markdown section. Returns True if modified."""
     content = fpath.read_text(encoding="utf-8")
@@ -755,7 +1051,7 @@ def _append_to_section(fpath: Path, section_heading: str, line_to_add: str) -> b
         # Find insert point: after any blank lines following heading
         insert_offset = 0
         for ch in rest:
-            if ch == '\n':
+            if ch == "\n":
                 insert_offset += 1
             else:
                 break
@@ -779,12 +1075,14 @@ def _add_frontmatter_field(fpath: Path, field: str, value: str) -> bool:
 
     # Insert before closing ---
     new_fm = fm_text.rstrip() + f"\n{field}: {value}"
-    content = f"---\n{new_fm}\n---" + content[m.end():]
+    content = f"---\n{new_fm}\n---" + content[m.end() :]
     fpath.write_text(content, encoding="utf-8")
     return True
 
 
-def fix_issues(wiki_dir: Path, issues: list[LintIssue], dry_run: bool = False) -> list[FixResult]:
+def fix_issues(
+    wiki_dir: Path, issues: list[LintIssue], dry_run: bool = False
+) -> list[FixResult]:
     """Apply auto-fixes for fixable issues. Returns list of fixes applied."""
     fixes = []
 
@@ -812,7 +1110,10 @@ def _fix_xref(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixResult | No
     # Parse the issue message to determine what fix is needed
     # Pattern: "key_papers has {ref} but papers/{ref}.md doesn't link back to [[{slug}]]"
     if "key_papers has" in msg and "papers/" in msg:
-        m = re.search(r"key_papers has (\S+) but papers/\S+\.md doesn't link back to \[\[(\S+)\]\]", msg)
+        m = re.search(
+            r"key_papers has (\S+) but papers/\S+\.md doesn't link back to \[\[(\S+)\]\]",
+            msg,
+        )
         if not m:
             return None
         paper_slug, concept_slug = m.group(1), m.group(2)
@@ -824,7 +1125,9 @@ def _fix_xref(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixResult | No
 
     # Pattern: "links to people/{target} but person doesn't link back to [[{slug}]]"
     if "links to people/" in msg and "doesn't link back" in msg:
-        m = re.search(r"links to people/(\S+) but person doesn't link back to \[\[(\S+)\]\]", msg)
+        m = re.search(
+            r"links to people/(\S+) but person doesn't link back to \[\[(\S+)\]\]", msg
+        )
         if not m:
             return None
         person_slug, paper_slug = m.group(1), m.group(2)
@@ -836,7 +1139,10 @@ def _fix_xref(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixResult | No
 
     # Pattern: "source_papers has {ref} but papers/{ref}.md doesn't link back to [[{slug}]]"
     if "source_papers has" in msg and "papers/" in msg:
-        m = re.search(r"source_papers has (\S+) but papers/\S+\.md doesn't link back to \[\[(\S+)\]\]", msg)
+        m = re.search(
+            r"source_papers has (\S+) but papers/\S+\.md doesn't link back to \[\[(\S+)\]\]",
+            msg,
+        )
         if not m:
             return None
         paper_slug, claim_slug = m.group(1), m.group(2)
@@ -848,7 +1154,10 @@ def _fix_xref(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixResult | No
 
     # Pattern: "origin_gaps has {ref} but claims/{ref}.md doesn't link back to [[{slug}]]"
     if "origin_gaps has" in msg and "claims/" in msg:
-        m = re.search(r"origin_gaps has (\S+) but claims/\S+\.md doesn't link back to \[\[(\S+)\]\]", msg)
+        m = re.search(
+            r"origin_gaps has (\S+) but claims/\S+\.md doesn't link back to \[\[(\S+)\]\]",
+            msg,
+        )
         if not m:
             return None
         claim_slug, idea_slug = m.group(1), m.group(2)
@@ -867,16 +1176,21 @@ def _fix_xref(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixResult | No
         # Extract experiment slug from issue.file: "experiments/foo.md" → "foo"
         exp_slug = Path(issue.file).stem
         target_path = wiki_dir / "claims" / f"{claim_slug}.md"
-        action = f"Add {exp_slug} reference to claims/{claim_slug}.md ## Evidence summary"
+        action = (
+            f"Add {exp_slug} reference to claims/{claim_slug}.md ## Evidence summary"
+        )
         if not dry_run:
-            _append_to_section(target_path, "## Evidence summary",
-                               f"- Tested by: [[{exp_slug}]]")
+            _append_to_section(
+                target_path, "## Evidence summary", f"- Tested by: [[{exp_slug}]]"
+            )
         return FixResult(f"claims/{claim_slug}.md", action)
 
     return None
 
 
-def _fix_missing_field(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixResult | None:
+def _fix_missing_field(
+    wiki_dir: Path, issue: LintIssue, dry_run: bool
+) -> FixResult | None:
     """Fix a missing frontmatter field by inserting a safe default."""
     m = re.search(r"Missing required field: (\S+)", issue.message)
     if not m:
@@ -901,17 +1215,34 @@ def _fix_missing_field(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixRe
 
 def main():
     parser = argparse.ArgumentParser(description="OmegaWiki linter")
-    parser.add_argument("--wiki-dir", default=None, type=Path,
-                        help="Path to wiki directory (default: config/paths.json or ./wiki)")
-    parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path,
-                        help="Path config JSON (default: config/paths.json)")
+    parser.add_argument(
+        "--wiki-dir",
+        default=None,
+        type=Path,
+        help="Path to wiki directory (default: config/paths.json or ./wiki)",
+    )
+    parser.add_argument(
+        "--paths-config",
+        default=DEFAULT_CONFIG_PATH,
+        type=Path,
+        help="Path config JSON (default: config/paths.json)",
+    )
     parser.add_argument("--json", action="store_true", help="Output as JSON")
-    parser.add_argument("--fix", action="store_true",
-                        help="Auto-fix deterministic issues (xref reverse links, missing field defaults)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="With --fix: preview fixes without applying them")
-    parser.add_argument("--suggest", action="store_true",
-                        help="Show actionable suggestions for non-auto-fixable issues")
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Auto-fix deterministic issues (xref reverse links, missing field defaults)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --fix: preview fixes without applying them",
+    )
+    parser.add_argument(
+        "--suggest",
+        action="store_true",
+        help="Show actionable suggestions for non-auto-fixable issues",
+    )
     args = parser.parse_args()
 
     paths = load_paths(config_path=args.paths_config, wiki_root=args.wiki_dir)
@@ -938,13 +1269,19 @@ def main():
             }
             print(json_module.dumps(output, indent=2, ensure_ascii=False))
         else:
-            print(json_module.dumps([i.to_dict() for i in issues], indent=2, ensure_ascii=False))
+            print(
+                json_module.dumps(
+                    [i.to_dict() for i in issues], indent=2, ensure_ascii=False
+                )
+            )
     else:
         level_order = {"🔴": 0, "🟡": 1, "🔵": 2}
         yellow = sum(1 for i in issues if i.level == "🟡")
         blue = sum(1 for i in issues if i.level == "🔵")
         print(f"Lint: {red} 🔴, {yellow} 🟡, {blue} 🔵\n")
-        for issue in sorted(issues, key=lambda i: (level_order.get(i.level, 9), i.file)):
+        for issue in sorted(
+            issues, key=lambda i: (level_order.get(i.level, 9), i.file)
+        ):
             print(issue)
             if args.suggest and issue.suggestion:
                 print(f"  💡 {issue.suggestion}")

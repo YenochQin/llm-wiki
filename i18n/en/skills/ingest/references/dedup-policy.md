@@ -4,7 +4,7 @@ Open this reference when you are about to create or update a concept, claim, or 
 
 ## The mental model
 
-A healthy ΩmegaWiki has far fewer claims and concepts than papers. Each concept is shared by many papers that deepen or extend it; each claim is supported by many papers that present evidence. When `/ingest` creates a new concept or claim per paper by default, the wiki quickly devolves into a pile of near-duplicates that breaks every downstream skill — survey generation, gap detection, idea novelty, citation reasoning.
+A healthy LLM-Wiki has far fewer claims and concepts than papers. Each concept is shared by many papers that deepen or extend it; each claim is supported by many papers that present evidence. When `/ingest` creates a new concept or claim per paper by default, the wiki quickly devolves into a pile of near-duplicates that breaks every downstream skill — survey generation, gap detection, idea novelty, citation reasoning.
 
 The default action is **merge**. The exception is **create**, and it needs a clear reason every time.
 
