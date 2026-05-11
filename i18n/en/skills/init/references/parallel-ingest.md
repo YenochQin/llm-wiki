@@ -1,6 +1,6 @@
 # /init Parallel Ingest
 
-Use this reference when `/init` is handing sources to parallel `/ingest` subagents and merging their work back.
+Use this reference when `/init` is handing sources to parallel `/ingest-local-pdf` subagents and merging their work back.
 
 ## Pre-Fan-Out Safety
 
@@ -35,8 +35,8 @@ git worktree add -b "$WT_BRANCH" "$WT_PATH" "$BASE_COMMIT"
 ## Subagent Prompt Contract
 
 - The subagent's shell working directory must be the worktree path (`$WT_PATH`), not the main repository root. All relative paths resolve from there.
-- Execute `/ingest` for exactly one relative source path.
-- Do not bypass `/ingest`.
+- Execute `/ingest-local-pdf` for exactly one relative source path.
+- Do not bypass `/ingest-local-pdf`; it hands the prepared source to `/ingest`.
 - In INIT MODE, consume the handed-off canonical path exactly as provided.
 - Skip `fetch_literature.py citations`.
 - Skip `fetch_literature.py references`.

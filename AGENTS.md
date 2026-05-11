@@ -147,12 +147,12 @@
 
 ## 约束
 
-- **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和本地 `/ingest` 只可在 `wiki/sources/` 下添加 vault 可见 source 副本：PDF 只能转化为 `wiki/sources/papers/*.md`，不要把 PDF 放入 `wiki/`；notes/web 可复制到 `wiki/sources/notes/` 和 `wiki/sources/web/`。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
+- **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和 `/ingest-local-pdf` 只可在 `wiki/sources/` 下添加 vault 可见 source 副本：PDF 只能转化为 `wiki/sources/papers/*.md`，不要把 PDF 放入 `wiki/`；notes/web 可复制到 `wiki/sources/notes/` 和 `wiki/sources/web/`。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
 - **用户可见 skill 参数属于用户**：`argument-hint` 中显示的 flag 和值属于用户命令，不是 agent 策略。不要仅凭仓库状态发明、翻转或删除这些参数。若用户省略某参数，只有 skill 文档明确说明可默认/推导时才推导，否则保持未设置或询问用户。
 - **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `wiki/sources/papers/<slug>.md`。
 - **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。
 - **双向链接**：写正向链接时必须同时写反向链接。
-- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest` 和 `/init` 消费 `wiki/sources/papers/<slug>.md`，不要直接消费原始 PDF。
+- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest-local-pdf` 和 `/init` 产出/消费 `wiki/sources/papers/<slug>.md`；`/ingest` 只消费已准备好的 `wiki/sources/papers/<slug>.md`、INIT MODE 交接路径，或 Zotero 定位后的论文源，不要直接消费原始 PDF。
 - **每次 ingest 都更新 index.md**；`log.md` 只追加。
 - **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
 - **Slug 生成规则**：论文标题关键词，用连字符连接，全小写。
@@ -175,6 +175,7 @@
 | `/init` | `skills/init/SKILL.md` | 手动 |
 | `/prefill` | `skills/prefill/SKILL.md` | 手动（`[domain] [--add concept]`） |
 | `/ingest` | `skills/ingest/SKILL.md` | 手动 |
+| `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | 手动 |
 | `/reingest` | `skills/reingest/SKILL.md` | 手动（重生成已有论文页） |
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |
 | `/ask` | `skills/ask/SKILL.md` | 手动 |

@@ -1,11 +1,11 @@
 ---
-description: Bootstrap ΩmegaWiki from local user sources, then ingest the prepared paper set in parallel
+description: Bootstrap ΩmegaWiki from local user sources, then ingest the prepared local paper set in parallel through /ingest-local-pdf
 argument-hint: ""
 ---
 
 # /init
 
-> Build a wiki from `raw/` with deterministic source preparation, provisional notes/web scaffolding, and parallel `/ingest` fan-out/fan-in. Local papers only — `/init` does not search or download external papers.
+> Build a wiki from `raw/` with deterministic source preparation, provisional notes/web scaffolding, and parallel `/ingest-local-pdf` fan-out/fan-in. Local papers only — `/init` does not search or download external papers.
 
 Use these local references on demand:
 
@@ -20,7 +20,7 @@ Use these local references on demand:
 
 - `wiki/` scaffold and provisional pages (Summary, topics, ideas, concepts, claims)
 - `wiki/sources/` prepared sources
-- Final paper pages via parallel `/ingest` subagents
+- Final paper pages via parallel `/ingest-local-pdf` subagents
 - `.checkpoints/init-*.json` manifests for resume and replay
 - Updated `wiki/index.md`, `wiki/log.md`, `wiki/graph/*`
 
@@ -42,7 +42,7 @@ Use these local references on demand:
 ### Graph edges created
 
 - `/init` itself creates only scaffold-level edges when provisional pages need them
-- all paper-driven edges are delegated to `/ingest`
+- all paper-driven edges are delegated to `/ingest-local-pdf`, which hands prepared sources to `/ingest`
 
 ## Workflow
 
@@ -90,7 +90,7 @@ Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log
 - when the agent supplied a PDF title, treat that title as authoritative for the prepared manifest; fetched/source titles are sanitized fallback metadata only and must not overwrite it
 - metadata or filename titles may remain as provisional display labels only; they are not trusted identity or title-search inputs
 - keep notes/web on their original source paths; `/init` reads them directly during scaffolding
-- set each local paper's `canonical_ingest_path` to a prepared `wiki/sources/` path when available; otherwise fall back to the original `raw/papers/...` path
+- set each local paper's `canonical_ingest_path` to a prepared `wiki/sources/` path when available; if preparation fails, mark the paper skipped instead of handing off the original `raw/papers/...` path
 - record warnings for failed decode / title recovery rather than aborting `/init`
 - see `references/prepare.md` for the prepare decision tree and source-preference rules
 
@@ -129,7 +129,7 @@ Provisional note: seeded from raw/notes or raw/web during /init; pending validat
 
 Paper sources for this step come strictly from `.checkpoints/init-sources.json`. Every entry is `origin=user_local` with a canonical prepared `wiki/sources/papers/<slug>.md` (MinerU output); the helper refuses to fall back to a raw PDF.
 
-Parallel ingest contract:
+Parallel local ingest contract:
 
 - stash unrelated dirty files before fan-out, then record `stash_ref`, `base_branch`, and `base_commit` in checkpoint metadata
 - commit the freshly created scaffold and init manifests before fan-out so `BASE_COMMIT` actually contains the pages, manifests, and handoff metadata that subagents must branch from
@@ -137,7 +137,7 @@ Parallel ingest contract:
 - `/init` worktree mode must run from a named branch, not detached HEAD
 - create each worktree from `BASE_COMMIT`, not from the already checked-out `BASE_BRANCH`
 - subagent prompts must use **relative paths only**, and the subagent's shell working directory must be the worktree path (`$WT_PATH`), not the main repository root
-- execute `/ingest` for exactly one handed-off source path; do not bypass `/ingest`
+- execute `/ingest-local-pdf` for exactly one handed-off source path; do not bypass `/ingest-local-pdf`
 - in INIT MODE, consume the handed-off canonical path exactly as provided
 - skip `fetch_literature.py citations`
 - skip `fetch_literature.py references`
@@ -179,14 +179,14 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 ## Constraints
 
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
-- `wiki/sources/` is a generated handoff area; direct local `/ingest` may also prepare reusable local sidecars under `wiki/sources/`
+- `wiki/sources/` is a generated handoff area; `/ingest-local-pdf` may also prepare reusable local sidecars under `wiki/sources/`
 - `/init` may write generated prepared local sources to `wiki/sources/`; it does not download external papers
 - `/prefill` is optional background seeding, not part of `/init`
 - no skill other than `/prefill` may auto-create foundations
 - `/init` must not create `people/` pages directly
 - notes/web-derived pages are provisional and must carry the exact notice line above
 - paper evidence outranks notes/web for claim confidence and concept consolidation
-- all paper ingest must run through parallel `/ingest` subagents with worktree isolation
+- all local paper ingest must run through parallel `/ingest-local-pdf` subagents with worktree isolation
 - Step 5 must read paper inputs from `.checkpoints/init-sources.json`, not by ad hoc folder scanning
 
 ## Error Handling
@@ -219,4 +219,5 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 
 ### Skills
 
-- `/ingest` — one paper per subagent, in INIT MODE
+- `/ingest-local-pdf` — one local prepared paper per subagent, in INIT MODE handoff
+- `/ingest` — consumes each prepared source after `/ingest-local-pdf` handoff

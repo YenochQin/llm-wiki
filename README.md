@@ -18,11 +18,12 @@ bash setup.sh
 claude
 
 # 5. Inside Claude Code:
-/setup              # guided API key configuration
-/init <topic>       # bootstrap the wiki around a research topic
-/ingest <pdf>       # add a single source
-/reingest <pdf>     # regenerate an existing paper and migrate linked entities
-/ask <question>     # query the wiki with citations
+/setup                          # guided API key configuration
+/init <topic>                   # bootstrap the wiki around a research topic
+/ingest --item-key <zotero-key> # add a Zotero-backed paper
+/ingest-local-pdf <pdf>         # normalize a local PDF, then ingest it
+/reingest <pdf>                 # regenerate an existing paper and migrate linked entities
+/ask <question>                 # query the wiki with citations
 ```
 
 ## Architecture
@@ -60,21 +61,23 @@ When `active_profile` is `"auto"`, the path config chooses `macos`, `windows`,
 or `linux` from the current operating system. Set `LLM_WIKI_PATH_PROFILE` to
 override that selection temporarily.
 
-## Skills (21)
+## Skills (22)
 
-`setup, reset, init, prefill, ingest, reingest, discover, ask, edit, check, novelty, review, ideate, exp-design, exp-eval, refine, paper-plan, paper-draft, survey, research, rebuttal`.
+`setup, reset, init, prefill, ingest, ingest-local-pdf, reingest, discover, ask, edit, check, novelty, review, ideate, exp-design, exp-eval, refine, paper-plan, paper-draft, survey, research, rebuttal`.
 
 Dropped from upstream OmegaWiki: `daily-arxiv, paper-compile, exp-run, exp-status`. `/research` stays design-only: the user runs experiments externally and reports results back to `/exp-eval`.
 
 ## PDF preprocessing
 
-PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. The output format is `mineru-md`; `/ingest` consumes it via the `canonical_ingest_path` field of the prep tool's JSON manifest.
+PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. The output format is `mineru-md`.
 
-`/ingest` can also locate a PDF from Zotero with `--title`, `--doi`, or `--item-key`. By default it scans the cross-platform candidates in `config/zotero-roots.json`; pass `--zotero-root <Zotero data dir or profile dir>` only to override that list. The Zotero helper reads `prefs.js` when needed, snapshots `zotero.sqlite` into `config/zotero-cache/`, then queries the snapshot read-only before feeding the selected PDF into the same MinerU pipeline without copying it into `raw/papers/`.
+Use `/ingest-local-pdf` for raw PDFs or directory batches. It prepares `wiki/sources/papers/*.md` and hands the prepared path to `/ingest`.
+
+`/ingest` can locate a PDF from Zotero with `--title`, `--doi`, or `--item-key`. By default it scans the cross-platform candidates in `config/zotero-roots.json`; pass `--zotero-root <Zotero data dir or profile dir>` only to override that list. The Zotero helper reads `prefs.js` when needed, snapshots `zotero.sqlite` into `config/zotero-cache/`, then queries the snapshot read-only before feeding the selected PDF into the same MinerU pipeline without copying it into `raw/papers/`.
 
 When Zotero Desktop is running with local API access enabled, `/ingest` can additionally call `tools/fetch_zotero_metadata.py --item-key <key>` to enrich the paper identity from the user's Zotero record: title, DOI, year, venue, creators, abstract, tags, URL, `external_ids.zotero_key`, `citationKey`, and a derived `bibtex` string. If the local API is unavailable, ingest falls back to the existing SQLite PDF lookup and Crossref enrichment path.
 
-For Zotero-backed sources, Zotero Local API metadata is the preferred way to read bibliographic fields. Existing MinerU Markdown under `wiki/sources/papers/` can be ingested directly. Metadata-only inputs do not create paper pages by themselves; they enrich a real content source such as a PDF, prepared Markdown, source note, or web/notes content.
+For Zotero-backed sources, Zotero Local API metadata is the preferred way to read bibliographic fields. Existing MinerU Markdown under `wiki/sources/papers/` can be ingested directly. Metadata-only inputs do not create paper pages by themselves; they enrich a real content source such as a prepared Markdown, source note, or web/notes content.
 
 Use `/reingest <pdf-or-wiki/sources/papers/*.md>` when a paper already exists in `wiki/papers/` but the PDF adapter, template, or analysis policy has changed. It refreshes the prepared markdown, regenerates the paper page, and by default audits/migrates linked `concepts`, `claims`, and `people` pages. Pass `--paper-only` only for a paper-page-only refresh; `--update-entities` is kept as a compatibility flag and is already the default behavior.
 

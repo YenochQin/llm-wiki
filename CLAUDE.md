@@ -149,12 +149,12 @@
 
 ## 约束
 
-- **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和本地 `/ingest` 只可在 `wiki/sources/` 下添加 vault 可见 source 副本：PDF 只能转化为 `wiki/sources/papers/*.md`，不要把 PDF 放入 `wiki/`；notes/web 可复制到 `wiki/sources/notes/` 和 `wiki/sources/web/`。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
+- **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和 `/ingest-local-pdf` 只可在 `wiki/sources/` 下添加 vault 可见 source 副本：PDF 只能转化为 `wiki/sources/papers/*.md`，不要把 PDF 放入 `wiki/`；notes/web 可复制到 `wiki/sources/notes/` 和 `wiki/sources/web/`。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
 - **用户可见 skill 参数属于用户**：`argument-hint` 中显示的 flag 和值属于用户命令，不是 agent 策略。不要仅凭仓库状态发明、翻转或删除这些参数。若用户省略某参数，只有 skill 文档明确说明可默认/推导时才推导，否则保持未设置或询问用户。
 - **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `wiki/sources/papers/<slug>.md`。
 - **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。
 - **双向链接**：写正向链接时必须同时写反向链接。
-- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest` 和 `/init` 消费 `wiki/sources/papers/<slug>.md`，不要直接消费原始 PDF。
+- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest-local-pdf` 和 `/init` 产出/消费 `wiki/sources/papers/<slug>.md`；`/ingest` 只消费已准备好的 `wiki/sources/papers/<slug>.md`、INIT MODE 交接路径，或 Zotero 定位后的论文源，不要直接消费原始 PDF。
 - **每次 ingest 都更新 index.md**；`log.md` 只追加。
 - **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
 - **Slug 生成规则**：论文标题关键词，用连字符连接，全小写。
@@ -165,7 +165,7 @@
 - **MinerU API token**：`MINERU_API_TOKEN` 环境变量驱动默认云端后端。没有它 PDF ingest 会失败；离线可安装本地后端（`uv sync --extra local`）。
 - **文献检索**：`tools/fetch_literature.py` 使用无需 API key 的 Crossref 搜索和元数据检索。由于公开源暴露的 citation graph 较少，引用图覆盖是 best-effort。
 - **仓库和 wiki 可分离**：使用 `tools/separate_wiki_repository.py` 将 `wiki/`、`raw/` 复制/移动到外部绝对路径并写入 `config/paths.json`；使用 `tools/clean_wiki_repository.py` 清理仓库内残留的 `wiki/`、`raw/`。清理脚本默认 dry-run，只有 `--yes` 才会删除。
-- **Zotero 集成**：`tools/find_zotero_pdf.py` 和 `tools/_zotero_snapshot.py` 支持从本地 Zotero 数据库按 `--title`、`--doi`、`--item-key` 查找 PDF；Zotero 根目录通过 `config/zotero-roots.json` 或 `--zotero-root` 指定。`/ingest` 可利用此功能自动定位本地 PDF。
+- **Zotero 集成**：`tools/find_zotero_pdf.py`、`tools/fetch_zotero_metadata.py` 和 `tools/_zotero_snapshot.py` 支持从本地 Zotero 数据库按 `--title`、`--doi`、`--item-key` 查找 PDF 和父条目 metadata；Zotero 根目录通过 `config/zotero-roots.json` 或 `--zotero-root` 指定。`/ingest` 可利用此功能自动定位 Zotero 附件，并从 Zotero metadata 直接派生 plain BibTeX 字段；原始本地 PDF 归 `/ingest-local-pdf` 处理。
 - **`tools/_schemas.py` 双向同步**：该模块是实体 schema（目录、边类型、必需字段、枚举值）的机器可消费副本。修改此文件时，必须同步更新 `i18n/*/CLAUDE.md` 中对应的人可读规范，反之亦然。
 
 ---
@@ -179,6 +179,7 @@
 | `/init` | `skills/init/SKILL.md` | 手动 |
 | `/prefill` | `skills/prefill/SKILL.md` | 手动（`[domain] [--add concept]`） |
 | `/ingest` | `skills/ingest/SKILL.md` | 手动 |
+| `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | 手动 |
 | `/reingest` | `skills/reingest/SKILL.md` | 手动（重新 ingest 已有论文页面） |
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |
 | `/ask` | `skills/ask/SKILL.md` | 手动 |

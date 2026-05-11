@@ -178,10 +178,25 @@ mkdir -p ".claude/commands"
 cat > ".claude/commands/ingest.md" <<'EOF'
 ---
 description: Ingest one paper into llm-wiki.
-argument-hint: "(<local-path> | [--zotero-root <dir>] (--title <str>|--doi <doi>|--item-key <key>)) [--discover]"
+argument-hint: "[--zotero-root <dir>] (--title <str>|--doi <doi>|--item-key <key>) [--discover]"
 ---
 
 Read and follow @skills/ingest/SKILL.md exactly.
+
+Use these user-provided invocation arguments for the skill:
+
+```
+$ARGUMENTS
+```
+EOF
+
+cat > ".claude/commands/ingest-local-pdf.md" <<'EOF'
+---
+description: Prepare and ingest local PDF files into llm-wiki.
+argument-hint: "(<local-pdf-or-dir> | <wiki/sources/papers/*.md>) [--title <str>] [--discover]"
+---
+
+Read and follow @skills/ingest-local-pdf/SKILL.md exactly.
 
 Use these user-provided invocation arguments for the skill:
 
