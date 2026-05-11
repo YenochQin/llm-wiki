@@ -36,7 +36,7 @@ cp config/settings.local.json.example .claude/settings.local.json
 | `Bash(mkdir:*)` | Create directories (e.g., wiki subdirectories) |
 | `Bash(git ls-tree:*)` | List files in git (used by some tools for discovery) |
 
-These are the **minimum permissions** for ΩmegaWiki skills to function. Claude Code will prompt you for approval when a skill tries to use a tool not in this list.
+These are the **minimum permissions** for LLM-Wiki skills to function. Claude Code will prompt you for approval when a skill tries to use a tool not in this list.
 
 **To customize:** You can add more permissions (e.g., `Bash(git add:*)` for auto-commit) or remove permissions if you want more manual control. See [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for the full permissions format.
 
