@@ -3,7 +3,9 @@
 
 The helper is intentionally optional for `/ingest`: when Zotero Desktop is not
 running or local API access is disabled, callers should fall back to the
-existing SQLite PDF lookup plus Crossref enrichment path.
+existing SQLite PDF lookup plus Crossref enrichment path. Successful responses
+include normalized metadata plus a derived plain BibTeX entry in
+``metadata.bibtex``.
 """
 
 from __future__ import annotations
@@ -21,6 +23,19 @@ from urllib.request import Request, urlopen
 
 DEFAULT_API_BASE = "http://127.0.0.1:23119/api"
 DEFAULT_TIMEOUT = 5
+ENTRY_TYPE_MAP = {
+    "journalarticle": "article",
+    "book": "book",
+    "booksection": "incollection",
+    "conferencepaper": "inproceedings",
+    "conference": "inproceedings",
+    "thesis": "thesis",
+    "report": "techreport",
+    "webpage": "misc",
+    "preprint": "misc",
+    "dataset": "misc",
+    "patent": "patent",
+}
 
 
 def _clean_text(value: Any) -> str:
@@ -39,6 +54,23 @@ def _plain_note(value: str | None) -> str:
 def _year_from_date(value: Any) -> int | None:
     match = re.search(r"\d{4}", str(value or ""))
     return int(match.group(0)) if match else None
+
+
+def _bibtex_escape(value: str) -> str:
+    text = str(value or "")
+    replacements = {
+        "\\": r"\\",
+        "{": r"\{",
+        "}": r"\}",
+        "&": r"\&",
+        "%": r"\%",
+        "#": r"\#",
+        "$": r"\$",
+        "_": r"\_",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
 
 
 def _creator_name(creator: dict[str, Any]) -> str:
@@ -65,6 +97,9 @@ def _external_ids(data: dict[str, Any], key: str) -> dict[str, str]:
     ids: dict[str, str] = {}
     if key:
         ids["zotero_key"] = key
+    citation_key = _clean_text(data.get("citationKey") or data.get("citekey"))
+    if citation_key:
+        ids["citekey"] = citation_key
     for source, target in [
         ("DOI", "DOI"),
         ("doi", "DOI"),
@@ -78,6 +113,94 @@ def _external_ids(data: dict[str, Any], key: str) -> dict[str, str]:
         if value and target not in ids:
             ids[target] = value
     return ids
+
+
+def _bibtex_key(metadata: dict[str, Any]) -> str:
+    for candidate in (
+        metadata.get("citekey"),
+        metadata.get("citation_key"),
+        metadata.get("external_ids", {}).get("citekey") if isinstance(metadata.get("external_ids"), dict) else "",
+    ):
+        text = _clean_text(candidate)
+        if text:
+            return text
+    key = _clean_text(metadata.get("item_key"))
+    return f"zotero_{key}" if key else "zotero_item"
+
+
+def _bibtex_entry_type(metadata: dict[str, Any]) -> str:
+    item_type = _clean_text(metadata.get("item_type")).lower()
+    return ENTRY_TYPE_MAP.get(item_type, "misc")
+
+
+def _bibtex_field_lines(metadata: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    title = _clean_text(metadata.get("title"))
+    authors = metadata.get("authors") or []
+    year = metadata.get("year")
+    doi = _clean_text(metadata.get("doi"))
+    url = _clean_text(metadata.get("url"))
+    venue = _clean_text(metadata.get("venue"))
+    abstract = _clean_text(metadata.get("abstract"))
+    tags = metadata.get("tags") or []
+    item_type = _clean_text(metadata.get("item_type")).lower()
+    raw = metadata.get("raw_data") if isinstance(metadata.get("raw_data"), dict) else {}
+
+    def add(field: str, value: str) -> None:
+        value = _clean_text(value)
+        if value:
+            lines.append(f"  {field} = {{{_bibtex_escape(value)}}},")
+
+    if authors:
+        add("author", " and ".join(_clean_text(author) for author in authors if _clean_text(author)))
+    if title:
+        add("title", title)
+    if year:
+        add("year", str(year))
+    if item_type in {"journalarticle", "article"}:
+        add("journal", venue)
+    elif item_type in {"booksection", "incollection", "conferencepaper", "conference", "inproceedings"}:
+        add("booktitle", venue)
+    elif item_type in {"book"}:
+        add("publisher", venue)
+    elif item_type in {"thesis"}:
+        add("school", venue)
+    elif item_type in {"report"}:
+        add("institution", venue)
+    elif venue:
+        add("howpublished", venue)
+    if raw.get("volume"):
+        add("volume", raw.get("volume"))
+    if raw.get("issue"):
+        add("number", raw.get("issue"))
+    elif raw.get("number"):
+        add("number", raw.get("number"))
+    if raw.get("pages"):
+        add("pages", raw.get("pages"))
+    if doi:
+        add("doi", doi)
+    if url:
+        add("url", url)
+    if tags:
+        add("keywords", ", ".join(_clean_text(tag) for tag in tags if _clean_text(tag)))
+    if abstract:
+        add("abstract", abstract)
+    if raw.get("language"):
+        add("language", raw.get("language"))
+    if raw.get("rights"):
+        add("rights", raw.get("rights"))
+    return lines
+
+
+def _bibtex(metadata: dict[str, Any]) -> str:
+    entry_type = _bibtex_entry_type(metadata)
+    key = _bibtex_key(metadata)
+    lines = [f"@{entry_type}{{{key},"]
+    lines.extend(_bibtex_field_lines(metadata))
+    if lines[-1].endswith(","):
+        lines[-1] = lines[-1].rstrip(",")
+    lines.append("}")
+    return "\n".join(lines)
 
 
 def _zotero_api(path: str, params: dict[str, Any] | None = None, api_base: str = "", timeout: float = DEFAULT_TIMEOUT) -> Any:
@@ -106,6 +229,7 @@ def normalize_item(item: dict[str, Any]) -> dict[str, Any]:
         or data.get("institution")
     )
     doi = _clean_text(data.get("DOI") or data.get("doi"))
+    citation_key = _clean_text(data.get("citationKey") or data.get("citekey"))
     tags = [
         _clean_text(tag.get("tag"))
         for tag in data.get("tags") or []
@@ -118,6 +242,8 @@ def normalize_item(item: dict[str, Any]) -> dict[str, Any]:
         "title": title,
         "short_title": _clean_text(data.get("shortTitle")),
         "doi": doi,
+        "citekey": citation_key,
+        "citation_key": citation_key,
         "year": _year_from_date(data.get("date")),
         "date": _clean_text(data.get("date")),
         "venue": venue,
@@ -149,9 +275,11 @@ def fetch_item(item_key: str, api_base: str = "", timeout: float = DEFAULT_TIMEO
         parent_metadata["queried_item_key"] = item_key
         parent_metadata["resolved_from_attachment"] = True
         parent_metadata["attachment"] = metadata
+        parent_metadata["bibtex"] = _bibtex(parent_metadata)
         return parent_metadata
     metadata["queried_item_key"] = item_key
     metadata["resolved_from_attachment"] = False
+    metadata["bibtex"] = _bibtex(metadata)
     return metadata
 
 

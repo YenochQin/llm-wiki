@@ -23,6 +23,7 @@ importance: 3           # 1-5
 date_added: YYYY-MM-DD
 source_type: tex         # tex | pdf
 external_ids: {}
+bibtex: ""
 keywords: []
 domain: ""               # NLP / CV / ML Systems / Robotics
 code_url: ""
@@ -31,6 +32,8 @@ cited_by: []
 ```
 
 Body sections: `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## Related`
+
+`bibtex` is a derived bibliographic field for Zotero-backed ingest. Populate it from `tools/fetch_zotero_metadata.py` when the selected source comes from a Zotero attachment or parent item. Keep the value as plain BibTeX so downstream citation styles in `bibbst/` can reuse it directly.
 
 `## Research classification` should first classify the paper into theory, computation, and/or experiment. For each active direction, name the specific theory, computational scheme, or experimental/observational process used. Always include the research object(s) being studied.
 

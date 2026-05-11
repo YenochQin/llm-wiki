@@ -117,6 +117,17 @@ def _yaml_scalar(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def _yaml_block_scalar(value: str) -> list[str]:
+    lines = ["bibtex: |"]
+    text = value.rstrip("\n")
+    if not text:
+        lines.append("  ")
+        return lines
+    for line in text.splitlines():
+        lines.append(f"  {line}")
+    return lines
+
+
 def _render_yaml(items: dict) -> str:
     lines = ["---"]
     for key, value in items.items():
@@ -143,7 +154,10 @@ def _render_yaml(items: dict) -> str:
                         else:
                             lines.append(f"{prefix}{k2}: {_yaml_scalar(str(v2))}")
         else:
-            lines.append(f"{key}: {_yaml_scalar(str(value))}")
+            if key == "bibtex" and "\n" in str(value):
+                lines.extend(_yaml_block_scalar(str(value)))
+            else:
+                lines.append(f"{key}: {_yaml_scalar(str(value))}")
     lines.append("---")
     return "\n".join(lines)
 
@@ -521,6 +535,33 @@ def _strip_frontmatter(text: str) -> str:
     return re.sub(r"^---\s*\n.*?\n---\s*", "", text, count=1, flags=re.DOTALL)
 
 
+def _upsert_bibtex_frontmatter(text: str, bibtex: str) -> str:
+    bibtex = bibtex.rstrip("\n")
+    if not bibtex:
+        return text
+    match = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    if not match:
+        return text
+    front = match.group(1)
+    block = "\n".join(_yaml_block_scalar(bibtex))
+    if re.search(r"^bibtex:\s*", front, flags=re.MULTILINE):
+        front = re.sub(
+            r"^bibtex:\s*(?:\|\s*)?.*(?:\n(?:  .*)?)*",
+            block,
+            front,
+            count=1,
+            flags=re.MULTILINE,
+        )
+    else:
+        marker = re.search(r"^pipeline:.*$", front, flags=re.MULTILINE)
+        if marker:
+            insert_at = marker.end()
+            front = front[:insert_at] + "\n" + block + front[insert_at:]
+        else:
+            front = front + "\n" + block
+    return text[:match.start(1)] + front + text[match.end(1):]
+
+
 # ---------------------------------------------------------------------------
 # Top-level pipeline
 # ---------------------------------------------------------------------------
@@ -546,6 +587,7 @@ def prepare(
     pdf: Path,
     raw_root: Path,
     title_override: str = "",
+    bibtex_override: str = "",
     cache_root: Path | None = None,
     language: str = "en",
     backend: str = "api",
@@ -609,6 +651,9 @@ def prepare(
         existing_source = existing_front.get("source", "")
         if _same_source(existing_source, pdf):
             existing_text = legacy_prepared_path.read_text(encoding="utf-8", errors="ignore")
+            if bibtex_override.strip() and "bibtex:" not in existing_text:
+                existing_text = _upsert_bibtex_frontmatter(existing_text, bibtex_override)
+                legacy_prepared_path.write_text(existing_text, encoding="utf-8")
             return {
                 "canonical_ingest_path": display_path(legacy_prepared_path, display_root),
                 "prepared_path": display_path(legacy_prepared_path, display_root),
@@ -626,6 +671,9 @@ def prepare(
         existing_source = existing_front.get("source", "")
         if _same_source(existing_source, pdf):
             existing_text = legacy_out_path.read_text(encoding="utf-8", errors="ignore")
+            if bibtex_override.strip() and "bibtex:" not in existing_text:
+                existing_text = _upsert_bibtex_frontmatter(existing_text, bibtex_override)
+                legacy_out_path.write_text(existing_text, encoding="utf-8")
             return {
                 "canonical_ingest_path": display_path(legacy_out_path, display_root),
                 "prepared_path": display_path(legacy_out_path, display_root),
@@ -643,6 +691,9 @@ def prepare(
         existing_source = existing_front.get("source", "")
         existing_text = out_path.read_text(encoding="utf-8", errors="ignore")
         if _same_source(existing_source, pdf):
+            if bibtex_override.strip() and "bibtex:" not in existing_text:
+                existing_text = _upsert_bibtex_frontmatter(existing_text, bibtex_override)
+                out_path.write_text(existing_text, encoding="utf-8")
             return {
                 "canonical_ingest_path": display_path(out_path, display_root),
                 "prepared_path": display_path(out_path, display_root),
@@ -698,6 +749,8 @@ def prepare(
         "totalPages": int(manifest.get("totalPages", 0) or 0),
         "totalChars": int(manifest.get("totalChars", 0) or 0),
     }
+    if bibtex_override.strip():
+        front["bibtex"] = bibtex_override.strip()
     if skipped_sections:
         front["skippedSectionHeadings"] = skipped_sections
     if dropped:
@@ -734,6 +787,7 @@ def prepare_paper_source(
     path: Path,
     raw_root: Path,
     title: str = "",
+    bibtex: str = "",
     overwrite: bool = False,
     wiki_root: Path | None = None,
     project_root: Path | None = None,
@@ -743,6 +797,7 @@ def prepare_paper_source(
         pdf=path,
         raw_root=raw_root,
         title_override=title,
+        bibtex_override=bibtex,
         overwrite=overwrite,
         wiki_root=wiki_root,
         project_root=project_root,
@@ -802,6 +857,8 @@ def main() -> None:
                         help="Path to a local PDF to prepare.")
     parser.add_argument("--title", default="",
                         help="Confident agent-recovered title. Used verbatim when set.")
+    parser.add_argument("--bibtex", default="",
+                        help="Derived Zotero BibTeX string to persist in the prepared source frontmatter.")
     parser.add_argument("--cache-root", default=None, type=Path,
                         help="MinerU cache root (default: .mineru-cache at CWD).")
     parser.add_argument("--language", default="en", help="Document language for MinerU.")
@@ -817,6 +874,7 @@ def main() -> None:
         pdf=source,
         raw_root=paths.raw_root,
         title_override=args.title,
+        bibtex_override=args.bibtex,
         cache_root=args.cache_root,
         language=args.language,
         backend=args.backend,
