@@ -73,6 +73,13 @@ def _bibtex_escape(value: str) -> str:
     return text
 
 
+def _bibtex_pages(value: Any) -> str:
+    text = _clean_text(value)
+    if not text:
+        return ""
+    return re.sub(r"(?<=\d)\s*[-\u2010-\u2015]\s*(?=\d)", "--", text)
+
+
 def _creator_name(creator: dict[str, Any]) -> str:
     first = _clean_text(creator.get("firstName"))
     last = _clean_text(creator.get("lastName"))
@@ -139,10 +146,7 @@ def _bibtex_field_lines(metadata: dict[str, Any]) -> list[str]:
     authors = metadata.get("authors") or []
     year = metadata.get("year")
     doi = _clean_text(metadata.get("doi"))
-    url = _clean_text(metadata.get("url"))
     venue = _clean_text(metadata.get("venue"))
-    abstract = _clean_text(metadata.get("abstract"))
-    tags = metadata.get("tags") or []
     item_type = _clean_text(metadata.get("item_type")).lower()
     raw = metadata.get("raw_data") if isinstance(metadata.get("raw_data"), dict) else {}
 
@@ -176,19 +180,9 @@ def _bibtex_field_lines(metadata: dict[str, Any]) -> list[str]:
     elif raw.get("number"):
         add("number", raw.get("number"))
     if raw.get("pages"):
-        add("pages", raw.get("pages"))
+        add("pages", _bibtex_pages(raw.get("pages")))
     if doi:
         add("doi", doi)
-    if url:
-        add("url", url)
-    if tags:
-        add("keywords", ", ".join(_clean_text(tag) for tag in tags if _clean_text(tag)))
-    if abstract:
-        add("abstract", abstract)
-    if raw.get("language"):
-        add("language", raw.get("language"))
-    if raw.get("rights"):
-        add("rights", raw.get("rights"))
     return lines
 
 

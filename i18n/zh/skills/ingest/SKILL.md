@@ -121,7 +121,7 @@ export PYTHON_BIN
    ```
 
    Treat a successful response as authoritative bibliographic metadata from the user's local library. Use it to prefer `title`, `doi`, `year`, `venue`, `creators`/authors, `abstract`, `tags`, `url`, `zotero_select`, `external_ids.zotero_key`, and the returned `bibtex` string. If the command fails, note the fallback only if it affects the report; do not block ingest.
-5. Carry the Zotero-derived `bibtex` string into both `wiki/sources/papers/{slug}.md` and `wiki/papers/{slug}.md` frontmatter as a derived bibliographic field. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
+5. Carry the Zotero-derived `bibtex` string into both `wiki/sources/papers/{slug}.md` and `wiki/papers/{slug}.md` frontmatter as a derived bibliographic field. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. The derived BibTeX entry must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`; do not include URL, tags/keywords, abstract, language, or rights in the BibTeX block. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
 
 Raw persistence rule: never copy or duplicate a file already under `wiki/sources/` or `raw/papers/` into a different raw subtree.
 
