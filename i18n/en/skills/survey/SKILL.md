@@ -53,7 +53,24 @@ argument-hint: <research-question-or-claim-slugs> [--format latex|markdown] [--m
 
 ## Workflow
 
-**Precondition**: confirm the working directory is the wiki project root (the directory containing `wiki/`, `raw/`, `tools/`).
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve the Python interpreter and runtime paths once and reuse them. Never hard-code `wiki/` or `raw/`; both come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+
+```bash
+# Find the project root via git so every command runs through the repository's
+# uv-managed Python environment and path configuration.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+PROJECT_ROOT=""
+if [ -n "$GIT_COMMON_DIR" ]; then
+  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
+fi
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT=$(pwd)
+fi
+cd "$PROJECT_ROOT"
+
+eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
+export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+```
 
 ### Step 1: Locate Relevant Knowledge
 
@@ -139,7 +156,7 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 
 1. **Generate slug**:
    ```bash
-   python3 tools/research_wiki.py slug "<query-keywords>"
+   uv run python tools/research_wiki.py slug "<query-keywords>"
    ```
 
 2. **Write archive file**:
@@ -159,14 +176,14 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 3. **Add graph edges**:
    ```bash
    # output → each cited paper
-   python3 tools/research_wiki.py add-edge wiki/ \
+   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" \
      --from "outputs/related-work-{slug}-{date}" --to "papers/{paper-slug}" \
      --type derived_from --evidence "Cited in related work section"
    ```
 
 4. **Append log**:
    ```bash
-   python3 tools/research_wiki.py log wiki/ \
+   uv run python tools/research_wiki.py log "$WIKI_ROOT" \
      "survey | {topic} | {N} papers, {G} groups, format: {format}"
    ```
 
@@ -194,10 +211,10 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 ## Dependencies
 
 ### Tools（via Bash）
-- `python3 tools/research_wiki.py slug "<title>"` — generate slug
-- `python3 tools/research_wiki.py add-edge wiki/ ...` — add graph edge
-- `python3 tools/research_wiki.py log wiki/ "<message>"` — append log
-- `python3 tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
+- `uv run python tools/research_wiki.py slug "<title>"` — generate slug
+- `uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" ...` — add graph edge
+- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log
+- `uv run python tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
 
 ### MCP Servers
 - None (survey does not require Review LLM; use /review --focus writing for separate review)

@@ -32,7 +32,7 @@ Use this local reference on demand:
 
 ### Tools (via Bash)
 
-- `"$PYTHON_BIN" tools/prepare_paper_source.py --raw-root raw --source <local-path> [--title "<recovered-title>"]`
+- `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --source <local-path> [--title "<recovered-title>"]`
 
 ### Skills
 

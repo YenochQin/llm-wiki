@@ -1,6 +1,6 @@
 # /discover wiki dedup
 
-`tools/discover.py` deduplicates candidates against the existing wiki when `--wiki-root wiki` is passed. This document explains what the dedup does and does not catch, so the user-facing report is accurate.
+`tools/discover.py` deduplicates candidates against the existing wiki when `--wiki-root "$WIKI_ROOT"` is passed. This document explains what the dedup does and does not catch, so the user-facing report is accurate.
 
 ## What it catches
 

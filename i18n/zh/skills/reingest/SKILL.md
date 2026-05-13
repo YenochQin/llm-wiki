@@ -26,15 +26,33 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 
 ## Workflow
 
-Resolve `PYTHON_BIN` using the same logic as `/ingest`; prefer `.venv/bin/python`.
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve the Python interpreter and runtime paths once and reuse them. Never hard-code `wiki/` or `raw/`; both come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+
+```bash
+# Find the project root via git so every command runs through the repository's
+# uv-managed Python environment and path configuration.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+PROJECT_ROOT=""
+if [ -n "$GIT_COMMON_DIR" ]; then
+  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
+fi
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT=$(pwd)
+fi
+cd "$PROJECT_ROOT"
+
+eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
+export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+```
 
 ### Step 1: Resolve and refresh source
 
 1. If input is a PDF, run:
 
    ```bash
-   "$PYTHON_BIN" tools/prepare_paper_source.py \
-     --raw-root raw \
+   uv run python tools/prepare_paper_source.py \
+     --raw-root "$RAW_ROOT" \
+     --wiki-root "$WIKI_ROOT" \
      --source <pdf-path> \
      --overwrite
    ```
@@ -48,7 +66,7 @@ Resolve `PYTHON_BIN` using the same logic as `/ingest`; prefer `.venv/bin/python
 1. Read the prepared markdown frontmatter title and generate slug:
 
    ```bash
-   "$PYTHON_BIN" tools/research_wiki.py slug "<title>"
+   uv run python tools/research_wiki.py slug "<title>"
    ```
 
 2. If `wiki/papers/{slug}.md` does not exist, stop and suggest `/ingest`; do not silently create a new paper page.
@@ -85,7 +103,7 @@ Unless `--paper-only` is explicitly set, review all existing entities connected 
 - concepts whose `key_papers` includes this paper
 - claims whose `source_papers` or `evidence[].source` includes this paper
 - people pages linked from the paper or already listing it under `## Key papers`
-- graph neighbors from `tools/research_wiki.py neighbors wiki/ papers/<slug>`
+- graph neighbors from `tools/research_wiki.py neighbors "$WIKI_ROOT" papers/<slug>`
 
 For each connected entity:
 
@@ -106,11 +124,11 @@ Do not remove old graph edges automatically. If the regenerated page or migrated
 Run:
 
 ```bash
-"$PYTHON_BIN" tools/research_wiki.py rebuild-index wiki/
-"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/
-"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/
-"$PYTHON_BIN" tools/lint.py --wiki-dir wiki
-"$PYTHON_BIN" tools/research_wiki.py log wiki/ "reingest | refreshed papers/<slug> | updated: <list>"
+uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
+uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
+uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
+uv run python tools/lint.py --wiki-dir "$WIKI_ROOT"
+uv run python tools/research_wiki.py log "$WIKI_ROOT" "reingest | refreshed papers/<slug> | updated: <list>"
 ```
 
 If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content.

@@ -60,12 +60,12 @@ git switch "$BASE_BRANCH"
 git merge --no-ff "$WT_BRANCH" --no-edit
 git worktree remove "$WT_PATH"
 git branch -d "$WT_BRANCH"
-"$PYTHON_BIN" tools/research_wiki.py dedup-edges wiki/
-"$PYTHON_BIN" tools/research_wiki.py dedup-citations wiki/
-"$PYTHON_BIN" tools/research_wiki.py rebuild-index wiki/
-"$PYTHON_BIN" tools/research_wiki.py rebuild-context-brief wiki/
-"$PYTHON_BIN" tools/research_wiki.py rebuild-open-questions wiki/
-"$PYTHON_BIN" tools/lint.py --wiki-dir wiki/ --fix
+uv run python tools/research_wiki.py dedup-edges "$WIKI_ROOT"
+uv run python tools/research_wiki.py dedup-citations "$WIKI_ROOT"
+uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
+uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
+uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
+uv run python tools/lint.py --wiki-dir "$WIKI_ROOT" --fix
 ```
 
 If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoint and report the failure.

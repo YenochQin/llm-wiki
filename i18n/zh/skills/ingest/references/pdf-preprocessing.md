@@ -33,8 +33,8 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
 Once you have the title (possibly empty), run:
 
 ```bash
-"$PYTHON_BIN" tools/prepare_paper_source.py \
-  --raw-root raw \
+uv run python tools/prepare_paper_source.py \
+  --raw-root "$RAW_ROOT" \
   --source <zotero-pdf-path> \
   [--title "<zotero-or-agent-recovered-title>"]
 ```

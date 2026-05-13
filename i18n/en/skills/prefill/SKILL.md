@@ -37,7 +37,24 @@ Manual: `/prefill [domain]` or `/prefill --add "concept name"`.
 
 ## Workflow
 
-**Pre-conditions**: working directory contains `wiki/`, `tools/`, `.claude/`. Set `WIKI_ROOT=wiki/`.
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve runtime paths once and reuse them. Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; they come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+
+```bash
+# Find the project root via git so every command runs through the repository's
+# uv-managed Python environment and path configuration.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+PROJECT_ROOT=""
+if [ -n "$GIT_COMMON_DIR" ]; then
+  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
+fi
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT=$(pwd)
+fi
+cd "$PROJECT_ROOT"
+
+eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
+export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+```
 
 ### Step 1: Resolve domain
 
@@ -48,7 +65,7 @@ Manual: `/prefill [domain]` or `/prefill --add "concept name"`.
 ### Step 2: Load seeds
 
 - **Catalog mode**: read `.claude/skills/prefill/foundations-catalog.yaml`. Pick all entries under `domains.{domain}` plus everything under `domains.general` (general foundations apply to every research field).
-- **`--add` mode**: synthesize a single seed entry `{slug: <slugified concept>, title: <concept>, summary: ""}`. Use `python3 tools/research_wiki.py slug "<concept>"` to derive the slug.
+- **`--add` mode**: synthesize a single seed entry `{slug: <slugified concept>, title: <concept>, summary: ""}`. Use `uv run python tools/research_wiki.py slug "<concept>"` to derive the slug.
 
 For each seed, check `wiki/foundations/{slug}.md`. If it already exists, **skip** (do not overwrite, do not warn).
 
@@ -57,9 +74,9 @@ For each seed, check `wiki/foundations/{slug}.md`. If it already exists, **skip*
 For each remaining seed, call `tools/fetch_wikipedia.py`:
 
 ```bash
-python3 tools/fetch_wikipedia.py summary "<title>"
-python3 tools/fetch_wikipedia.py sections "<title>"
-python3 tools/fetch_wikipedia.py section "<title>" --index <N>   # for relevant sections
+uv run python tools/fetch_wikipedia.py summary "<title>"
+uv run python tools/fetch_wikipedia.py sections "<title>"
+uv run python tools/fetch_wikipedia.py section "<title>" --index <N>   # for relevant sections
 ```
 
 - The summary call returns `{title, extract, url}`.
@@ -109,8 +126,8 @@ Write each file to `wiki/foundations/{slug}.md`.
 ### Step 5: Refresh navigation and log
 
 ```bash
-python3 tools/research_wiki.py rebuild-index wiki/
-python3 tools/research_wiki.py log wiki/ "prefill | {N} foundations created for {domain}"
+uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
+uv run python tools/research_wiki.py log "$WIKI_ROOT" "prefill | {N} foundations created for {domain}"
 ```
 
 ### Step 6: Report
@@ -143,7 +160,7 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 
 ## Error Handling
 
-- **`wiki/foundations/` does not exist**: run `python3 tools/research_wiki.py init wiki/` first.
+- **`wiki/foundations/` does not exist**: run `uv run python tools/research_wiki.py init "$WIKI_ROOT"` first.
 - **Wikipedia 404**: log the missing page, fall back to LLM knowledge for that seed (`source_url: ""`).
 - **Network failure**: print which seeds failed and continue with the remainder; do not abort the whole batch.
 - **Catalog file missing**: print error pointing to `.claude/skills/prefill/foundations-catalog.yaml`.
@@ -151,10 +168,10 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 ## Dependencies
 
 ### Tools (via Bash)
-- `python3 tools/fetch_wikipedia.py summary|sections|section|wikitext "<title>" [--index N]`
-- `python3 tools/research_wiki.py slug "<title>"`
-- `python3 tools/research_wiki.py rebuild-index wiki/`
-- `python3 tools/research_wiki.py log wiki/ "<message>"`
+- `uv run python tools/fetch_wikipedia.py summary|sections|section|wikitext "<title>" [--index N]`
+- `uv run python tools/research_wiki.py slug "<title>"`
+- `uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"`
+- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"`
 
 ### Catalog
 - `.claude/skills/prefill/foundations-catalog.yaml`

@@ -59,7 +59,24 @@ argument-hint: <artifact-slug-or-path> [--max-rounds N] [--target-score N] [--di
 
 ## Workflow
 
-**Precondition**: confirm working directory is the wiki project root (containing `wiki/`, `raw/`, `tools/`).
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve runtime paths once and reuse them. Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; they come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+
+```bash
+# Find the project root via git so every command runs through the repository's
+# uv-managed Python environment and path configuration.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+PROJECT_ROOT=""
+if [ -n "$GIT_COMMON_DIR" ]; then
+  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
+fi
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT=$(pwd)
+fi
+cd "$PROJECT_ROOT"
+
+eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
+export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+```
 
 ### Step 1: Initialize
 
@@ -144,8 +161,8 @@ Classify and handle each actionable item:
 
 If this round had wiki changes (Category C):
 ```bash
-python3 tools/research_wiki.py rebuild-context-brief wiki/
-python3 tools/research_wiki.py rebuild-open-questions wiki/
+uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
+uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
 ```
 
 ### Step 3: Final Report
@@ -191,7 +208,7 @@ After iteration ends, generate the REFINE_REPORT:
 
 Append log:
 ```bash
-python3 tools/research_wiki.py log wiki/ \
+uv run python tools/research_wiki.py log "$WIKI_ROOT" \
   "refine | {artifact-slug} | {N} rounds | score {initial}→{final} | verdict: {verdict}"
 ```
 
@@ -216,10 +233,10 @@ python3 tools/research_wiki.py log wiki/ \
 ## Dependencies
 
 ### Tools（via Bash）
-- `python3 tools/research_wiki.py rebuild-context-brief wiki/` — rebuild query_pack
-- `python3 tools/research_wiki.py rebuild-open-questions wiki/` — rebuild gap_map
-- `python3 tools/research_wiki.py add-edge wiki/ ...` — add graph edge (if needed)
-- `python3 tools/research_wiki.py log wiki/ "<message>"` — append log entry
+- `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"` — rebuild query_pack
+- `uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"` — rebuild gap_map
+- `uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" ...` — add graph edge (if needed)
+- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log entry
 
 ### Skills（via Skill tool）
 - `/review` — each round's review (core dependency)

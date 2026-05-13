@@ -21,10 +21,10 @@ Open this reference when a step fails. `/ingest` prefers to degrade gracefully: 
 
 ## Wiki not initialized
 
-If `wiki/` is missing or empty, run:
+If `$WIKI_ROOT` is missing or empty, run:
 
 ```bash
-"$PYTHON_BIN" tools/research_wiki.py init wiki/
+uv run python tools/research_wiki.py init "$WIKI_ROOT"
 ```
 
 Then retry `/ingest`. Do not attempt to create pages in a non-initialized wiki; `index.md` and `graph/` scaffolding must exist first.

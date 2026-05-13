@@ -62,8 +62,24 @@ argument-hint: <question>
 
 ## Workflow
 
-**Precondition**: confirm working directory is the wiki project root (containing `wiki/`, `raw/`, `tools/`).
-Set `WIKI_ROOT=wiki/`.
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve runtime paths once and reuse them. Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; they come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+
+```bash
+# Find the project root via git so every command runs through the repository's
+# uv-managed Python environment and path configuration.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+PROJECT_ROOT=""
+if [ -n "$GIT_COMMON_DIR" ]; then
+  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
+fi
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT=$(pwd)
+fi
+cd "$PROJECT_ROOT"
+
+eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
+export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+```
 
 ### Step 1: Load Global Context
 
@@ -71,8 +87,8 @@ Set `WIKI_ROOT=wiki/`.
 2. Read `wiki/graph/open_questions.md` — understand known open questions and knowledge gaps
 3. If both are missing, rebuild first:
    ```bash
-   python3 tools/research_wiki.py rebuild-context-brief wiki/
-   python3 tools/research_wiki.py rebuild-open-questions wiki/
+   uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
+   uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
    ```
 
 ### Step 2: Retrieve Relevant Pages
@@ -118,7 +134,7 @@ Set `WIKI_ROOT=wiki/`.
 Choose the crystallize target based on answer content:
 
 **Case A — Write to outputs/ (default):**
-1. Generate slug: `python3 tools/research_wiki.py slug "<query-summary>"`
+1. Generate slug: `uv run python tools/research_wiki.py slug "<query-summary>"`
 2. Create `wiki/outputs/{query-slug}.md`:
    ```yaml
    ---
@@ -132,7 +148,7 @@ Choose the crystallize target based on answer content:
    Body is the answer content (preserve wikilinks)
 3. Add a graph edge for each cited source page:
    ```bash
-   python3 tools/research_wiki.py add-edge wiki/ --from outputs/<slug> --to papers/<source-slug> --type derived_from --evidence "query answer"
+   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" --from outputs/<slug> --to papers/<source-slug> --type derived_from --evidence "query answer"
    ```
 
 **Case B — Create new concept:**
@@ -156,16 +172,16 @@ Choose the crystallize target based on answer content:
 1. **index.md**: append new page entries under the appropriate category
 2. **log.md**:
    ```bash
-   python3 tools/research_wiki.py log wiki/ "ask | <question-summary> | crystallized: <target-path>"
+   uv run python tools/research_wiki.py log "$WIKI_ROOT" "ask | <question-summary> | crystallized: <target-path>"
    ```
    If not crystallized:
    ```bash
-   python3 tools/research_wiki.py log wiki/ "ask | <question-summary> | answer-only"
+   uv run python tools/research_wiki.py log "$WIKI_ROOT" "ask | <question-summary> | answer-only"
    ```
 3. **Rebuild derived graph files** (only if crystallize created new pages):
    ```bash
-   python3 tools/research_wiki.py rebuild-context-brief wiki/
-   python3 tools/research_wiki.py rebuild-open-questions wiki/
+   uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
+   uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
    ```
 
 ### Step 7: Report to User
@@ -191,21 +207,21 @@ Output a summary including:
 
 ## Error Handling
 
-- **context_brief.md missing**: run `python3 tools/research_wiki.py rebuild-context-brief wiki/` to rebuild, then retry
+- **context_brief.md missing**: run `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"` to rebuild, then retry
 - **wiki is empty**: inform the user to first run `/init` or `/ingest` to build the knowledge base
 - **no matching pages**: honestly report that no relevant content exists in the wiki, suggest search and ingest directions
 - **crystallize slug conflict**: append a numeric suffix (e.g. `query-result-2`)
-- **index.md missing**: run `python3 tools/research_wiki.py init wiki/` to initialize, then retry
+- **index.md missing**: run `uv run python tools/research_wiki.py init "$WIKI_ROOT"` to initialize, then retry
 
 ## Dependencies
 
 ### Tools（via Bash）
-- `python3 tools/research_wiki.py slug "<title>"` — slug generation
-- `python3 tools/research_wiki.py add-edge wiki/ --from <id> --to <id> --type <type> --evidence "<text>"` — add graph edge
-- `python3 tools/research_wiki.py rebuild-context-brief wiki/` — rebuild compressed context
-- `python3 tools/research_wiki.py rebuild-open-questions wiki/` — rebuild knowledge gap map
-- `python3 tools/research_wiki.py log wiki/ "<message>"` — append log entry
-- `python3 tools/research_wiki.py init wiki/` — initialize wiki (fallback)
+- `uv run python tools/research_wiki.py slug "<title>"` — slug generation
+- `uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" --from <id> --to <id> --type <type> --evidence "<text>"` — add graph edge
+- `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"` — rebuild compressed context
+- `uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"` — rebuild knowledge gap map
+- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log entry
+- `uv run python tools/research_wiki.py init "$WIKI_ROOT"` — initialize wiki (fallback)
 
 ### Skills（via Skill tool）
 - `/ingest` — referenced when suggesting the user supplement knowledge

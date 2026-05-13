@@ -1,89 +1,124 @@
 # llm-wiki
 
-A personal LLM-maintained research wiki. Adopts the OmegaWiki workflow (24 → 21 Claude Code skills, 9 typed page kinds, claim/experiment graph) but swaps the PDF preprocessing layer for [MinerU](https://mineru.net/) — a vision-language parser that gives section-aware structured markdown.
+A personal LLM-maintained research wiki. Adapts the [LLM-Wiki](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md) workflow and replaces the PDF preprocessing layer with [MinerU](https://mineru.net/) — a vision-language parser that produces section-aware structured markdown.
 
-See [`llm-wiki.md`](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md) for the underlying pattern (Karpathy).
+Supported agents: **Claude Code** and **Codex**. Runtime entry points:
+- [`CLAUDE.md`](CLAUDE.md) — spec loaded by Claude Code
+- [`AGENTS.md`](AGENTS.md) — spec loaded by Codex
+- [`skills/`](skills) — symlink to the active-language skill set under `i18n/`; both agents share the same set via `.claude/skills` and `.agents/skills`.
+
+## Requirements
+
+- [uv](https://docs.astral.sh/uv/) (Python environment + dependency manager)
+- Python >= 3.10, or a compatible interpreter resolved by `uv`
+- One of:
+  - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI, or
+  - [Codex CLI](https://github.com/openai/codex)
+- `MINERU_API_TOKEN` from [mineru.net](https://mineru.net/) — free, required for the default cloud PDF backend. Skip only if you install the local backend (`uv sync --extra local`, several GB of models).
 
 ## Quick start
 
 ```bash
-# 1. Install uv if you don't have it: https://docs.astral.sh/uv/
-# 2. From the project root:
-bash setup.sh
+# 1. From the project root, install deps and activate English runtime files:
+bash setup.sh                # or: ./setup.sh --lang zh
 
-# 3. Set MINERU_API_TOKEN in ~/.config/llm-wiki/.env (required for PDF ingest)
-#    Get a free token at https://mineru.net/
-
-# 4. Start Claude Code:
-claude
-
-# 5. Inside Claude Code:
-/setup                          # guided API key configuration
-/init <topic>                   # bootstrap the wiki around a research topic
-/ingest --item-key <zotero-key> # add a Zotero-backed paper
-/ingest-local-pdf <pdf>         # normalize a local PDF, then ingest it
-/reingest <pdf>                 # regenerate an existing paper and migrate linked entities
-/ask <question>                 # query the wiki with citations
+# 2. Put your MinerU token in ~/.config/llm-wiki/.env
+#    (setup.sh seeded the file from config/.env.example)
 ```
+
+Then pick the agent you want to drive the wiki with.
+
+### Using Claude Code
+
+```bash
+claude
+/setup                           # guided API key configuration
+/init <topic>                    # seed the wiki around a research topic
+/ingest --item-key <zotero-key>  # add a Zotero-backed paper
+/ingest-local-pdf <pdf>          # normalize a local PDF, then ingest it
+/ask <question>                  # query the wiki with citations
+```
+
+### Using Codex
+
+Codex reads `AGENTS.md` and the same skill files under `skills/` (via the `.agents/skills` symlink). From the Codex CLI, launch `codex` in the project root and ask it to read and follow the relevant skill file with your arguments:
+
+```text
+read and follow skills/setup/SKILL.md
+read and follow skills/init/SKILL.md with: <topic>
+read and follow skills/ingest/SKILL.md with: --item-key <zotero-key>
+read and follow skills/ingest-local-pdf/SKILL.md with: <pdf>
+read and follow skills/ask/SKILL.md with: <question>
+```
+
+If your Codex build exposes slash commands directly, you can use the same `/setup`, `/init`, `/ingest`, `/ingest-local-pdf`, and `/ask` forms as above. The skill files are self-contained and agent-agnostic.
+
+`setup.sh` copies `i18n/{lang}/{CLAUDE,AGENTS}.md` to the repo root and points `skills/`, `.claude/skills`, and `.agents/skills` at `i18n/{lang}/skills/`. Its prompts are still Claude-oriented, but it installs the shared Codex runtime files too. Edit the originals under `i18n/`, not the root copies.
 
 ## Architecture
 
 ```
-raw/         — user-owned original source documents (PDFs, notes, web clips). Read-only to the LLM.
-wiki/sources/ — vault-visible sources: converted paper markdown, copied notes, and copied web clips.
-wiki/        — LLM-maintained markdown: papers, concepts, topics, people, ideas, experiments, claims, Summary, foundations, outputs.
-wiki/graph/  — auto-derived graph state (edges, citations, context_brief). Never hand-edit.
-tools/       — Python tooling (run via `uv run python tools/<name>.py`).
-skills/      — canonical skills entrypoint for the active language; `.claude/skills` and `.agents/skills` point here.
-mcp-servers/ — optional project MCP servers, including `llm-review` for cross-model review.
+raw/           user-owned originals (PDFs, notes, web clips). Read-only to the LLM.
+wiki/sources/  vault-visible sources: MinerU-converted paper markdown, copied notes and web clips.
+wiki/          LLM-maintained pages: papers, concepts, topics, people, ideas, experiments, claims, Summary, foundations, outputs.
+wiki/graph/    auto-derived edges, citations, context_brief — never hand-edit.
+tools/         Python CLIs (run via uv).
+skills/        active-language skill entrypoint (symlinked from i18n/).
+mcp-servers/   optional project MCP servers (includes llm-review for cross-model review).
+i18n/          source of truth for CLAUDE.md, AGENTS.md, and skills in each language.
+docs/          pipeline docs, runtime references, page templates.
 ```
 
-`wiki/` and `raw/` may live outside this code repository. Put OS-specific
-absolute paths in `config/paths.json` (ignored by git; see
-`config/paths.json.example`) or run:
+`wiki/` renders as an Obsidian vault: internal links use `[[slug]]` wikilinks, and every forward link has a required reverse link (see the cross-reference rules in `CLAUDE.md` or `AGENTS.md`).
+
+### External vault paths
+
+`wiki/` and `raw/` can live outside this code repository. Put OS-specific absolute paths in `config/paths.json` (gitignored; see `config/paths.json.example`), then copy the vault out:
 
 ```bash
 uv run python tools/separate_wiki_repository.py \
-  --wiki-root /absolute/path/to/wiki \
-  --raw-root /absolute/path/to/raw \
+  --wiki-root /abs/path/to/wiki \
+  --raw-root /abs/path/to/raw \
   --mode copy --yes
+```
 
+After verifying the external copy, optionally clean the in-repo `wiki/` and `raw/` directories:
+
+```bash
 uv run python tools/clean_wiki_repository.py --target all --yes
 ```
 
-Core graph commands can use `@wiki` to resolve the configured vault path:
+`active_profile: "auto"` chooses `macos`, `windows`, or `linux` based on the current OS. Override with `LLM_WIKI_PATH_PROFILE`. Graph commands accept `@wiki` to resolve the configured vault:
 
 ```bash
 uv run python tools/research_wiki.py rebuild-index @wiki
 ```
 
-When `active_profile` is `"auto"`, the path config chooses `macos`, `windows`,
-or `linux` from the current operating system. Set `LLM_WIKI_PATH_PROFILE` to
-override that selection temporarily.
-
 ## Skills (22)
 
-`setup, reset, init, prefill, ingest, ingest-local-pdf, reingest, discover, ask, edit, check, novelty, review, ideate, exp-design, exp-eval, refine, paper-plan, paper-draft, survey, research, rebuttal`.
+Grouped by workflow phase:
 
-Dropped from upstream OmegaWiki: `daily-arxiv, paper-compile, exp-run, exp-status`. `/research` stays design-only: the user runs experiments externally and reports results back to `/exp-eval`.
+| Phase | Skills |
+|-------|--------|
+| Setup | `setup`, `reset` |
+| Bootstrap & ingest | `init`, `prefill`, `ingest`, `ingest-local-pdf`, `reingest`, `discover` |
+| Explore & maintain | `ask`, `edit`, `check`, `novelty`, `review` |
+| Research cycle | `ideate`, `exp-design`, `exp-eval`, `refine`, `research` |
+| Produce | `paper-plan`, `paper-draft`, `survey`, `rebuttal` |
 
 ## PDF preprocessing
 
-PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. The output format is `mineru-md`.
+PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. Canonical ingest format is `mineru-md`.
 
-Use `/ingest-local-pdf` for raw PDFs or directory batches. It prepares `wiki/sources/papers/*.md` and hands the prepared path to `/ingest`.
+- **`/ingest-local-pdf`** — for raw PDFs or directory batches. Prepares `wiki/sources/papers/*.md` and hands off to `/ingest`.
+- **`/ingest`** — consumes prepared markdown or resolves a Zotero attachment via `--title`, `--doi`, or `--item-key`. Scans the cross-platform candidates in `config/zotero-roots.json`; override with `--zotero-root <Zotero data dir>`. The Zotero helper snapshots `zotero.sqlite` into `config/zotero-cache/` and queries it read-only. If Zotero Desktop's local API is running, metadata (title, DOI, year, venue, creators, abstract, tags, `bibtex`) is pulled from there and falls back to SQLite + Crossref.
+- **`/reingest`** — rerun the adapter and migrate linked entities after the PDF adapter, template, or analysis policy changes. `--paper-only` skips the entity audit.
 
-`/ingest` can locate a PDF from Zotero with `--title`, `--doi`, or `--item-key`. By default it scans the cross-platform candidates in `config/zotero-roots.json`; pass `--zotero-root <Zotero data dir or profile dir>` only to override that list. The Zotero helper reads `prefs.js` when needed, snapshots `zotero.sqlite` into `config/zotero-cache/`, then queries the snapshot read-only before feeding the selected PDF into the same MinerU pipeline without copying it into `raw/papers/`.
-
-When Zotero Desktop is running with local API access enabled, `/ingest` can additionally call `tools/fetch_zotero_metadata.py --item-key <key>` to enrich the paper identity from the user's Zotero record: title, DOI, year, venue, creators, abstract, tags, URL, `external_ids.zotero_key`, `citationKey`, and a derived `bibtex` string. If the local API is unavailable, ingest falls back to the existing SQLite PDF lookup and Crossref enrichment path.
-
-For Zotero-backed sources, Zotero Local API metadata is the preferred way to read bibliographic fields. Existing MinerU Markdown under `wiki/sources/papers/` can be ingested directly. Metadata-only inputs do not create paper pages by themselves; they enrich a real content source such as a prepared Markdown, source note, or web/notes content.
-
-Use `/reingest <pdf-or-wiki/sources/papers/*.md>` when a paper already exists in `wiki/papers/` but the PDF adapter, template, or analysis policy has changed. It refreshes the prepared markdown, regenerates the paper page, and by default audits/migrates linked `concepts`, `claims`, and `people` pages. Pass `--paper-only` only for a paper-page-only refresh; `--update-entities` is kept as a compatibility flag and is already the default behavior.
+Metadata-only inputs don't create paper pages on their own — they enrich an existing content source (prepared markdown, note, or web clip).
 
 ## Python tooling
 
-All Python operations run through `uv` — no manual venv activation needed:
+All Python operations run through `uv` — no manual venv activation:
 
 ```bash
 uv run python tools/research_wiki.py --help
@@ -91,7 +126,7 @@ uv run python tools/lint.py
 uv run python tools/prepare_paper_source.py --source raw/papers/<file>.pdf
 ```
 
-The optional local MinerU backend (downloads several GB of models on first run) is opt-in:
+Optional local MinerU backend (downloads several GB of models on first run):
 
 ```bash
 uv sync --extra local

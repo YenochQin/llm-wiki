@@ -58,7 +58,24 @@ argument-hint: <claim-slugs...> --venue <ICLR|NeurIPS|ICML|ACL|CVPR|IEEE> [--tit
 
 ## Workflow
 
-**Precondition**: confirm the working directory is the wiki project root (the directory containing `wiki/`, `raw/`, `tools/`).
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve runtime paths once and reuse them. Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; they come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+
+```bash
+# Find the project root via git so every command runs through the repository's
+# uv-managed Python environment and path configuration.
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+PROJECT_ROOT=""
+if [ -n "$GIT_COMMON_DIR" ]; then
+  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
+fi
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT=$(pwd)
+fi
+cd "$PROJECT_ROOT"
+
+eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
+export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+```
 
 ### Step 1: Load Claim Graph
 
@@ -283,7 +300,7 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
 
 1. **Generate slug**:
    ```bash
-   python3 tools/research_wiki.py slug "<working-title>"
+   uv run python tools/research_wiki.py slug "<working-title>"
    ```
 
 2. **Write PAPER_PLAN.md**:
@@ -298,24 +315,24 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
 3. **Add graph edges**:
    ```bash
    # plan → target claim
-   python3 tools/research_wiki.py add-edge wiki/ \
+   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" \
      --from "outputs/paper-plan-{slug}-{date}" --to "claims/{primary-claim}" \
      --type derived_from --evidence "Paper plan built from this claim"
 
    # plan → key papers
-   python3 tools/research_wiki.py add-edge wiki/ \
+   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" \
      --from "outputs/paper-plan-{slug}-{date}" --to "papers/{paper-slug}" \
      --type derived_from --evidence "Paper plan cites this paper"
    ```
 
 4. **Rebuild derived data**:
    ```bash
-   python3 tools/research_wiki.py rebuild-context-brief wiki/
+   uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
    ```
 
 5. **Append log**:
    ```bash
-   python3 tools/research_wiki.py log wiki/ \
+   uv run python tools/research_wiki.py log "$WIKI_ROOT" \
      "paper-plan | {venue} paper outline for [[{slug}]] | claims: {claim-list} | citations: {verified}/{total}"
    ```
 
@@ -379,11 +396,11 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
 ## Dependencies
 
 ### Tools（via Bash）
-- `python3 tools/research_wiki.py slug "<title>"` — generate slug
-- `python3 tools/research_wiki.py add-edge wiki/ ...` — add graph edge
-- `python3 tools/research_wiki.py rebuild-context-brief wiki/` — rebuild query_pack
-- `python3 tools/research_wiki.py log wiki/ "<message>"` — append log
-- `python3 tools/fetch_literature.py search "<title>"` — no-key literature search (citation plan fallback)
+- `uv run python tools/research_wiki.py slug "<title>"` — generate slug
+- `uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" ...` — add graph edge
+- `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"` — rebuild query_pack
+- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log
+- `uv run python tools/fetch_literature.py search "<title>"` — no-key literature search (citation plan fallback)
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 7 outline review (mandatory)

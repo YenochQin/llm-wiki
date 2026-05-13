@@ -138,7 +138,7 @@
 - 本项目由 **uv 管理**：`setup.sh` 通过 `uv sync` 从 `pyproject.toml` 创建/更新 `.venv`
 - `.venv/` 存在时优先使用 `.venv/bin/python`（Unix/macOS）或 `.venv/Scripts/python.exe`（Windows）
 - 否则回退到 `python3`（Unix/macOS）或 `python`（Windows）
-- skill 通常按 `"$PYTHON_BIN" tools/<name>.py …` 运行工具；等价写法是 `uv run --python .venv/bin/python python tools/<name>.py …`
+- skill 通过 `uv run python tools/<name>.py …` 运行工具（uv 会按 `pyproject.toml` 自动定位 `.venv`）；当 `.venv/` 已存在时，等价写法是 `.venv/bin/python tools/<name>.py …`
 - Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
 - 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；`active_profile: auto` 会按系统选择 `macos`、`windows` 或 `linux`，也可用 `LLM_WIKI_PATH_PROFILE` 临时指定；未配置时回退到仓库内 `wiki/` 和 `raw/`
 - 可选 MinerU 本地后端需显式启用：`uv sync --extra local`（首次会下载数 GB 模型权重）
