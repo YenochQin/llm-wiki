@@ -13,6 +13,23 @@ Use this local reference on demand:
 
 ## Workflow
 
+**Pre-condition**: resolve the repository root and runtime paths once, then reuse them for every preprocessing command. `wiki/` and `raw/` may live outside the repository via `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+
+```bash
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+PROJECT_ROOT=""
+if [ -n "$GIT_COMMON_DIR" ]; then
+  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
+fi
+if [ -z "$PROJECT_ROOT" ]; then
+  PROJECT_ROOT=$(pwd)
+fi
+cd "$PROJECT_ROOT"
+
+eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
+export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+```
+
 1. Resolve the input path.
    - If the input is a single PDF, inspect the first page and recover a confident title only when the title is clear.
    - If the input is a directory, enumerate readable PDFs in deterministic order and process each file separately.
@@ -32,7 +49,7 @@ Use this local reference on demand:
 
 ### Tools (via Bash)
 
-- `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --source <local-path> [--title "<recovered-title>"]`
+- `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --source <local-path> [--title "<recovered-title>"]`
 
 ### Skills
 

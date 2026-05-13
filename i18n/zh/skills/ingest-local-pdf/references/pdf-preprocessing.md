@@ -37,6 +37,7 @@ Once you have the title (possibly empty), run:
 ```bash
 uv run python tools/prepare_paper_source.py \
   --raw-root "$RAW_ROOT" \
+  --wiki-root "$WIKI_ROOT" \
   --source <pdf-path> \
   [--title "<agent-recovered-title>"]
 ```

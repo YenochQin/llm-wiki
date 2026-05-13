@@ -4,9 +4,9 @@ Use this reference when `/init` is preparing local inputs and writing `.checkpoi
 
 ## Prepare Flow
 
-- Run `uv run python tools/init_discovery.py prepare --raw-root "$RAW_ROOT" --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`.
+- Run `uv run python tools/init_discovery.py prepare --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`.
 - Before preparing local PDFs, recover confident titles when possible and write `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }` or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`.
-- `tools/init_discovery.py prepare` must pass recovered titles into `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --source <local-path> [--title "<recovered-title>"]`.
+- `tools/init_discovery.py prepare` must pass recovered titles into `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --source <local-path> [--title "<recovered-title>"]`.
 - `tools/init_discovery.py prepare` must delegate local paper normalization to the same helper and reuse pre-staged `wiki/sources/` artifacts when they already exist.
 - For local PDFs, use this recovery order only: agent-recovered title from the first page -> MinerU produces structured markdown.
 - When the agent supplied a confident PDF title, that title is authoritative for the prepared manifest. MinerU cover-page detected titles are fallback display strings only and must not overwrite the agent title.
@@ -21,7 +21,7 @@ Use this reference when `/init` is preparing local inputs and writing `.checkpoi
 
 ## Source Manifest Contract
 
-- Run `uv run python tools/init_discovery.py manifest --raw-root "$RAW_ROOT" --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json` after `prepare` succeeds.
+- Run `uv run python tools/init_discovery.py manifest --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json` after `prepare` succeeds.
 - `.checkpoints/init-sources.json` is the single source of truth for Step 5 ingest order.
 - All entries are `origin=user_local` with the canonical prepared path. `/init` does not download external papers, so no `origin=introduced` entries are produced.
 - Step 5 must consume the handed-off `canonical_ingest_path` exactly as written.
