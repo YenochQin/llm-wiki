@@ -11,6 +11,7 @@ Pipeline:
       -> _mineru.extract(...)                    # cache by sha16(PDF)
       -> _normalize_cache(...)                   # synthesize Zotero-style manifest
       -> _convert_to_markdown(...)               # adapter: cleans cover/headings/figures
+      -> repair_latex_math(...)                  # conservative math delimiter/spacing fixes
       -> wiki/sources/papers/<slug>.md                # canonical_ingest_path
       -> wiki/sources/papers/assets/<slug>/*.jpg      # extracted figure crops
 
@@ -49,6 +50,7 @@ from pathlib import Path
 import frontmatter
 import _mineru
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
+from repair_latex_math import repair_latex_math
 from research_wiki import slugify
 
 PREPARED_SUBDIR = "prepared"
@@ -392,7 +394,7 @@ def _transform_markdown(
     full_md: str,
     slug: str,
     detected_title: str,
-) -> tuple[str, list[str], list[str]]:
+) -> tuple[str, list[str], list[str], dict[str, int | bool]]:
     out: list[str] = []
     dropped: list[str] = []
     skipped_sections: list[str] = []
@@ -460,7 +462,8 @@ def _transform_markdown(
 
     body = "\n".join(out).strip() + "\n"
     body = re.sub(r"\n{3,}", "\n\n", body)
-    return body, dropped, skipped_sections
+    body, latex_report = repair_latex_math(body)
+    return body, dropped, skipped_sections, latex_report.as_dict()
 
 
 def _collect_used_images(body: str, slug: str) -> set[str]:
@@ -569,6 +572,32 @@ def _upsert_bibtex_body(text: str, bibtex: str = "") -> str:
     return frontmatter.dumps(frontmatter.Post(body, **metadata)).rstrip() + "\n"
 
 
+def _repair_prepared_text(text: str) -> tuple[str, dict[str, int | bool]]:
+    """Repair math in an existing prepared markdown document."""
+    try:
+        post = frontmatter.loads(text)
+    except Exception:
+        repaired, report = repair_latex_math(text)
+        return repaired, report.as_dict()
+
+    repaired_body, report = repair_latex_math(post.content)
+    if not report.changed:
+        return text, report.as_dict()
+    metadata = dict(post.metadata)
+    metadata["latexRepairReplacements"] = int(report.replacements)
+    metadata["latexRepairConvertedDelimiters"] = int(report.converted_delimiters)
+    metadata["latexRepairMathSpans"] = int(report.math_spans)
+    return frontmatter.dumps(frontmatter.Post(repaired_body, **metadata)).rstrip() + "\n", report.as_dict()
+
+
+def _latex_warning(report: dict[str, int | bool]) -> str:
+    return (
+        "latex math repaired: "
+        f"{report.get('replacements', 0)} spacing replacements, "
+        f"{report.get('converted_delimiters', 0)} delimiter conversions"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Top-level pipeline
 # ---------------------------------------------------------------------------
@@ -662,6 +691,12 @@ def prepare(
             if migrated_text != existing_text:
                 existing_text = migrated_text
                 legacy_prepared_path.write_text(existing_text, encoding="utf-8")
+            repaired_text, latex_report = _repair_prepared_text(existing_text)
+            latex_warnings = []
+            if latex_report.get("changed"):
+                existing_text = repaired_text
+                legacy_prepared_path.write_text(existing_text, encoding="utf-8")
+                latex_warnings.append(_latex_warning(latex_report))
             return {
                 "canonical_ingest_path": display_path(legacy_prepared_path, display_root),
                 "prepared_path": display_path(legacy_prepared_path, display_root),
@@ -671,7 +706,7 @@ def prepare(
                 "warnings": [
                     f"legacy prepared source reused: {display_path(legacy_prepared_path, display_root)}",
                     f"new prepared sources are written under {display_path(output_dir, display_root)}",
-                ],
+                ] + latex_warnings,
                 "usable": True,
             }
     if not out_path.exists() and legacy_out_path.exists() and not overwrite:
@@ -683,6 +718,12 @@ def prepare(
             if migrated_text != existing_text:
                 existing_text = migrated_text
                 legacy_out_path.write_text(existing_text, encoding="utf-8")
+            repaired_text, latex_report = _repair_prepared_text(existing_text)
+            latex_warnings = []
+            if latex_report.get("changed"):
+                existing_text = repaired_text
+                legacy_out_path.write_text(existing_text, encoding="utf-8")
+                latex_warnings.append(_latex_warning(latex_report))
             return {
                 "canonical_ingest_path": display_path(legacy_out_path, display_root),
                 "prepared_path": display_path(legacy_out_path, display_root),
@@ -692,7 +733,7 @@ def prepare(
                 "warnings": [
                     f"legacy prepared source reused: {display_path(legacy_out_path, display_root)}",
                     f"new prepared sources are written under {display_path(output_dir, display_root)}",
-                ],
+                ] + latex_warnings,
                 "usable": True,
             }
     if out_path.exists() and not overwrite:
@@ -704,13 +745,19 @@ def prepare(
             if migrated_text != existing_text:
                 existing_text = migrated_text
                 out_path.write_text(existing_text, encoding="utf-8")
+            repaired_text, latex_report = _repair_prepared_text(existing_text)
+            latex_warnings = []
+            if latex_report.get("changed"):
+                existing_text = repaired_text
+                out_path.write_text(existing_text, encoding="utf-8")
+                latex_warnings.append(_latex_warning(latex_report))
             return {
                 "canonical_ingest_path": display_path(out_path, display_root),
                 "prepared_path": display_path(out_path, display_root),
                 "ingest_format": "mineru-md",
                 "title": existing_front.get("title") or title,
                 "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
-                "warnings": [f"prepared source already exists; reusing: {out_path}"],
+                "warnings": [f"prepared source already exists; reusing: {out_path}"] + latex_warnings,
                 "usable": True,
             }
         return {
@@ -726,7 +773,9 @@ def prepare(
             "usable": False,
         }
 
-    body, dropped, skipped_sections = _transform_markdown(full_md, slug, title)
+    body, dropped, skipped_sections, latex_report = _transform_markdown(full_md, slug, title)
+    if latex_report.get("changed"):
+        warnings.append(_latex_warning(latex_report))
 
     if not body.strip():
         return {
@@ -759,6 +808,10 @@ def prepare(
         "totalPages": int(manifest.get("totalPages", 0) or 0),
         "totalChars": int(manifest.get("totalChars", 0) or 0),
     }
+    if latex_report.get("changed"):
+        front["latexRepairReplacements"] = int(latex_report.get("replacements", 0) or 0)
+        front["latexRepairConvertedDelimiters"] = int(latex_report.get("converted_delimiters", 0) or 0)
+        front["latexRepairMathSpans"] = int(latex_report.get("math_spans", 0) or 0)
     if skipped_sections:
         front["skippedSectionHeadings"] = skipped_sections
     if dropped:

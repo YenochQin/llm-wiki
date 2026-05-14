@@ -8,7 +8,7 @@ End-to-end pipeline for converting raw PDFs into the structured markdown that `/
 raw/papers/<file>.pdf
     -> tools/_mineru.extract           (cloud API or local backend)
     -> .mineru-cache/<sha16>/          (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
-    -> tools/prepare_paper_source     (adapter: heading hierarchy, cover normalization, cutoffs, image relocation)
+    -> tools/prepare_paper_source     (adapter: heading hierarchy, cover normalization, cutoffs, image relocation, LaTeX math repair)
     -> wiki/sources/papers/<slug>.md        + wiki/sources/papers/assets/<slug>/<hash>.jpg
     -> /ingest reads canonical_ingest_path = wiki/sources/papers/<slug>.md
 ```
@@ -22,13 +22,14 @@ raw/papers/<file>.pdf
 | `ingest_format` | `"mineru-md"` — flag to skills that this is structured MinerU output, not raw PDF or `.tex` |
 | `title` | best-effort title detected from the cover or the first non-junk heading |
 | `abstract_excerpt` | first ~400 chars after the abstract heading, for skill prompts |
-| `warnings` | non-fatal anomalies (missing abstract, no figures, etc.) |
+| `warnings` | non-fatal anomalies (missing abstract, no figures, LaTeX math repair counts, etc.) |
 | `usable` | boolean — `false` blocks downstream ingest |
 
 ## Components
 
 - **`tools/_mineru.py`** — MinerU client. Two interchangeable backends (`api` cloud and `local` library) that both normalize their output into the cache layout below. Lifted verbatim from `pdf-source-scripts/mineru_backend.py`.
-- **`tools/prepare_paper_source.py`** — orchestrator + adapter. Hashes the PDF for a per-document cache, calls `_mineru.extract`, synthesizes a manifest from MinerU's block list, runs the adapter, and writes the OmegaWiki-style JSON manifest.
+- **`tools/prepare_paper_source.py`** — orchestrator + adapter. Hashes the PDF for a per-document cache, calls `_mineru.extract`, synthesizes a manifest from MinerU's block list, runs the adapter, applies the conservative LaTeX math repair pass, and writes the OmegaWiki-style JSON manifest.
+- **`tools/repair_latex_math.py`** — reusable Markdown repair pass for OCR-spaced formulas. It only edits math spans/blocks, skips fenced and inline code, converts `\(...\)` / `\[...\]` to `$...$` / `$$...$$`, and fixes common spacing breaks such as `\ alpha`, `_ {i}`, `^ {2}`, `\left (`, and atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` -> `1s^{2} \ ^{1}S_{0}`.
 
 ## Prerequisites
 
@@ -78,7 +79,7 @@ Frontmatter on `<slug>.md` includes `title`, `source`, `ingestedAt`, `totalPages
 
 ## What the adapter cleans up
 
-MinerU's raw markdown is flat and noisy. The adapter applies seven passes (mirrors `pdf-source-scripts/pdf_to_source_mineru.py`):
+MinerU's raw markdown is flat and noisy. The adapter applies nine passes (mirrors `pdf-source-scripts/pdf_to_source_mineru.py` where applicable):
 
 1. **Title detection.** Picks the first non-junk, non-numbered, non-journal heading from the manifest's `sections`. Falls back to the PDF stem.
 2. **Cover-page normalization.** MinerU emits each visual line on the cover as a separate level-1 block. The adapter merges title fragments and drops author bylines / journal furniture, then emits a single synthetic `# <title>` before the first real section.
@@ -87,7 +88,15 @@ MinerU's raw markdown is flat and noisy. The adapter applies seven passes (mirro
 5. **Reference preservation.** Keeps References, Bibliography, and Literature Cited sections in the canonical markdown so inline `(Author, year)` citations remain resolvable during later discovery and graph expansion.
 6. **Administrative-section skipping.** Skips acknowledgement, disclosure, funding, author-contribution, competing-interest, data-availability, appendix, and supplementary-material sections when they are parsed as standalone headings, without truncating the rest of the document.
 7. **Image relocation.** Rewrites `images/<hash>` references to `assets/<slug>/<hash>` and copies only the images that survive the filtering passes.
-8. **Frontmatter emission.** Writes the YAML described above.
+8. **LaTeX math repair.** Runs `tools/repair_latex_math.py` on the cleaned body before writing. Repair counts are reported through JSON `warnings` as `latex math repaired: ...` and stored in prepared frontmatter fields `latexRepairReplacements`, `latexRepairConvertedDelimiters`, and `latexRepairMathSpans` when nonzero.
+9. **Frontmatter emission.** Writes the YAML described above.
+
+To inspect or repair existing prepared markdown, use:
+
+```bash
+uv run python tools/repair_latex_math.py --dry-run "$WIKI_ROOT/sources/papers/<slug>.md"
+uv run python tools/repair_latex_math.py "$WIKI_ROOT/sources/papers/<slug>.md"
+```
 
 ## Troubleshooting
 

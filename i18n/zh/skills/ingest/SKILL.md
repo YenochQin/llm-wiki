@@ -108,7 +108,7 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
      [--title "<title>"] [--doi <doi>] [--item-key <key>]
    ```
 
-   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the preprocessing path documented in `references/pdf-preprocessing.md`; do not copy it into `$RAW_ROOT/papers/`.
+   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the preprocessing path documented in `references/pdf-preprocessing.md`; this preprocessing includes the conservative LaTeX math repair pass and may report `latex math repaired: ...` in its warnings. Do not copy it into `$RAW_ROOT/papers/`.
 4. If the selected Zotero candidate has an `item_key`, try:
 
    ```bash
@@ -167,7 +167,7 @@ Body sections to populate: Problem, Key idea, Research classification, Method, R
 Paper page content must be both structured and source-faithful:
 
 - Preserve the paper's own section logic. Use the `sections` frontmatter as the outline anchor; when useful, name source sections, figures, tables, algorithms, equations, or examples in bullets.
-- For mathematical or technical papers, keep important equations in LaTeX. Use `$...$` for inline math and `$$...$$` for display math — this is the Obsidian rendering standard. Do not use code fences for equations or `\(` `\)` notation. Do not replace formulas with vague prose or ASCII pseudocode when the source gives formal notation.
+- For mathematical or technical papers, keep important equations in LaTeX. Use `$...$` for inline math and `$$...$$` for display math — this is the Obsidian rendering standard. Do not use code fences for equations or `\(` `\)` notation. PDF-derived prepared sources should already have passed `tools/repair_latex_math.py`; if a copied formula is still visibly broken, repair the math span itself instead of carrying OCR-spaced commands such as `\ alpha`, `_ {i}`, `^ {2}`, or `\left (` into the page. Do not replace formulas with vague prose or ASCII pseudocode when the source gives formal notation.
 - `## Method` and `## Results` must contain concrete mechanisms, procedures, empirical findings, theoretical results, or chapter-level takeaways. Avoid generic summaries that could fit any paper in the field.
 - `## Related` must list the concepts, claims, foundations, topics, and people linked during this ingest, so the paper is navigable even before graph files are rebuilt.
 - Wikilinks must be vault-local slug links: write `[[slug]]`, never `[[wiki/...]]`, `[[wiki_glm/...]]`, `[[wiki_back.../...]]`, `[[topics/slug]]`, or any other directory-prefixed wikilink. Use ordinary relative markdown links only for prepared source excerpts, e.g. `[prepared markdown](../sources/papers/<paper-slug>.md)`.
@@ -293,7 +293,7 @@ Append the markdown output to the report under a heading like "Related papers yo
   - importance < 4: at most **1** new concept and **1** new claim per paper
   - importance ≥ 4: **at least 1** and at most **3** new concepts; **at least 1** and at most **2** new claims per paper
   - Any further candidates must be merged into their nearest `find-similar-*` result, or left out for `/check` to flag. Rationale and matching rules: `references/dedup-policy.md`.
-- LaTeX notation: use `$...$` for inline math and `$$...$$` for display math in all wiki pages. Code fences for equations and `\(` `\)` notation are not Obsidian-compatible and must not appear.
+- LaTeX notation: use `$...$` for inline math and `$$...$$` for display math in all wiki pages. Code fences for equations and `\(` `\)` notation are not Obsidian-compatible and must not appear. PDF-derived formulas pass through `tools/repair_latex_math.py` during preprocessing; if you manually copy formulas, keep the same repaired style.
 - `/ingest` runs a shape check on its own output (required keys, enum ranges, YAML parses) and stops there. Backlink symmetry, dangling nodes, and full semantic audits belong to `/check`. Do not re-implement them here.
 - Assume another `/ingest` may run concurrently in a sibling worktree. All shared-file writes (`graph/edges.jsonl`, `graph/citations.jsonl`, `index.md`, `log.md`) must go through `tools/research_wiki.py` or use append-only semantics. See `references/init-mode.md`.
 - In INIT MODE, skip `fetch_literature.py citations`, `fetch_literature.py references`, and the `rebuild-*` commands — the parent `/init` runs them once after fan-in.

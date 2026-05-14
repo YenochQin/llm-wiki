@@ -13,7 +13,7 @@ This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when
 ```text
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
     -> .mineru-cache/<sha16>/           (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
-    -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation)
+    -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation, LaTeX math repair)
     -> wiki/sources/papers/<slug>.md         + wiki/sources/papers/assets/<slug>/<hash>.jpg
 ```
 
@@ -43,6 +43,7 @@ uv run python tools/prepare_paper_source.py \
 
 - Pass `--title` when Zotero metadata or first-page inspection gives a confident title. Do not pass a title derived from PDF metadata or from the filename — those poison the literature enrichment lookup.
 - Omit the flag when no title is confident. The helper falls back cleanly.
+- The helper automatically runs `tools/repair_latex_math.py` on the prepared body before writing. This conservative pass only edits math spans/blocks, skips code fences and inline code, converts `\(...\)` / `\[...\]` to Obsidian-compatible `$...$` / `$$...$$`, and removes common OCR-inserted spaces such as `\ alpha`, `_ {i}`, `^ {2}`, and `\left (`. It also repairs atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` into `1s^{2} \ ^{1}S_{0}` so the second superscript renders as the left superscript of the term symbol. If repairs were applied, the JSON `warnings` array includes a `latex math repaired: ...` summary and the prepared frontmatter records the repair counts.
 
 The helper writes the prepared entry under `wiki/sources/papers/` and prints a JSON record with:
 
@@ -53,7 +54,7 @@ The helper writes the prepared entry under `wiki/sources/papers/` and prints a J
 | `ingest_format` | always `mineru-md` for this pipeline |
 | `title` | best title (agent-supplied > MinerU-detected > filename stem) |
 | `abstract_excerpt` | first ~400 chars after the abstract heading |
-| `warnings` | non-fatal anomalies (no abstract found, no figures detected, etc.) |
+| `warnings` | non-fatal anomalies (no abstract found, no figures detected, LaTeX math repair counts, etc.) |
 | `usable` | boolean — `false` blocks ingest |
 
 Use `canonical_ingest_path` as the source for the rest of `/ingest`.
@@ -92,6 +93,14 @@ droppedHeadings: ["URL stub", "Contents"]
 ```
 
 Use the frontmatter as your structural anchor when extracting concepts, claims, and figure references. Do not re-derive section structure from the body; the adapter already did it. The bibliography is intentionally retained: use it to resolve inline `(Author, year)` references and to expand citation/discovery paths.
+
+Prepared math should already use `$...$` and `$$...$$`. If you still see visibly broken formulas in the prepared markdown, run a dry report first:
+
+```bash
+uv run python tools/repair_latex_math.py --dry-run "$WIKI_ROOT/sources/papers/<slug>.md"
+```
+
+Only rewrite existing prepared sources after confirming the report is limited to math-span repairs.
 
 ## Output
 

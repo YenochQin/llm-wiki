@@ -14,7 +14,7 @@ For directory inputs, process each PDF independently in deterministic order. Do 
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
     -> .mineru-cache/<sha16>/           (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/enrich_local_pdf_bibtex    (optional metadata-only Zotero BibTeX enrichment)
-    -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation)
+    -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation, LaTeX math repair)
     -> wiki/sources/papers/<slug>.md         + wiki/sources/papers/assets/<slug>/<hash>.jpg
 ```
 
@@ -59,6 +59,7 @@ uv run python tools/prepare_paper_source.py \
 - Pass `--title` only when the title is confident. Do not pass a title derived from PDF metadata or the filename.
 - Omit the flag when no title is confident. The helper falls back cleanly.
 - Pass `--bibtex` only with a BibTeX string returned by `tools/enrich_local_pdf_bibtex.py` or other authoritative metadata flow. The helper writes it into the prepared markdown body under `## BibTeX`; it must not appear in YAML frontmatter.
+- The helper automatically runs `tools/repair_latex_math.py` on the prepared body before writing. This conservative pass only edits math spans/blocks, skips code fences and inline code, converts `\(...\)` / `\[...\]` to Obsidian-compatible `$...$` / `$$...$$`, and removes common OCR-inserted spaces such as `\ alpha`, `_ {i}`, `^ {2}`, and `\left (`. It also repairs atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` into `1s^{2} \ ^{1}S_{0}` so the second superscript is rendered as the left superscript of the term symbol. If repairs were applied, the JSON `warnings` array includes a `latex math repaired: ...` summary and the prepared frontmatter records the repair counts.
 
 The helper writes the prepared entry under `wiki/sources/papers/` and prints a JSON record with:
 
@@ -69,7 +70,7 @@ The helper writes the prepared entry under `wiki/sources/papers/` and prints a J
 | `ingest_format` | always `mineru-md` for this pipeline |
 | `title` | best title (agent-supplied > MinerU-detected > filename stem) |
 | `abstract_excerpt` | first ~400 chars after the abstract heading |
-| `warnings` | non-fatal anomalies (no abstract found, no figures detected, etc.) |
+| `warnings` | non-fatal anomalies (no abstract found, no figures detected, LaTeX math repair counts, etc.) |
 | `usable` | boolean — `false` blocks ingest |
 
 Use `canonical_ingest_path` as the source for `/ingest`. When the prepared markdown contains a `## BibTeX` block, `/ingest` should carry that block into the generated paper page unless a later Zotero metadata lookup produces a clearly better authoritative BibTeX entry.
@@ -86,6 +87,14 @@ A successful preprocessing pass produces:
 - `wiki/sources/papers/assets/<slug>/<hash>.jpg` — only the figures that survived the cut
 
 From this point on, treat the prepared `.md` as the canonical source for `/ingest`. Do not re-copy the PDF into `raw/papers/`; the original path remains the user-owned artifact.
+
+Prepared math should already use `$...$` and `$$...$$`. If you need to repair an existing prepared source, inspect first:
+
+```bash
+uv run python tools/repair_latex_math.py --dry-run "$WIKI_ROOT/sources/papers/<slug>.md"
+```
+
+Only run without `--dry-run` after confirming the report is limited to math-span repairs.
 
 ## Failure modes
 

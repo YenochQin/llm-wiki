@@ -104,7 +104,7 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
      [--title "<title>"] [--doi <doi>] [--item-key <key>]
    ```
 
-   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the preprocessing path documented in `references/pdf-preprocessing.md`; do not copy it into `$RAW_ROOT/papers/`.
+   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the preprocessing path documented in `references/pdf-preprocessing.md`; this preprocessing includes the conservative LaTeX math repair pass and may report `latex math repaired: ...` in its warnings. Do not copy it into `$RAW_ROOT/papers/`.
 4. If the selected Zotero candidate has an `item_key`, try:
 
    ```bash
@@ -152,6 +152,8 @@ Before writing, run a **shape check** on the frontmatter you are about to emit â
 The shape check is intentionally narrow. Backlink symmetry, dangling-node detection, and cross-entity consistency are `/check`'s job, not this skill's.
 
 Body sections to populate: Problem, Key idea, Method, Results, Limitations, Open questions, My take, Related.
+
+For mathematical or technical papers, keep important equations in LaTeX. Use `$...$` for inline math and `$$...$$` for display math. PDF-derived prepared sources should already have passed `tools/repair_latex_math.py`; if a copied formula is still visibly broken, repair the math span itself instead of carrying OCR-spaced commands such as `\ alpha`, `_ {i}`, `^ {2}`, or `\left (` into the page. Do not use code fences for equations or `\(` `\)` notation.
 
 Wikilinks must be vault-local slug links: write `[[slug]]`, never `[[wiki/...]]`, `[[wiki_glm/...]]`, `[[wiki_back.../...]]`, `[[topics/slug]]`, or any other directory-prefixed wikilink. Use ordinary relative markdown links only for prepared source excerpts, e.g. `[prepared markdown](../sources/papers/<paper-slug>.md)`.
 
@@ -253,7 +255,7 @@ Append the markdown output to the report under a heading like "Related papers yo
 - Slugs always come from `tools/research_wiki.py slug`. Never hand-craft.
 - Every forward link writes its reverse link in the same turn â€” the wiki's bidirectional-link invariant. The only exception is links to `$WIKI_ROOT/foundations/`, which are terminal.
 - In INIT MODE, do not write reverse links into pages that already exist (created by a sibling worktree or scaffold). Record the relationship via `tools/research_wiki.py add-edge` only; the parent `/init` backfills reverse links during fan-in.
-- Source format: `mineru-md` is the canonical prepared format. `/ingest` consumes prepared markdown in `$WIKI_ROOT/sources/papers/` or the INIT MODE handoff path; Zotero-selected PDFs are preprocessed through `tools/prepare_paper_source.py`. Raw local PDFs are handled by `/ingest-local-pdf`. If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than proceeding.
+- Source format: `mineru-md` is the canonical prepared format. `/ingest` consumes prepared markdown in `$WIKI_ROOT/sources/papers/` or the INIT MODE handoff path; Zotero-selected PDFs are preprocessed through `tools/prepare_paper_source.py`, including its LaTeX math repair pass. Raw local PDFs are handled by `/ingest-local-pdf`. If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than proceeding.
 - Metadata-only sources (Zotero metadata without an attachment/content source) cannot create a paper page. They may enrich a real content ingest, or be saved only when the user explicitly asks `/edit` to add a metadata note/source.
 - Ingest is conservative about new entities:
   - importance < 4: at most **1** new concept and **1** new claim per paper
