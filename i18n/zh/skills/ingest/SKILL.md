@@ -24,7 +24,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 - `source`: Zotero lookup arguments. Prepared `$WIKI_ROOT/sources/papers/*.md` and `canonical_ingest_path` values are internal handoffs from `/ingest-local-pdf` or `/init` only (see `references/init-mode.md`). The prepared format is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
 - Existing MinerU Markdown may be consumed only when handed off by `/ingest-local-pdf` or `/init`; do not expose prepared markdown as a normal `/ingest` user-facing input.
-- Optional reference metadata usually comes directly from Zotero Local API when the source is a Zotero item; this includes Zotero/Better BibTeX fields such as `citationKey` and a derived `bibtex` entry that is compatible with the three `bibbst/` styles in this repo. Use that Zotero-derived `bibtex` string directly; do not route `/ingest` through `.bib` or reference-metadata sidecars.
+- Optional reference metadata usually comes directly from Zotero Local API when the source is a Zotero item; this includes Zotero/Better BibTeX fields such as `citationKey` and a derived `bibtex` entry that is compatible with the three `bibbst/` styles in this repo. Use that Zotero-derived `bibtex` string directly in the paper body under `## BibTeX`; never store BibTeX in YAML frontmatter and do not route `/ingest` through `.bib` or reference-metadata sidecars.
 - Zotero lookup form: one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`, optionally plus `--zotero-root <dir>`. If `--zotero-root` is omitted, read `config/zotero-roots.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
 - Zotero metadata enrichment is optional: after a Zotero lookup selects an `item_key`, try `tools/fetch_zotero_metadata.py --item-key <key>` to read richer metadata from Zotero Desktop's local API. If Zotero Desktop is closed or local API access is disabled, continue with the existing SQLite/Crossref path.
 - Zotero metadata by itself is not a grounded source. If the user only provides metadata with no PDF, prepared Markdown, source note, or web/notes content, do not create a paper page; ask for a content source or record the metadata as a future ingest aid only when explicitly requested.
@@ -116,7 +116,7 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
    ```
 
    Treat a successful response as authoritative bibliographic metadata from the user's local library. Use it to prefer `title`, `doi`, `year`, `venue`, `creators`/authors, `abstract`, `tags`, `url`, `zotero_select`, `external_ids.zotero_key`, and the returned `bibtex` string. If the command fails, note the fallback only if it affects the report; do not block ingest.
-5. Carry the Zotero-derived `bibtex` string into both `$WIKI_ROOT/sources/papers/{slug}.md` and `$WIKI_ROOT/papers/{slug}.md` frontmatter as a derived bibliographic field. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. The derived BibTeX entry must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`; do not include URL, tags/keywords, abstract, language, or rights in the BibTeX block. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
+5. Carry the Zotero-derived `bibtex` string into the body of both `$WIKI_ROOT/sources/papers/{slug}.md` and `$WIKI_ROOT/papers/{slug}.md` under a `## BibTeX` fenced `bibtex` code block. Do not put `bibtex` in frontmatter. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. The derived BibTeX entry must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`; do not include URL, tags/keywords, abstract, language, or rights in the BibTeX block. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
 
 Raw persistence rule: never copy or duplicate a file already under `$WIKI_ROOT/sources/` or `$RAW_ROOT/papers/` into a different raw subtree.
 
@@ -129,7 +129,7 @@ Raw persistence rule: never copy or duplicate a file already under `$WIKI_ROOT/s
    ```
 
 2. Stop-if-exists: if `$WIKI_ROOT/papers/{slug}.md` already exists and the title or DOI matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
-3. When Zotero Local API metadata is available, prefer it for identity fields (`title`, `doi`, `year`, `venue`, authors/creators, abstract, tags, URL, `citationKey`/`citekey`, `external_ids`, and the derived `bibtex` field).
+3. When Zotero Local API metadata is available, prefer it for identity fields (`title`, `doi`, `year`, `venue`, authors/creators, abstract, tags, URL, `citationKey`/`citekey`, and `external_ids`) and use the derived `bibtex` string only for the body `## BibTeX` block.
 4. When a DOI or confident title is available, query the no-key literature lookup:
 
    ```bash
@@ -154,7 +154,7 @@ Open `docs/runtime-page-templates.en.md` for the paper template and `references/
 
 Before writing, run a **shape check** on the frontmatter you are about to emit — no more than this:
 
-- every required key is present and non-empty, including `paper_type`, `research_modes`, and `research_object_tags`
+- every required key is present and non-empty, including `paper_type`, `research_modes`, and `research_object_tags`; `bibtex` is absent from frontmatter
 - `importance` ∈ {1,2,3,4,5}; `status` on claims ∈ the documented set; `maturity` on concepts ∈ the documented set; claim `confidence` ∈ [0,1]
 - `paper_type` is one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`
 - every value in `research_modes` is one of `theory`, `computation`, `experiment`; for each mode present, the corresponding `theory_tags` / `computation_tags` / `experiment_tags` is non-empty
@@ -162,7 +162,7 @@ Before writing, run a **shape check** on the frontmatter you are about to emit �
 
 The shape check is intentionally narrow. Backlink symmetry, dangling-node detection, and cross-entity consistency are `/check`'s job, not this skill's.
 
-Body sections to populate: Problem, Key idea, Research classification, Method, Results, Limitations, Open questions, My take, Related.
+Body sections to populate: Problem, Key idea, Research classification, Method, Results, Limitations, Open questions, My take, BibTeX, Related.
 
 Paper page content must be both structured and source-faithful:
 

@@ -62,6 +62,24 @@ Every `papers/{slug}.md` must first classify the paper by research direction and
 
 The body must include `## Research classification`, explaining which of theory/computation/experiment apply, what specific theory/computational scheme/experimental process was used, and what objects were studied. If the source does not make something clear, write `unclear` rather than inventing it.
 
+### BibTeX Placement
+
+`papers/{slug}.md` YAML frontmatter must not contain a `bibtex` field. BibTeX belongs in the body under `## BibTeX` as a fenced code block:
+
+````markdown
+## BibTeX
+
+```bibtex
+@article{key,
+  author = {...},
+  title = {...},
+  year = {...}
+}
+```
+````
+
+BibTeX entries must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`. Do not include URL, tags/keywords, abstract, language, rights, or note-like fields in the BibTeX block.
+
 ### Concept Source Grounding
 
 Every `concepts/{slug}.md` page must include `## Source excerpts` immediately after `## Definition`.

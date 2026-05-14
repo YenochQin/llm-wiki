@@ -61,6 +61,9 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+import frontmatter
+import yaml
+
 from _paths import load_paths
 
 # ---------------------------------------------------------------------------
@@ -2121,20 +2124,7 @@ def _parse_scalar(val: str):
 
 
 def _parse_frontmatter(path: Path) -> dict:
-    """Extract YAML frontmatter as a dict.
-
-    Handles:
-      - Simple scalars: ``key: value``
-      - Inline lists: ``tags: [a, b, c]``
-      - Block lists: ``tags:\\n  - a\\n  - b``
-      - Nested dicts: ``setup:\\n  model: gpt-4\\n  dataset: mmlu``
-      - List of dicts (evidence format)::
-
-            evidence:
-              - source: paper-slug
-                type: supports
-                strength: moderate
-    """
+    """Extract YAML frontmatter as a dict."""
     try:
         content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
@@ -2144,11 +2134,20 @@ def _parse_frontmatter(path: Path) -> dict:
     if not m:
         return {}
 
-    return _parse_yaml_block(m.group(1))
+    try:
+        return dict(frontmatter.loads(content).metadata)
+    except Exception:
+        return _parse_yaml_block(m.group(1))
 
 
 def _parse_yaml_block(text: str) -> dict:
-    """Parse a block of YAML text into a dict (no PyYAML dependency)."""
+    """Parse a block of YAML text into a dict."""
+    try:
+        loaded = yaml.safe_load(text) or {}
+        return loaded if isinstance(loaded, dict) else {}
+    except yaml.YAMLError:
+        pass
+
     fm: dict = {}
     lines = text.split("\n")
     i = 0
@@ -2271,6 +2270,16 @@ def _serialize_frontmatter(fm: dict) -> str:
 
     Handles scalars, inline lists, block lists-of-dicts, and nested dicts.
     """
+    try:
+        return yaml.safe_dump(
+            fm,
+            allow_unicode=True,
+            default_flow_style=False,
+            sort_keys=False,
+        )
+    except yaml.YAMLError:
+        pass
+
     lines: list[str] = []
 
     for key, val in fm.items():

@@ -32,6 +32,9 @@ import re
 import sys
 from pathlib import Path
 
+import frontmatter
+import yaml
+
 from _paths import DEFAULT_CONFIG_PATH, load_paths
 
 # Schema constants — single source of truth shared with research_wiki.py.
@@ -55,6 +58,23 @@ from _schemas import (
 
 WIKILINK_RE = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]*)?\]\]")
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
+BIBTEX_BLOCK_RE = re.compile(r"^## BibTeX\s*\n+```bibtex\n.*?\n```", re.MULTILINE | re.DOTALL)
+BIBTEX_FIELD_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*=", re.MULTILINE)
+BIBTEX_ALLOWED_FIELDS = {
+    "author",
+    "title",
+    "year",
+    "journal",
+    "booktitle",
+    "publisher",
+    "school",
+    "institution",
+    "howpublished",
+    "volume",
+    "number",
+    "pages",
+    "doi",
+}
 
 
 class LintIssue:
@@ -106,10 +126,20 @@ class FixResult:
 
 
 def extract_frontmatter(content: str) -> dict:
-    """Extract YAML frontmatter as dict (basic key-value parsing)."""
+    """Extract YAML frontmatter as a dict."""
     m = FRONTMATTER_RE.match(content)
     if not m:
         return {}
+    try:
+        return dict(frontmatter.loads(content).metadata)
+    except Exception:
+        pass
+    try:
+        loaded = yaml.safe_load(m.group(1)) or {}
+        return loaded if isinstance(loaded, dict) else {}
+    except yaml.YAMLError:
+        pass
+
     fm = {}
     current_key = None
     current_list_key = None
@@ -156,9 +186,9 @@ def extract_frontmatter_value(content: str, field: str) -> str | None:
     val = fm.get(field)
     if val is None:
         return None
-    # Strip quotes
-    val = val.strip().strip('"').strip("'")
-    return val
+    if isinstance(val, str):
+        return val.strip().strip('"').strip("'")
+    return json_module.dumps(val, ensure_ascii=False)
 
 
 def find_all_pages(wiki_dir: Path) -> dict[str, Path]:
@@ -222,6 +252,45 @@ def check_paper_classification(
         content = fpath.read_text(encoding="utf-8")
         rel = str(fpath.relative_to(wiki_dir))
         fm = extract_frontmatter(content)
+        if "bibtex" in fm:
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "paper-bibtex",
+                    rel,
+                    "bibtex must not be stored in YAML frontmatter; move it to ## BibTeX fenced code block",
+                    suggestion="Run tools/migrate_bibtex_frontmatter.py on this paper",
+                )
+            )
+        bibtex_match = BIBTEX_BLOCK_RE.search(content)
+        if not bibtex_match:
+            issues.append(
+                LintIssue(
+                    "🟡",
+                    "paper-bibtex",
+                    rel,
+                    "Missing body section: ## BibTeX with a ```bibtex fenced code block",
+                    suggestion="Add ## BibTeX after ## My take and before ## Related",
+                )
+            )
+        else:
+            extra_fields = sorted(
+                {
+                    field.lower()
+                    for field in BIBTEX_FIELD_RE.findall(bibtex_match.group(0))
+                }
+                - BIBTEX_ALLOWED_FIELDS
+            )
+            if extra_fields:
+                issues.append(
+                    LintIssue(
+                        "🟡",
+                        "paper-bibtex",
+                        rel,
+                        "BibTeX contains non-core fields: " + ", ".join(extra_fields),
+                        suggestion="Keep only author/title/year, one venue field, volume/number/pages, and doi",
+                    )
+                )
         modes = fm.get("research_modes", [])
         if not isinstance(modes, list):
             issues.append(

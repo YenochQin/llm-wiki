@@ -42,6 +42,10 @@ def _clean_text(value: Any) -> str:
     return " ".join(str(value or "").split())
 
 
+def _key_fragment(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
 def _plain_note(value: str | None) -> str:
     if not value:
         return ""
@@ -57,7 +61,8 @@ def _year_from_date(value: Any) -> int | None:
 
 
 def _bibtex_escape(value: str) -> str:
-    text = str(value or "")
+    text = re.sub(r"<[^>]+>", "", str(value or ""))
+    text = html.unescape(text)
     replacements = {
         "\\": r"\\",
         "{": r"\{",
@@ -132,7 +137,18 @@ def _bibtex_key(metadata: dict[str, Any]) -> str:
         if text:
             return text
     key = _clean_text(metadata.get("item_key"))
-    return f"zotero_{key}" if key else "zotero_item"
+    if key:
+        return f"zotero_{key}"
+    authors = metadata.get("authors") or []
+    first_author = _clean_text(authors[0]).split()[-1] if authors else ""
+    year = str(metadata.get("year") or "")
+    title_words = [
+        _key_fragment(word)
+        for word in _clean_text(metadata.get("title")).split()
+        if len(_key_fragment(word)) >= 4
+    ]
+    fallback = f"{_key_fragment(first_author)}{year}{''.join(title_words[:1])}"
+    return fallback or "zotero_item"
 
 
 def _bibtex_entry_type(metadata: dict[str, Any]) -> str:
@@ -191,6 +207,19 @@ def _bibtex(metadata: dict[str, Any]) -> str:
     key = _bibtex_key(metadata)
     lines = [f"@{entry_type}{{{key},"]
     lines.extend(_bibtex_field_lines(metadata))
+    present_fields = {
+        line.split("=", 1)[0].strip()
+        for line in lines[1:]
+        if "=" in line
+    }
+    missing = {"author", "title", "year"} - present_fields
+    if missing:
+        missing_text = ", ".join(sorted(missing))
+        lines.insert(
+            0,
+            f"% [UNCONFIRMED] BibTeX missing required field(s): {missing_text} — manual check required",
+        )
+        lines[1] = lines[1].replace(f"{{{key},", f"{{UNCONFIRMED_{key},", 1)
     if lines[-1].endswith(","):
         lines[-1] = lines[-1].rstrip(",")
     lines.append("}")

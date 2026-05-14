@@ -62,6 +62,24 @@
 
 论文正文必须包含 `## Research classification`，分别说明：属于理论/计算/实验中的哪些方向；每个方向具体用了什么理论、计算方案或实验流程；研究对象是什么。无法从文献中确定时写 `unclear`，不要编造。
 
+### BibTeX 存放规范
+
+`papers/{slug}.md` 的 YAML frontmatter 不得包含 `bibtex` 字段。BibTeX 属于正文内容，必须放在 `## BibTeX` 小节中的 fenced code block：
+
+````markdown
+## BibTeX
+
+```bibtex
+@article{key,
+  author = {...},
+  title = {...},
+  year = {...}
+}
+```
+````
+
+BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`title`、`year`、一个 venue 字段（`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`）、`volume`、`number`、`pages`、`doi`。不要把 URL、tags/keywords、abstract、language、rights 或笔记类字段写进 BibTeX。
+
 ### 概念页原文溯源规范
 
 每个 `concepts/{slug}.md` 页面必须在 `## Definition` 后包含 `## Source excerpts`。

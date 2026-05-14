@@ -46,6 +46,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import frontmatter
 import _mineru
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
 from research_wiki import slugify
@@ -107,6 +108,10 @@ NUMBERED_HEADING_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s*[A-Za-z]")
 IMG_RE = re.compile(r"!\[([^\]]*)\]\(images/([^)]+)\)")
 FIGURE_LABEL_RE = re.compile(r"\b(Figure|Fig\.?|Table)\s*\d+\b", re.IGNORECASE)
 AUTHOR_INITIAL_RE = re.compile(r"\b[A-Z]\.\s*[A-Z]")
+BIBTEX_SECTION_RE = re.compile(
+    r"\n*## BibTeX\s*\n+```bibtex\n.*?\n```\s*",
+    re.DOTALL,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -117,8 +122,8 @@ def _yaml_scalar(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def _yaml_block_scalar(value: str) -> list[str]:
-    lines = ["bibtex: |"]
+def _yaml_block_scalar(key: str, value: str) -> list[str]:
+    lines = [f"{key}: |"]
     text = value.rstrip("\n")
     if not text:
         lines.append("  ")
@@ -154,8 +159,8 @@ def _render_yaml(items: dict) -> str:
                         else:
                             lines.append(f"{prefix}{k2}: {_yaml_scalar(str(v2))}")
         else:
-            if key == "bibtex" and "\n" in str(value):
-                lines.extend(_yaml_block_scalar(str(value)))
+            if "\n" in str(value):
+                lines.extend(_yaml_block_scalar(str(key), str(value)))
             else:
                 lines.append(f"{key}: {_yaml_scalar(str(value))}")
     lines.append("---")
@@ -521,6 +526,11 @@ def _read_existing_frontmatter(path: Path) -> dict[str, str]:
     match = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
     if not match:
         return {}
+    try:
+        metadata = frontmatter.loads(text).metadata
+        return {str(k): str(v) for k, v in metadata.items()}
+    except Exception:
+        pass
     fields: dict[str, str] = {}
     for line in match.group(1).splitlines():
         stripped = line.strip()
@@ -535,31 +545,28 @@ def _strip_frontmatter(text: str) -> str:
     return re.sub(r"^---\s*\n.*?\n---\s*", "", text, count=1, flags=re.DOTALL)
 
 
-def _upsert_bibtex_frontmatter(text: str, bibtex: str) -> str:
+def _format_bibtex_section(bibtex: str) -> str:
     bibtex = bibtex.rstrip("\n")
     if not bibtex:
-        return text
-    match = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
-    if not match:
-        return text
-    front = match.group(1)
-    block = "\n".join(_yaml_block_scalar(bibtex))
-    if re.search(r"^bibtex:\s*", front, flags=re.MULTILINE):
-        front = re.sub(
-            r"^bibtex:\s*(?:\|\s*)?.*(?:\n(?:  .*)?)*",
-            block,
-            front,
-            count=1,
-            flags=re.MULTILINE,
-        )
-    else:
-        marker = re.search(r"^pipeline:.*$", front, flags=re.MULTILINE)
-        if marker:
-            insert_at = marker.end()
-            front = front[:insert_at] + "\n" + block + front[insert_at:]
-        else:
-            front = front + "\n" + block
-    return text[:match.start(1)] + front + text[match.end(1):]
+        return ""
+    return f"\n\n## BibTeX\n\n```bibtex\n{bibtex}\n```\n"
+
+
+def _upsert_bibtex_body(text: str, bibtex: str = "") -> str:
+    """Move BibTeX out of frontmatter and into a body fenced code block."""
+    try:
+        post = frontmatter.loads(text)
+    except Exception:
+        body_bibtex = bibtex.strip()
+        return text if not body_bibtex else BIBTEX_SECTION_RE.sub("", text).rstrip() + _format_bibtex_section(body_bibtex)
+
+    metadata = dict(post.metadata)
+    fm_bibtex = str(metadata.pop("bibtex", "") or "").strip()
+    body_bibtex = bibtex.strip() or fm_bibtex
+    body = BIBTEX_SECTION_RE.sub("", post.content).rstrip()
+    if body_bibtex:
+        body += _format_bibtex_section(body_bibtex)
+    return frontmatter.dumps(frontmatter.Post(body, **metadata)).rstrip() + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -651,8 +658,9 @@ def prepare(
         existing_source = existing_front.get("source", "")
         if _same_source(existing_source, pdf):
             existing_text = legacy_prepared_path.read_text(encoding="utf-8", errors="ignore")
-            if bibtex_override.strip() and "bibtex:" not in existing_text:
-                existing_text = _upsert_bibtex_frontmatter(existing_text, bibtex_override)
+            migrated_text = _upsert_bibtex_body(existing_text, bibtex_override)
+            if migrated_text != existing_text:
+                existing_text = migrated_text
                 legacy_prepared_path.write_text(existing_text, encoding="utf-8")
             return {
                 "canonical_ingest_path": display_path(legacy_prepared_path, display_root),
@@ -671,8 +679,9 @@ def prepare(
         existing_source = existing_front.get("source", "")
         if _same_source(existing_source, pdf):
             existing_text = legacy_out_path.read_text(encoding="utf-8", errors="ignore")
-            if bibtex_override.strip() and "bibtex:" not in existing_text:
-                existing_text = _upsert_bibtex_frontmatter(existing_text, bibtex_override)
+            migrated_text = _upsert_bibtex_body(existing_text, bibtex_override)
+            if migrated_text != existing_text:
+                existing_text = migrated_text
                 legacy_out_path.write_text(existing_text, encoding="utf-8")
             return {
                 "canonical_ingest_path": display_path(legacy_out_path, display_root),
@@ -691,8 +700,9 @@ def prepare(
         existing_source = existing_front.get("source", "")
         existing_text = out_path.read_text(encoding="utf-8", errors="ignore")
         if _same_source(existing_source, pdf):
-            if bibtex_override.strip() and "bibtex:" not in existing_text:
-                existing_text = _upsert_bibtex_frontmatter(existing_text, bibtex_override)
+            migrated_text = _upsert_bibtex_body(existing_text, bibtex_override)
+            if migrated_text != existing_text:
+                existing_text = migrated_text
                 out_path.write_text(existing_text, encoding="utf-8")
             return {
                 "canonical_ingest_path": display_path(out_path, display_root),
@@ -749,8 +759,6 @@ def prepare(
         "totalPages": int(manifest.get("totalPages", 0) or 0),
         "totalChars": int(manifest.get("totalChars", 0) or 0),
     }
-    if bibtex_override.strip():
-        front["bibtex"] = bibtex_override.strip()
     if skipped_sections:
         front["skippedSectionHeadings"] = skipped_sections
     if dropped:
@@ -762,7 +770,7 @@ def prepare(
     if figures:
         front["figures"] = figures
 
-    document = _render_yaml(front) + "\n\n" + body
+    document = _render_yaml(front) + "\n\n" + body.rstrip() + _format_bibtex_section(bibtex_override)
     out_path.write_text(document, encoding="utf-8")
 
     print(
@@ -858,7 +866,7 @@ def main() -> None:
     parser.add_argument("--title", default="",
                         help="Confident agent-recovered title. Used verbatim when set.")
     parser.add_argument("--bibtex", default="",
-                        help="Derived Zotero BibTeX string to persist in the prepared source frontmatter.")
+                        help="Derived Zotero BibTeX string to persist in the prepared source body under ## BibTeX.")
     parser.add_argument("--cache-root", default=None, type=Path,
                         help="MinerU cache root (default: .mineru-cache at CWD).")
     parser.add_argument("--language", default="en", help="Document language for MinerU.")

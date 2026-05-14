@@ -13,6 +13,7 @@ For directory inputs, process each PDF independently in deterministic order. Do 
 ```text
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
     -> .mineru-cache/<sha16>/           (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
+    -> tools/enrich_local_pdf_bibtex    (optional metadata-only Zotero BibTeX enrichment)
     -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation)
     -> wiki/sources/papers/<slug>.md         + wiki/sources/papers/assets/<slug>/<hash>.jpg
 ```
@@ -32,18 +33,32 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
 
 ## Invocation
 
-Once you have the title (possibly empty), run:
+Once you have the title (possibly empty), first try metadata-only Zotero enrichment:
+
+```bash
+uv run python tools/enrich_local_pdf_bibtex.py \
+  --source <pdf-path> \
+  [--title "<agent-recovered-title>"]
+```
+
+- Use this only to enrich metadata/BibTeX for the same local PDF. Do not switch the content source to Zotero's PDF from this skill.
+- If the helper returns `status: ok`, use the returned `.bibtex` verbatim.
+- If the helper returns `not_found` or `metadata_error`, continue without BibTeX and report the reason. The user can open Zotero Desktop / enable Local API access and rerun if needed.
+
+Then run:
 
 ```bash
 uv run python tools/prepare_paper_source.py \
   --raw-root "$RAW_ROOT" \
   --wiki-root "$WIKI_ROOT" \
   --source <pdf-path> \
-  [--title "<agent-recovered-title>"]
+  [--title "<agent-recovered-title>"] \
+  [--bibtex "$BIBTEX"]
 ```
 
 - Pass `--title` only when the title is confident. Do not pass a title derived from PDF metadata or the filename.
 - Omit the flag when no title is confident. The helper falls back cleanly.
+- Pass `--bibtex` only with a BibTeX string returned by `tools/enrich_local_pdf_bibtex.py` or other authoritative metadata flow. The helper writes it into the prepared markdown body under `## BibTeX`; it must not appear in YAML frontmatter.
 
 The helper writes the prepared entry under `wiki/sources/papers/` and prints a JSON record with:
 
@@ -57,7 +72,7 @@ The helper writes the prepared entry under `wiki/sources/papers/` and prints a J
 | `warnings` | non-fatal anomalies (no abstract found, no figures detected, etc.) |
 | `usable` | boolean — `false` blocks ingest |
 
-Use `canonical_ingest_path` as the source for `/ingest`.
+Use `canonical_ingest_path` as the source for `/ingest`. When the prepared markdown contains a `## BibTeX` block, `/ingest` should carry that block into the generated paper page unless a later Zotero metadata lookup produces a clearly better authoritative BibTeX entry.
 
 ## Title authority
 
@@ -78,3 +93,5 @@ From this point on, treat the prepared `.md` as the canonical source for `/inges
 - **MinerU API outage / rate limit**: same fallback — try the local backend if available, otherwise hand off to the user with a clear message.
 - **Manifest reports `usable: false`**: do not proceed. Surface the `warnings` array to the user; common causes are scanned PDFs without OCR, encrypted PDFs, or pages-only image dumps.
 - **No figures extracted on a paper that clearly has them**: not blocking. Note in the report; the user may want to switch to the local backend for that paper.
+- **Zotero enrichment not found**: not blocking. Continue ingest and report that no matching Zotero item was found.
+- **Zotero Local API unavailable**: not blocking. SQLite matching may find an item, but full BibTeX extraction needs Zotero Desktop Local API; tell the user to open Zotero and rerun if they want the richer BibTeX.

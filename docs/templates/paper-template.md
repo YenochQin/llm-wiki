@@ -14,7 +14,6 @@ importance: 3
 date_added: YYYY-MM-DD
 source_type: pdf
 external_ids: {}
-bibtex: ""
 keywords: []
 domain: ""
 code_url: ""
@@ -44,5 +43,10 @@ cited_by: []
 ## Open Questions
 
 ## My Take
+
+## BibTeX
+
+```bibtex
+```
 
 ## Related
