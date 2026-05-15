@@ -106,7 +106,8 @@ KEEP_UNNUMBERED = {
     "references", "reference", "bibliography", "literature cited",
 }
 
-NUMBERED_HEADING_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s*[A-Za-z]")
+_ROMAN_RE = r"(?:M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))"
+NUMBERED_HEADING_RE = re.compile(r"^\s*((?:\d+(?:\.\d+)*)|(?:" + _ROMAN_RE + r"))\.?\s+[A-Za-z]")
 IMG_RE = re.compile(r"!\[([^\]]*)\]\(images/([^)]+)\)")
 FIGURE_LABEL_RE = re.compile(r"\b(Figure|Fig\.?|Table)\s*\d+\b", re.IGNORECASE)
 AUTHOR_INITIAL_RE = re.compile(r"\b[A-Z]\.\s*[A-Z]")
