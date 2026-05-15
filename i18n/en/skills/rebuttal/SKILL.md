@@ -55,11 +55,10 @@ argument-hint: <review-file-or-path> [--paper-slug <slug>] [--venue <venue>] [--
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve the Python interpreter and runtime paths once and reuse them. Never hard-code `wiki/` or `raw/`; both come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -70,8 +69,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 Additional steps:
@@ -312,7 +310,7 @@ Additional Experiments (if applicable):
 - For claims with evidence gaps: append reviewer-identified gaps to `## Open questions` in `wiki/claims/{slug}.md`
 - Append log:
   ```bash
-  uv run python tools/research_wiki.py log "$WIKI_ROOT" \
+  uv run python tools/research_wiki.py log @configured \
     "rebuttal | {N} concerns addressed | {M} evidence gaps | stress-test avg: {score}/5"
   ```
 
@@ -342,7 +340,7 @@ Additional Experiments (if applicable):
 
 ### Tools（via Bash）
 - `uv run python tools/research_wiki.py slug "{title}"` — generate rebuttal slug
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log entry
+- `uv run python tools/research_wiki.py log @configured "<message>"` — append log entry
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 5 stress-test first round

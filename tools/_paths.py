@@ -123,6 +123,36 @@ def display_path(path: Path, project_root: Path) -> str:
         return str(resolved)
 
 
+def resolve_runtime_path(value: str | Path | None, paths: RuntimePaths, *, role: str) -> Path | None:
+    """Resolve CLI path tokens, including aliases for configured runtime roots."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        raise ValueError(f"{role} is empty; pass an explicit path or configured alias")
+
+    aliases = {
+        "@project-root": paths.project_root,
+        "@project": paths.project_root,
+        "@wiki-root": paths.wiki_root,
+        "@wiki": paths.wiki_root,
+        "@configured": paths.wiki_root,
+        "@configured-wiki": paths.wiki_root,
+        "@raw-root": paths.raw_root,
+        "@raw": paths.raw_root,
+        "@configured-raw": paths.raw_root,
+        "@configured-sources": paths.wiki_root / "sources",
+        "@wiki-sources": paths.wiki_root / "sources",
+        "@configured-sources-papers": paths.wiki_root / "sources" / "papers",
+        "@wiki-sources-papers": paths.wiki_root / "sources" / "papers",
+        "@mineru-cache": paths.project_root / ".checkpoints" / "mineru-cache",
+        "@project-checkpoints-mineru-cache": paths.project_root / ".checkpoints" / "mineru-cache",
+    }
+    if text in aliases:
+        return aliases[text].resolve()
+    return expand_path(text, paths.project_root)
+
+
 def write_paths_config(config_path: Path, wiki_root: Path, raw_root: Path) -> None:
     payload = {
         "active_profile": current_platform_profile(),

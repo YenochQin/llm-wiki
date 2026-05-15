@@ -97,6 +97,42 @@ STOP_WORDS = frozenset({
 
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 
+
+def _looks_like_project_root(path: Path) -> bool:
+    return (path / "pyproject.toml").exists() and (path / "tools").is_dir()
+
+
+def _validate_cli_wiki_root(raw_wiki_root: str) -> str:
+    """Reject ambiguous wiki roots that would write wiki files into the repo."""
+    value = str(raw_wiki_root or "").strip()
+    if not value:
+        print(json.dumps({
+            "status": "error",
+            "message": "wiki_root is empty; pass an explicit wiki root or @configured",
+        }))
+        sys.exit(2)
+
+    root = Path(value).expanduser()
+    if not root.is_absolute():
+        root = (Path.cwd() / root).resolve()
+    else:
+        root = root.resolve()
+
+    project_root = load_paths().project_root.resolve()
+    if root == project_root or _looks_like_project_root(root):
+        print(json.dumps({
+            "status": "error",
+            "message": (
+                "Refusing to use the code repository root as wiki_root. "
+                "Pass @configured or the external wiki root explicitly."
+            ),
+            "wiki_root": str(root),
+            "project_root": str(project_root),
+        }, ensure_ascii=False))
+        sys.exit(2)
+
+    return str(root)
+
 # ---------------------------------------------------------------------------
 # Slug generation
 # ---------------------------------------------------------------------------
@@ -2765,6 +2801,8 @@ def main():
 
     if hasattr(args, "wiki_root") and args.wiki_root in {"@wiki", "@configured"}:
         args.wiki_root = str(load_paths().wiki_root)
+    if hasattr(args, "wiki_root"):
+        args.wiki_root = _validate_cli_wiki_root(args.wiki_root)
 
     if args.command == "init":
         init_wiki(args.wiki_root)

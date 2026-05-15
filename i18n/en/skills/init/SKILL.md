@@ -46,11 +46,10 @@ Use these local references on demand:
 
 ## Workflow
 
-**Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.json`. Run Python tools through `uv run python`, matching `README.md`. Resolve `PROJECT_ROOT`, `WIKI_ROOT`, and `RAW_ROOT` once and reuse them for every command during `/init`. Do not hard-code `wiki/` or `raw/`: by default, `tools/_paths.py` loads `config/paths.json`, `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`, and `LLM_WIKI_PATH_PROFILE`; only override these roots when the user explicitly requests it.
+**Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.json`. Run Python tools through `uv run python`, matching `README.md`. Do not hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources`, `@configured-sources-papers`, and `@mineru-cache`. By default, `tools/_paths.py` loads `config/paths.json` and the documented `LLM_WIKI_*` overrides; only override these roots when the user explicitly requests it.
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -61,14 +60,13 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 1: Initialize wiki structure
 
 ```bash
-uv run python tools/research_wiki.py init "$WIKI_ROOT"
+uv run python tools/research_wiki.py init @configured
 ```
 
 Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log.md`. Do not add a second init log entry here.
@@ -76,11 +74,11 @@ Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log
 ### Step 2: Prepare local inputs into `wiki/sources/`
 
 ```bash
-uv run python tools/init_discovery.py prepare --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json
+uv run python tools/init_discovery.py prepare --raw-root @raw-root --wiki-root @configured --sources-output-dir @configured-sources --cache-root @mineru-cache --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json
 ```
 
-- before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }`, `{ "$RAW_ROOT/papers/foo.pdf": "Recovered Paper Title" }`, or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`
-- use `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --source <local-path> [--title "<recovered-title>"]` for local paper normalization
+- before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }`, `{ "@raw-root/papers/foo.pdf": "Recovered Paper Title" }`, or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`
+- use `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <local-path> [--title "<recovered-title>"]` for local paper normalization
 - local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown at `wiki/sources/papers/<slug>.md`
 - when the agent supplied a PDF title, treat that title as authoritative for the prepared manifest; fetched/source titles are sanitized fallback metadata only and must not overwrite it
 - metadata or filename titles may remain as provisional display labels only; they are not trusted identity or title-search inputs
@@ -92,7 +90,7 @@ uv run python tools/init_discovery.py prepare --raw-root "$RAW_ROOT" --wiki-root
 ### Step 3: Build the source manifest
 
 ```bash
-uv run python tools/init_discovery.py manifest --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json
+uv run python tools/init_discovery.py manifest --raw-root @raw-root --wiki-root @configured --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json
 ```
 
 - `manifest` reads `.checkpoints/init-prepare.json` and emits one `origin=user_local` entry per usable prepared paper
@@ -152,12 +150,12 @@ After all subagents complete:
 - run:
 
 ```bash
-uv run python tools/research_wiki.py dedup-edges "$WIKI_ROOT"
-uv run python tools/research_wiki.py dedup-citations "$WIKI_ROOT"
-uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
-uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
-uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
-uv run python tools/lint.py --wiki-dir "$WIKI_ROOT" --fix
+uv run python tools/research_wiki.py dedup-edges @configured
+uv run python tools/research_wiki.py dedup-citations @configured
+uv run python tools/research_wiki.py rebuild-index @configured
+uv run python tools/research_wiki.py rebuild-context-brief @configured
+uv run python tools/research_wiki.py rebuild-open-questions @configured
+uv run python tools/lint.py --wiki-dir @configured --fix
 ```
 
 Report separately:
@@ -198,19 +196,19 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 
 ### Tools (via Bash)
 
-- `uv run python tools/research_wiki.py init "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py checkpoint-set-meta "$WIKI_ROOT" init-session <key> <value>`
-- `uv run python tools/research_wiki.py checkpoint-save/load/clear "$WIKI_ROOT" init-session ...`
-- `uv run python tools/research_wiki.py dedup-edges "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py dedup-citations "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"`
-- `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --source <local-path> [--title "<recovered-title>"]`
-- `uv run python tools/init_discovery.py prepare --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`
-- `uv run python tools/init_discovery.py manifest --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json`
-- `uv run python tools/lint.py --wiki-dir "$WIKI_ROOT" --fix`
+- `uv run python tools/research_wiki.py init @configured`
+- `uv run python tools/research_wiki.py checkpoint-set-meta @configured init-session <key> <value>`
+- `uv run python tools/research_wiki.py checkpoint-save/load/clear @configured init-session ...`
+- `uv run python tools/research_wiki.py dedup-edges @configured`
+- `uv run python tools/research_wiki.py dedup-citations @configured`
+- `uv run python tools/research_wiki.py rebuild-index @configured`
+- `uv run python tools/research_wiki.py rebuild-context-brief @configured`
+- `uv run python tools/research_wiki.py rebuild-open-questions @configured`
+- `uv run python tools/research_wiki.py log @configured "<message>"`
+- `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <local-path> [--title "<recovered-title>"]`
+- `uv run python tools/init_discovery.py prepare --raw-root @raw-root --wiki-root @configured --sources-output-dir @configured-sources --cache-root @mineru-cache --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`
+- `uv run python tools/init_discovery.py manifest --raw-root @raw-root --wiki-root @configured --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json`
+- `uv run python tools/lint.py --wiki-dir @configured --fix`
 
 ### Skills
 

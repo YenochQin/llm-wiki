@@ -7,9 +7,9 @@ End-to-end pipeline for converting raw PDFs into the structured markdown that `/
 ```text
 raw/papers/<file>.pdf
     -> tools/_mineru.extract           (cloud API or local backend)
-    -> .mineru-cache/<sha16>/          (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
+    -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source     (adapter: heading hierarchy, cover normalization, cutoffs, image relocation, LaTeX math repair)
-    -> wiki/sources/papers/<slug>.md        + wiki/sources/papers/assets/<slug>/<hash>.jpg
+    -> <explicit-output-dir>/<slug>.md        + <explicit-output-dir>/assets/<slug>/<hash>.jpg
     -> /ingest reads canonical_ingest_path = wiki/sources/papers/<slug>.md
 ```
 
@@ -42,14 +42,16 @@ raw/papers/<file>.pdf
 ```bash
 uv run python tools/prepare_paper_source.py \
   --raw-root raw \
+  --output-dir @configured-sources-papers \
+  --cache-root @mineru-cache \
   --source raw/papers/<file>.pdf \
   [--title "Optional override"] \
 ```
 
 Output is a JSON manifest on stdout (consumed by `/ingest`). Side effects:
 
-- Populates `.mineru-cache/<sha16>/` (reused on subsequent runs).
-- Writes `wiki/sources/papers/<slug>.md` + `wiki/sources/papers/assets/<slug>/`.
+- Populates the explicit cache root, e.g. `.checkpoints/mineru-cache/<sha16>/` (reused on subsequent runs).
+- Writes to the explicit output directory, e.g. `@configured-sources-papers/<slug>.md` + `@configured-sources-papers/assets/<slug>/`.
 
 Zotero-backed ingest uses a separate cache under `config/zotero-cache/` so the
 lookup helper can query a local SQLite snapshot even when Zotero is still open.
@@ -57,7 +59,7 @@ lookup helper can query a local SQLite snapshot even when Zotero is still open.
 ## Cache layout
 
 ```
-.mineru-cache/<sha16>/
+<explicit-cache-root>/<sha16>/
     <stem>.md                  # raw MinerU markdown (untouched)
     <stem>.json                # MinerU content_list block list
     full.md                    # adapter-canonical copy of the .md
@@ -65,7 +67,7 @@ lookup helper can query a local SQLite snapshot even when Zotero is still open.
     images/                    # extracted figure / table crops
 ```
 
-`<sha16>` is the first 16 hex chars of `sha256(first 4 MiB of pdf)`. Re-running on the same PDF reuses the cache and only re-runs the cheap adapter step. To force a fresh extraction, delete the per-PDF cache directory.
+`<sha16>` is the first 16 hex chars of `sha256(first 4 MiB of pdf)`. Re-running on the same PDF reuses the explicit cache and only re-runs the cheap adapter step. To force a fresh extraction, delete the per-PDF cache directory.
 
 ## Output layout
 
@@ -94,8 +96,8 @@ MinerU's raw markdown is flat and noisy. The adapter applies nine passes (mirror
 To inspect or repair existing prepared markdown, use:
 
 ```bash
-uv run python tools/repair_latex_math.py --dry-run "$WIKI_ROOT/sources/papers/<slug>.md"
-uv run python tools/repair_latex_math.py "$WIKI_ROOT/sources/papers/<slug>.md"
+uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<slug>.md
+uv run python tools/repair_latex_math.py @configured-sources-papers/<slug>.md
 ```
 
 ## Troubleshooting
@@ -104,7 +106,7 @@ uv run python tools/repair_latex_math.py "$WIKI_ROOT/sources/papers/<slug>.md"
 - **`401`/`403` from the cloud API**: token invalid or expired. Regenerate at <https://mineru.net/apiManage/account/api>.
 - **`backend='local' requires the mineru library`**: install with `uv sync --extra local`. First run downloads several GB of model weights.
 - **MinerU API down / rate-limited**: switch to local backend by installing the `local` extra and re-running. The CLI accepts the same flags.
-- **Title is split or missing**: cover-block sequence broke normalization. Inspect `.mineru-cache/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
+- **Title is split or missing**: cover-block sequence broke normalization. Inspect `<explicit-cache-root>/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
 - **Administrative material leaks into body**: the skip heading didn't match any `SKIP_SECTION_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`). Do not add References/Bibliography/Literature Cited to the skip list.
 - **Stale output after editing the adapter**: delete only `manifest.json` inside the per-PDF cache (or the whole `<sha16>/` directory) and re-run; the cached `<stem>.md` / `<stem>.json` from MinerU are reused.
 

@@ -19,7 +19,7 @@ The first three changes below address these gaps without expanding `/ingest`'s r
 - `i18n/en/skills/ingest/SKILL.md` — added a self-check section (EN previously had none); the prepared-source check is item 8 in the final 10-item list shared with the ZH side.
 - `i18n/zh/skills/ingest/references/content-quality-gate.md` — Post-ingest verification checklist: added item 8.
 
-**New rule**: every `[prepared markdown](../sources/papers/<slug>.md)` link written by the current ingest must point at a file under `$WIKI_ROOT/sources/papers/` that exists and has size > 0. If any target is missing or empty, surface the affected slugs in the report and stop instead of shipping dead links. Concept pages without source backing must use the documented `prepared markdown: missing` fallback wording — never a live link to an empty file.
+**New rule**: every `[prepared markdown](../sources/papers/<slug>.md)` link written by the current ingest must point at a file under `@configured-sources-papers/` that exists and has size > 0. If any target is missing or empty, surface the affected slugs in the report and stop instead of shipping dead links. Concept pages without source backing must use the documented `prepared markdown: missing` fallback wording — never a live link to an empty file.
 
 **What this does not do**: it does not investigate or roll back the upstream cause (`/reset --scope wiki`, `setup.sh` rerun, `tools/clean_wiki_repository.py`, manual `rm`, etc.). Diagnosing which tool emptied `wiki/sources/` is out of scope; the check exists so the next ingest fails fast instead of silently shipping broken links.
 
@@ -32,12 +32,12 @@ The first three changes below address these gaps without expanding `/ingest`'s r
 - Step 8 self-check (both languages): added an item verifying the connection sentence is present, or has a one-line scoped reason, or notes the anchor file was absent.
 
 **New rule**:
-- Before drafting any concept page's `## My understanding`, the skill reads `$WIKI_ROOT/Summary/research-direction.md` if it exists. The file is a user-maintained free-form Markdown page that lists the active research direction(s) — e.g. `ML CSF selection`, `GRASP2018 high-precision atomic structure`. No schema is imposed; the skill consumes it as anchoring context.
+- Before drafting any concept page's `## My understanding`, the skill reads `@configured/Summary/research-direction.md` if it exists. The file is a user-maintained free-form Markdown page that lists the active research direction(s) — e.g. `ML CSF selection`, `GRASP2018 high-precision atomic structure`. No schema is imposed; the skill consumes it as anchoring context.
 - `## My understanding` must contain **at least one concrete connection sentence** tying the concept to one of those directions — how the concept appears in that direction and what role it plays (descriptor feature, computational bottleneck, validation benchmark, baseline method, …).
 - If the source paper genuinely cannot defend a connection, the skill writes a one-line scoped reason instead of forcing a generic tie-in. This is the explicit escape hatch — the rule is "anchor when defensible", not "anchor at any cost".
-- If `$WIKI_ROOT/Summary/research-direction.md` does not exist, the skill writes a generic maintainer-voice synthesis and appends `_no research-direction anchor file found_` on its own line so future agents see why the connection sentence is missing.
+- If `@configured/Summary/research-direction.md` does not exist, the skill writes a generic maintainer-voice synthesis and appends `_no research-direction anchor file found_` on its own line so future agents see why the connection sentence is missing.
 
-**Configuration surface**: `$WIKI_ROOT/Summary/research-direction.md` is the canonical anchor. There is no flag to disable this behavior; absence of the file is itself the off switch. Users who want to tighten or broaden the connection requirement should edit `research-direction.md` content, not the skill.
+**Configuration surface**: `@configured/Summary/research-direction.md` is the canonical anchor. There is no flag to disable this behavior; absence of the file is itself the off switch. Users who want to tighten or broaden the connection requirement should edit `research-direction.md` content, not the skill.
 
 **What this does not do**: it does not retro-edit existing concept pages — the rule applies to new and materially-edited concept pages written by future ingest runs. Existing pages with generic `## My understanding` sections will be flagged by `/check` on its next sweep, not by `/ingest`.
 
@@ -48,7 +48,7 @@ The first three changes below address these gaps without expanding `/ingest`'s r
 - `i18n/en/skills/ingest/SKILL.md` — mirror edits in Step 6 and Step 8.
 - `i18n/zh/skills/ingest/references/content-quality-gate.md` — Post-ingest verification checklist item 10.
 
-**New rule**: Step 6 already matches the paper's domain/tags against `$WIKI_ROOT/topics/*.md`. The skill now also records the matched count `N` and includes a `Topic placement: matched N topics` line in the Step 8 report. When `N=0`, the report appends a one-line suggestion to run `/edit` and create a topic page for the paper's domain. The skill still does not create topic pages itself.
+**New rule**: Step 6 already matches the paper's domain/tags against `@configured/topics/*.md`. The skill now also records the matched count `N` and includes a `Topic placement: matched N topics` line in the Step 8 report. When `N=0`, the report appends a one-line suggestion to run `/edit` and create a topic page for the paper's domain. The skill still does not create topic pages itself.
 
 ## Change 4 — Runtime paths and Python invocation follow repository conventions
 
@@ -58,9 +58,9 @@ The first three changes below address these gaps without expanding `/ingest`'s r
 
 **New rule**:
 - Python tools are invoked with `uv run python`, matching `README.md`.
-- `/ingest` resolves `PROJECT_ROOT`, `WIKI_ROOT`, and `RAW_ROOT` once at the start through `tools/_paths.py`.
+- `/ingest` runs from the repository root and lets each tool resolve runtime paths through `tools/_paths.py`.
 - `config/paths.json`, `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`, and `LLM_WIKI_PATH_PROFILE` are the default source of truth for runtime paths.
-- Commands and prose use `$WIKI_ROOT` and `$RAW_ROOT` rather than hard-coded `wiki/` and `raw/`.
+- Commands and prose use `@configured`, `@raw-root`, and related aliases rather than hard-coded `wiki/` and `raw/`.
 
 This prevents future ingest runs from silently writing into the repository-local `wiki/` when the user configured an external Obsidian vault.
 
@@ -82,7 +82,7 @@ This does not claim Obsidian cannot later rewrite links when multiple same-named
 - `i18n/en/skills/ingest/SKILL.md`
 - `i18n/zh/skills/ingest/references/content-quality-gate.md`
 
-**New rule**: `/ingest` may update an existing `$WIKI_ROOT/Summary/*.md` page when its scope clearly covers the paper, but it still does not create Summary pages. The final report includes `Summary placement: matched S summaries`; if `S=0`, it suggests adding or updating a Summary page.
+**New rule**: `/ingest` may update an existing `@configured/Summary/*.md` page when its scope clearly covers the paper, but it still does not create Summary pages. The final report includes `Summary placement: matched S summaries`; if `S=0`, it suggests adding or updating a Summary page.
 
 ## Files touched
 

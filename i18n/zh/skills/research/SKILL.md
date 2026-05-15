@@ -59,12 +59,11 @@ argument-hint: <research-direction-or-brief> [--auto] [--start-from stage1|stage
 ## Workflow
 
 **Precondition**:
-1. A configured llm-wiki repo (see `/setup`). Resolve the Python interpreter and runtime paths once and reuse them. Never hard-code `wiki/` or `raw/`; both come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`).
-2. If `--start-from` is specified, read `$WIKI_ROOT/outputs/pipeline-progress.md` to restore state.
+1. A configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`.
+2. If `--start-from` is specified, read `@configured/outputs/pipeline-progress.md` to restore state.
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -75,8 +74,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 0: Initialize
@@ -135,23 +133,23 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
 
 5. **Append log**:
    ```bash
-   uv run python tools/research_wiki.py log "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py log @configured \
      "research | started | direction: {direction} | mode: {auto|interactive}"
    ```
 
 6. **Snapshot wiki state** (for Growth Report in Step Final):
    ```bash
-   uv run python tools/research_wiki.py maturity "$WIKI_ROOT" --json
+   uv run python tools/research_wiki.py maturity @configured --json
    ```
    Save returned JSON as `maturity_before`.
 
 ### Stage 0: Bootstrap (auto-triggered when wiki is empty)
 
-**Trigger condition**: run `uv run python tools/research_wiki.py maturity "$WIKI_ROOT" --json`. If `level == "cold"` and `papers < 3`: enter Bootstrap. Otherwise skip and proceed to Stage 1.
+**Trigger condition**: run `uv run python tools/research_wiki.py maturity @configured --json`. If `level == "cold"` and `papers < 3`: enter Bootstrap. Otherwise skip and proceed to Stage 1.
 
 1. **Initialize wiki** (if not yet initialized):
    ```bash
-   uv run python tools/research_wiki.py init "$WIKI_ROOT"
+   uv run python tools/research_wiki.py init @configured
    ```
 
 2. **Search for relevant papers**:
@@ -166,16 +164,16 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
 
 5. **Rebuild derived data**:
    ```bash
-   uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
-   uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
+   uv run python tools/research_wiki.py rebuild-context-brief @configured
+   uv run python tools/research_wiki.py rebuild-open-questions @configured
    ```
 
 6. **Log + update progress**:
    ```bash
-   uv run python tools/research_wiki.py log "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py log @configured \
      "research | stage0-bootstrap | auto-ingested {N} papers | maturity: {level}"
    uv run python tools/research_wiki.py set-meta \
-     "$WIKI_ROOT/outputs/pipeline-progress.md" current_stage stage1
+     "@configured/outputs/pipeline-progress.md" current_stage stage1
    ```
 
 ### Stage 1: Idea Discovery
@@ -219,7 +217,7 @@ Args: "{idea_slug}" --review
 3. Set `current_stage: stage3-eval` (so the next session resumes at the verdict step)
 4. Append log:
    ```bash
-   uv run python tools/research_wiki.py log "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py log @configured \
      "research | stage2 | designed {N} experiments | pipeline: {slug}"
    ```
 
@@ -389,7 +387,7 @@ Generate `wiki/outputs/PIPELINE_REPORT.md`:
 
 Append log:
 ```bash
-uv run python tools/research_wiki.py log "$WIKI_ROOT" \
+uv run python tools/research_wiki.py log @configured \
   "research | completed | idea: {slug} | claims: {N} updated | paper: {yes/no}"
 ```
 
@@ -438,9 +436,9 @@ Update pipeline-progress: status: completed.
 ### Tools (via Bash)
 - `uv run python tools/research_wiki.py slug "{title}"` — generate pipeline slug
 - `uv run python tools/research_wiki.py set-meta <path> <field> <value>` — update pipeline-progress fields
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log entry
-- `uv run python tools/research_wiki.py maturity "$WIKI_ROOT" --json` — wiki maturity (Stage 0 trigger + Growth Report)
-- `uv run python tools/research_wiki.py init "$WIKI_ROOT"` — initialize wiki structure (Stage 0)
+- `uv run python tools/research_wiki.py log @configured "<message>"` — append log entry
+- `uv run python tools/research_wiki.py maturity @configured --json` — wiki maturity (Stage 0 trigger + Growth Report)
+- `uv run python tools/research_wiki.py init @configured` — initialize wiki structure (Stage 0)
 - `uv run python tools/fetch_literature.py search "{query}" --limit 20` — no-key literature search (Stage 0)
 
 ### Claude Code Native

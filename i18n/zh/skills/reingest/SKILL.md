@@ -15,7 +15,7 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 `/reingest` updates the paper page, its canonical prepared source, and affected knowledge entities. It is not a reset:
 
 - raw files under `raw/papers/`, `raw/notes/`, `raw/web/` remain read-only.
-- `wiki/sources/papers/<slug>.md` may be overwritten via `tools/prepare_paper_source.py --overwrite`.
+- `wiki/sources/papers/<slug>.md` may be overwritten via `tools/prepare_paper_source.py --overwrite`, but the output directory and MinerU cache root must be passed explicitly.
 - entity migration is enabled by default; `--update-entities` does not need to be provided.
 - `--paper-only` disables entity migration for this run.
 - existing concept/claim/people pages must be reviewed and migrated when the regenerated source makes an old definition, claim status, confidence, evidence detail, alias, author metadata, or research-area summary stale or incomplete.
@@ -26,11 +26,10 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve the Python interpreter and runtime paths once and reuse them. Never hard-code `wiki/` or `raw/`; both come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -41,8 +40,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 1: Resolve and refresh source
@@ -51,8 +49,9 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
 
    ```bash
    uv run python tools/prepare_paper_source.py \
-     --raw-root "$RAW_ROOT" \
-     --wiki-root "$WIKI_ROOT" \
+     --raw-root @raw-root \
+     --output-dir @configured-sources-papers \
+     --cache-root @mineru-cache \
      --source <pdf-path> \
      --overwrite
    ```
@@ -103,7 +102,7 @@ Unless `--paper-only` is explicitly set, review all existing entities connected 
 - concepts whose `key_papers` includes this paper
 - claims whose `source_papers` or `evidence[].source` includes this paper
 - people pages linked from the paper or already listing it under `## Key papers`
-- graph neighbors from `tools/research_wiki.py neighbors "$WIKI_ROOT" papers/<slug>`
+- graph neighbors from `tools/research_wiki.py neighbors @configured papers/<slug>`
 
 For each connected entity:
 
@@ -124,11 +123,11 @@ Do not remove old graph edges automatically. If the regenerated page or migrated
 Run:
 
 ```bash
-uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
-uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
-uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
-uv run python tools/lint.py --wiki-dir "$WIKI_ROOT"
-uv run python tools/research_wiki.py log "$WIKI_ROOT" "reingest | refreshed papers/<slug> | updated: <list>"
+uv run python tools/research_wiki.py rebuild-index @configured
+uv run python tools/research_wiki.py rebuild-context-brief @configured
+uv run python tools/research_wiki.py rebuild-open-questions @configured
+uv run python tools/lint.py --wiki-dir @configured
+uv run python tools/research_wiki.py log @configured "reingest | refreshed papers/<slug> | updated: <list>"
 ```
 
 If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content.

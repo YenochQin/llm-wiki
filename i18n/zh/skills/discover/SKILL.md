@@ -50,11 +50,10 @@ Exactly one of `--anchor`, `--topic`, `--from-wiki` must be given.
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve the Python interpreter and runtime paths once and reuse them. Never hard-code `wiki/` or `raw/`; both come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -65,8 +64,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 1: Pick the seed mode
@@ -84,7 +82,7 @@ If the user supplied negatives ("not these"), include them via `--negative` in a
 ```bash
 uv run python tools/discover.py from-anchors \
   --id <doi-or-title> [--id <doi-or-title>...] [--negative <id-or-title>...] \
-  --wiki-root "$WIKI_ROOT" \
+  --wiki-root @configured \
   --limit 10 \
   --output-checkpoint .checkpoints/ \
   --markdown
@@ -93,13 +91,13 @@ uv run python tools/discover.py from-anchors \
 Or for topic / wiki modes:
 
 ```bash
-uv run python tools/discover.py from-topic "<query>" --wiki-root "$WIKI_ROOT" --limit 10 --output-checkpoint .checkpoints/ --markdown
-uv run python tools/discover.py from-wiki --wiki-root "$WIKI_ROOT" --limit 10 --output-checkpoint .checkpoints/ --markdown
+uv run python tools/discover.py from-topic "<query>" --wiki-root @configured --limit 10 --output-checkpoint .checkpoints/ --markdown
+uv run python tools/discover.py from-wiki --wiki-root @configured --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
 Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key provider used here does not expose a full citing-works graph.
 
-The tool handles candidate gathering, wiki dedup, ranking, and writes the checkpoint. Always pass `--wiki-root "$WIKI_ROOT"` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
+The tool handles candidate gathering, wiki dedup, ranking, and writes the checkpoint. Always pass `--wiki-root @configured` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
 
 If Crossref is unavailable in topic mode, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
 
@@ -122,7 +120,7 @@ Do not ingest anything yourself. The user picks.
 ### Step 4: Log
 
 ```bash
-uv run python tools/research_wiki.py log "$WIKI_ROOT" "discover | mode=<anchors|topic|wiki> | seed=<short-desc> | shortlist=<N>"
+uv run python tools/research_wiki.py log @configured "discover | mode=<anchors|topic|wiki> | seed=<short-desc> | shortlist=<N>"
 ```
 
 ## Internal Callers
@@ -142,7 +140,7 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 - **Never auto-ingest**: `/discover` returns a shortlist and stops. Even when called by `/ingest --discover`, the caller surfaces results and the user decides what to ingest.
 - **No writes to `wiki/` other than `log.md`**: paper pages, concepts, claims, graph edges all belong to `/ingest`.
 - **No writes to `raw/`**: `/discover` does not download papers. For Zotero-managed PDFs, the user can run `/ingest --title "<candidate title>"` or `/ingest --doi <doi>` and let `/ingest` scan `config/zotero-roots.json`; for non-Zotero PDFs, they can pass the local PDF path directly to `/ingest`.
-- **Always dedupe against the wiki**: pass `--wiki-root "$WIKI_ROOT"` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
+- **Always dedupe against the wiki**: pass `--wiki-root @configured` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
 - **No-key provider coverage**: anchor mode uses Crossref title/DOI lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
 
@@ -157,10 +155,10 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 
 ### Tools (via Bash)
 
-- `uv run python tools/discover.py from-anchors --id <id> [--id <id>...] [--negative <id>...] --wiki-root "$WIKI_ROOT" --limit <N> --output-checkpoint .checkpoints/ --markdown`
-- `uv run python tools/discover.py from-topic "<query>" --wiki-root "$WIKI_ROOT" --limit <N> --output-checkpoint .checkpoints/ --markdown`
-- `uv run python tools/discover.py from-wiki --wiki-root "$WIKI_ROOT" --limit <N> --output-checkpoint .checkpoints/ --markdown`
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"`
+- `uv run python tools/discover.py from-anchors --id <id> [--id <id>...] [--negative <id>...] --wiki-root @configured --limit <N> --output-checkpoint .checkpoints/ --markdown`
+- `uv run python tools/discover.py from-topic "<query>" --wiki-root @configured --limit <N> --output-checkpoint .checkpoints/ --markdown`
+- `uv run python tools/discover.py from-wiki --wiki-root @configured --limit <N> --output-checkpoint .checkpoints/ --markdown`
+- `uv run python tools/research_wiki.py log @configured "<message>"`
 
 ### Skills
 

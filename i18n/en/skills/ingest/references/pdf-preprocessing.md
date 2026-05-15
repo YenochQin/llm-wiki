@@ -12,9 +12,9 @@ This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when
 
 ```text
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
-    -> .mineru-cache/<sha16>/           (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
+    -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation, LaTeX math repair)
-    -> wiki/sources/papers/<slug>.md         + wiki/sources/papers/assets/<slug>/<hash>.jpg
+    -> <explicit-output-dir>/<slug>.md       + <explicit-output-dir>/assets/<slug>/<hash>.jpg
 ```
 
 For full details (cache layout, adapter passes, troubleshooting) open `docs/mineru-pipeline.md`.
@@ -36,7 +36,9 @@ Once you have the title (possibly empty), run:
 
 ```bash
 uv run python tools/prepare_paper_source.py \
-  --raw-root "$RAW_ROOT" \
+  --raw-root @raw-root \
+  --output-dir @configured-sources-papers \
+  --cache-root @mineru-cache \
   --source <zotero-pdf-path> \
   [--title "<zotero-or-agent-recovered-title>"]
 ```
@@ -45,7 +47,7 @@ uv run python tools/prepare_paper_source.py \
 - Omit the flag when no title is confident. The helper falls back cleanly.
 - The helper automatically runs `tools/repair_latex_math.py` on the prepared body before writing. This conservative pass only edits math spans/blocks, skips code fences and inline code, converts `\(...\)` / `\[...\]` to Obsidian-compatible `$...$` / `$$...$$`, and removes common OCR-inserted spaces such as `\ alpha`, `_ {i}`, `^ {2}`, and `\left (`. It also repairs atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` into `1s^{2} \ ^{1}S_{0}` so the second superscript renders as the left superscript of the term symbol. If repairs were applied, the JSON `warnings` array includes a `latex math repaired: ...` summary and the prepared frontmatter records the repair counts.
 
-The helper writes the prepared entry under `wiki/sources/papers/` and prints a JSON record with:
+The helper writes the prepared entry under the explicit `--output-dir` (normally `@configured-sources/papers`) and prints a JSON record with:
 
 | Field | Meaning |
 |-------|---------|
@@ -97,7 +99,7 @@ Use the frontmatter as your structural anchor when extracting concepts, claims, 
 Prepared math should already use `$...$` and `$$...$$`. If you still see visibly broken formulas in the prepared markdown, run a dry report first:
 
 ```bash
-uv run python tools/repair_latex_math.py --dry-run "$WIKI_ROOT/sources/papers/<slug>.md"
+uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<slug>.md
 ```
 
 Only rewrite existing prepared sources after confirming the report is limited to math-span repairs.

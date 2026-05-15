@@ -22,7 +22,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 ## Inputs
 
-- `source`: Zotero lookup arguments. Prepared `$WIKI_ROOT/sources/papers/*.md` and `canonical_ingest_path` values are internal handoffs from `/ingest-local-pdf` or `/init` only (see `references/init-mode.md`). The prepared format is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
+- `source`: Zotero lookup arguments. Prepared `@configured-sources-papers/*.md` and `canonical_ingest_path` values are internal handoffs from `/ingest-local-pdf` or `/init` only (see `references/init-mode.md`). The prepared format is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
 - Existing MinerU Markdown may be consumed only when handed off by `/ingest-local-pdf` or `/init`; do not expose prepared markdown as a normal `/ingest` user-facing input.
 - Optional reference metadata usually comes directly from Zotero Local API when the source is a Zotero item; this includes Zotero/Better BibTeX fields such as `citationKey` and a derived `bibtex` entry that is compatible with the three `bibbst/` styles in this repo. Use that Zotero-derived `bibtex` string directly in the paper body under `## BibTeX`; never store BibTeX in YAML frontmatter and do not route `/ingest` through `.bib` or reference-metadata sidecars.
 - Zotero lookup form: one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`, optionally plus `--zotero-root <dir>`. If `--zotero-root` is omitted, read `config/zotero-roots.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
@@ -41,27 +41,27 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 ### Reads
 
-- `$WIKI_ROOT/index.md` for existing slugs and tags
-- `$WIKI_ROOT/papers/*.md` to detect an already-ingested paper
-- `$WIKI_ROOT/concepts/*.md` and `$WIKI_ROOT/foundations/*.md` for dedup matches
-- `$WIKI_ROOT/claims/*.md` for dedup matches
-- `$WIKI_ROOT/people/*.md` for existing authors
-- `$WIKI_ROOT/topics/*.md` to place the paper under existing topics
-- `$WIKI_ROOT/graph/open_questions.md` to notice when the paper addresses a known gap
+- `@configured/index.md` for existing slugs and tags
+- `@configured/papers/*.md` to detect an already-ingested paper
+- `@configured/concepts/*.md` and `@configured/foundations/*.md` for dedup matches
+- `@configured/claims/*.md` for dedup matches
+- `@configured/people/*.md` for existing authors
+- `@configured/topics/*.md` to place the paper under existing topics
+- `@configured/graph/open_questions.md` to notice when the paper addresses a known gap
 
 ### Writes
 
-- `$WIKI_ROOT/papers/{slug}.md` — CREATE
-- `$WIKI_ROOT/concepts/{slug}.md` — CREATE (new) or EDIT (append `key_papers`, aliases, variants)
-- `$WIKI_ROOT/claims/{slug}.md` — CREATE (new) or EDIT (append `evidence` entry)
-- `$WIKI_ROOT/people/{slug}.md` — CREATE (importance ≥ 4 only) or EDIT (append `Key papers`)
-- `$WIKI_ROOT/topics/{slug}.md` — EDIT only (no CREATE from `/ingest`)
-- `$WIKI_ROOT/graph/edges.jsonl` — APPEND via tool
-- `$WIKI_ROOT/graph/citations.jsonl` — APPEND via tool
-- `$WIKI_ROOT/graph/context_brief.md` — REBUILD (skipped in INIT MODE)
-- `$WIKI_ROOT/graph/open_questions.md` — REBUILD (skipped in INIT MODE)
-- `$WIKI_ROOT/index.md` — APPEND
-- `$WIKI_ROOT/log.md` — APPEND via tool
+- `@configured/papers/{slug}.md` — CREATE
+- `@configured/concepts/{slug}.md` — CREATE (new) or EDIT (append `key_papers`, aliases, variants)
+- `@configured/claims/{slug}.md` — CREATE (new) or EDIT (append `evidence` entry)
+- `@configured/people/{slug}.md` — CREATE (importance ≥ 4 only) or EDIT (append `Key papers`)
+- `@configured/topics/{slug}.md` — EDIT only (no CREATE from `/ingest`)
+- `@configured/graph/edges.jsonl` — APPEND via tool
+- `@configured/graph/citations.jsonl` — APPEND via tool
+- `@configured/graph/context_brief.md` — REBUILD (skipped in INIT MODE)
+- `@configured/graph/open_questions.md` — REBUILD (skipped in INIT MODE)
+- `@configured/index.md` — APPEND
+- `@configured/log.md` — APPEND via tool
 
 ### Graph edges created
 
@@ -77,11 +77,10 @@ paper-to-concept or paper-to-paper types on new writes.
 
 ## Workflow
 
-**Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.json`. Run Python tools through `uv run python`, matching `README.md`. Resolve `PROJECT_ROOT`, `WIKI_ROOT`, and `RAW_ROOT` once and reuse them for every command during `/ingest`. Do not hard-code `wiki/` or `raw/`: by default, `tools/_paths.py` loads `config/paths.json`, `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`, and `LLM_WIKI_PATH_PROFILE`; only override these roots when the user explicitly requests it.
+**Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.json`. Run Python tools through `uv run python`, matching `README.md`. Do not hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources-papers`, and `@mineru-cache`. By default, `tools/_paths.py` loads `config/paths.json` and the documented `LLM_WIKI_*` overrides; only override these roots when the user explicitly requests it.
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -92,14 +91,15 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
+
+`@configured` must resolve to the actual wiki vault root, not the code repository root. `tools/research_wiki.py` rejects the code repository root to prevent accidental creation of root-level `graph/`, `index.md`, or `log.md`.
 
 ### Step 1: Resolve the source
 
-1. If `/init` passed a `canonical_ingest_path`, enter **INIT MODE** and consume that path verbatim. Do not rescan `$RAW_ROOT`. See `references/init-mode.md`.
-2. If the source is a prepared `$WIKI_ROOT/sources/papers/*.md`, use it directly.
+1. If `/init` passed a `canonical_ingest_path`, enter **INIT MODE** and consume that path verbatim. Do not rescan `@raw-root`. See `references/init-mode.md`.
+2. If the source is a prepared `@configured-sources-papers/*.md`, use it directly.
 3. If the user supplied Zotero lookup arguments, run:
 
    ```bash
@@ -108,7 +108,7 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
      [--title "<title>"] [--doi <doi>] [--item-key <key>]
    ```
 
-   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the preprocessing path documented in `references/pdf-preprocessing.md`; this preprocessing includes the conservative LaTeX math repair pass and may report `latex math repaired: ...` in its warnings. Do not copy it into `$RAW_ROOT/papers/`.
+   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Feed the selected PDF path into the preprocessing path documented in `references/pdf-preprocessing.md`; this preprocessing includes the conservative LaTeX math repair pass and may report `latex math repaired: ...` in its warnings. Do not copy it into `@raw-root/papers/`.
 4. If the selected Zotero candidate has an `item_key`, try:
 
    ```bash
@@ -116,9 +116,9 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
    ```
 
    Treat a successful response as authoritative bibliographic metadata from the user's local library. Use it to prefer `title`, `doi`, `year`, `venue`, `creators`/authors, `abstract`, `tags`, `url`, `zotero_select`, `external_ids.zotero_key`, and the returned `bibtex` string. If the command fails, note the fallback only if it affects the report; do not block ingest.
-5. Carry the Zotero-derived `bibtex` string into the body of both `$WIKI_ROOT/sources/papers/{slug}.md` and `$WIKI_ROOT/papers/{slug}.md` under a `## BibTeX` fenced `bibtex` code block. Do not put `bibtex` in frontmatter. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. The derived BibTeX entry must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`; do not include URL, tags/keywords, abstract, language, or rights in the BibTeX block. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
+5. Carry the Zotero-derived `bibtex` string into the body of both `@configured-sources-papers/{slug}.md` and `@configured/papers/{slug}.md` under a `## BibTeX` fenced `bibtex` code block. Do not put `bibtex` in frontmatter. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. The derived BibTeX entry must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`; do not include URL, tags/keywords, abstract, language, or rights in the BibTeX block. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
 
-Raw persistence rule: never copy or duplicate a file already under `$WIKI_ROOT/sources/` or `$RAW_ROOT/papers/` into a different raw subtree.
+Raw persistence rule: never copy or duplicate a file already under `@configured-sources/` or `@raw-root/papers/` into a different raw subtree.
 
 ### Step 2: Paper identity and enrichment
 
@@ -128,7 +128,7 @@ Raw persistence rule: never copy or duplicate a file already under `$WIKI_ROOT/s
    uv run python tools/research_wiki.py slug "<paper-title>"
    ```
 
-2. Stop-if-exists: if `$WIKI_ROOT/papers/{slug}.md` already exists and the title or DOI matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
+2. Stop-if-exists: if `@configured/papers/{slug}.md` already exists and the title or DOI matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
 3. When Zotero Local API metadata is available, prefer it for identity fields (`title`, `doi`, `year`, `venue`, authors/creators, abstract, tags, URL, `citationKey`/`citekey`, and `external_ids`) and use the derived `bibtex` string only for the body `## BibTeX` block.
 4. When a DOI or confident title is available, query the no-key literature lookup:
 
@@ -183,15 +183,15 @@ Paper page content must be both structured and source-faithful:
 
 Follow `references/dedup-policy.md`. In short:
 
-**Research-direction anchor (optional but preferred)**: before drafting any concept's `## My understanding` section, check whether `$WIKI_ROOT/Summary/research-direction.md` exists. If it does, read it and use the listed direction(s) as the anchoring context for the synthesis — see item 7 below. If the file is absent, fall back to a generic maintainer-voice synthesis and note that the anchor file was not found. Treat the file as guidance, not as a license to fabricate a connection the source paper cannot support.
+**Research-direction anchor (optional but preferred)**: before drafting any concept's `## My understanding` section, check whether `@configured/Summary/research-direction.md` exists. If it does, read it and use the listed direction(s) as the anchoring context for the synthesis — see item 7 below. If the file is absent, fall back to a generic maintainer-voice synthesis and note that the anchor file was not found. Treat the file as guidance, not as a license to fabricate a connection the source paper cannot support.
 
 1. For each candidate concept or claim, call the matching `find-similar-*` tool first.
 2. Prefer merging into the top result. Create a new page only when the tool returns no acceptable candidate and the paper's importance justifies it.
 3. For each entity you write or edit, write the reverse link in the same turn. The obligation matrix lives in `references/cross-references.md`.
-4. Create a `$WIKI_ROOT/people/{slug}.md` only for papers with importance ≥ 4. Otherwise append to existing author pages only.
+4. Create a `@configured/people/{slug}.md` only for papers with importance ≥ 4. Otherwise append to existing author pages only.
 5. For every paper with importance ≥ 4, create or update at least one claim. A missing `claims/` layer for a high-importance paper is a failed ingest unless the source is purely bibliographic, editorial, or otherwise has no defensible claim; record that exception in the log and final report. The "at most N" entity limits in the Constraints section are upper bounds, not targets — zero claims for an importance ≥ 4 paper violates this floor.
 6. For every concept page created or materially edited, add or refresh `## Source excerpts` with at least **two substantively different excerpts** per concept page when the source covers the concept in multiple passages. Each excerpt must be an exact original-language blockquote linked to that paper's prepared MinerU markdown (`../sources/papers/<paper-slug>.md`). If the source contains formulas or precise definitions for the concept, include a short formula/definition excerpt rather than only paraphrase. Do not cherry-pick a generic opening sentence — the excerpts should collectively demonstrate the concept's formal structure. If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
-7. For concept pages, fill the reusable-knowledge sections, not just a definition: `## Intuition`, `## Formal notation`, `## Variants`, `## Comparison`, `## When to use`, `## Known limitations`, `## Open problems`, `## Key papers`, and `## My understanding`. **All listed sections are mandatory** — omit none silently. If a section truly does not apply, write a one-line scoped reason. `## Comparison` must include a compact table when two or more variants, neighboring concepts, or methods are worth contrasting. `## When to use` must give concrete applicability conditions (quantitative thresholds, physical regimes, specific task types), not purely qualitative "use when working with [topic]" formulations. `## Formal notation` must use `$`/`$$` LaTeX notation, never code fences or `\(` `\)`. `## My understanding` must include **at least one concrete connection sentence** tying the concept to the user's active research direction(s) declared in `$WIKI_ROOT/Summary/research-direction.md` — e.g. how the concept appears in that direction, what role it plays (descriptor feature, computational bottleneck, validation benchmark, …). Only omit the connection if the source paper genuinely cannot defend one; in that case write a one-line scoped reason instead of forcing a generic tie-in. If the anchor file is absent, write a synthesis in the maintainer's voice and add `_no research-direction anchor file found_` on its own line.
+7. For concept pages, fill the reusable-knowledge sections, not just a definition: `## Intuition`, `## Formal notation`, `## Variants`, `## Comparison`, `## When to use`, `## Known limitations`, `## Open problems`, `## Key papers`, and `## My understanding`. **All listed sections are mandatory** — omit none silently. If a section truly does not apply, write a one-line scoped reason. `## Comparison` must include a compact table when two or more variants, neighboring concepts, or methods are worth contrasting. `## When to use` must give concrete applicability conditions (quantitative thresholds, physical regimes, specific task types), not purely qualitative "use when working with [topic]" formulations. `## Formal notation` must use `$`/`$$` LaTeX notation, never code fences or `\(` `\)`. `## My understanding` must include **at least one concrete connection sentence** tying the concept to the user's active research direction(s) declared in `@configured/Summary/research-direction.md` — e.g. how the concept appears in that direction, what role it plays (descriptor feature, computational bottleneck, validation benchmark, …). Only omit the connection if the source paper genuinely cannot defend one; in that case write a one-line scoped reason instead of forcing a generic tie-in. If the anchor file is absent, write a synthesis in the maintainer's voice and add `_no research-direction anchor file found_` on its own line.
 8. For claim pages, include `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. Keep confidence conservative: reserve ≥0.85 for claims with direct, strong evidence and clear scope; avoid wording like "necessary and sufficient" unless the paper proves exactly that.
 
 ### Step 5: Paper-to-paper edges and `cited_by`
@@ -203,40 +203,40 @@ uv run python tools/fetch_literature.py references <doi-or-title>
 uv run python tools/fetch_literature.py citations <doi-or-title>
 ```
 
-- For each reference whose DOI or title resolves to an existing `$WIKI_ROOT/papers/{slug}.md`, add a bibliographic `cites` row to `graph/citations.jsonl`.
+- For each reference whose DOI or title resolves to an existing `@configured/papers/{slug}.md`, add a bibliographic `cites` row to `graph/citations.jsonl`.
 - Add a semantic paper-to-paper edge in `graph/edges.jsonl` only when the source text gives a clear cue. Edge-type selection is in `references/cross-references.md`. If no semantic relation cleanly fits, keep only the `cites` row.
 - For each citation already in the wiki, append the citer's slug to this paper's `cited_by`.
 - Surface unmatched high-citation references in the final report so the user can decide whether to follow up with another `/ingest`.
 
 ### Step 6: Topics and index
 
-1. Match the paper's domain and tags against existing `$WIKI_ROOT/topics/*.md`. For each match:
+1. Match the paper's domain and tags against existing `@configured/topics/*.md`. For each match:
    - importance ≥ 4 → append to the topic's `## Seminal works`
    - importance < 4 → append under `## SOTA tracker` or `## Recent work` by year
    - if the paper directly addresses a listed open problem, annotate that line on the topic page
    - record the matched topic count `N` for the Step 8 report
 2. Do not create new topic pages from `/ingest` — topic creation belongs to `/init` and `/edit`. If `N=0`, surface this in the Step 8 report with a one-line suggestion to run `/edit` and create a topic page for the paper's domain. Do not silently leave `topics/` empty.
-3. Match the paper against existing `$WIKI_ROOT/Summary/*.md`. If a Summary page's `scope`, `key_topics`, or overview clearly covers the paper, append the paper under `## Key References` or `## Related` and record the matched Summary count `S`. Do not create Summary pages from `/ingest`; if `S=0`, surface it in the report with the topic-placement note.
-4. Rebuild or append new/edited page entries to `$WIKI_ROOT/index.md` using the repository-supported format. The index must remain useful to both humans and tools: keep `# Wiki Index`, entity category headings, slugs, titles when available, and key metadata such as importance/status/confidence/tags/research modes. A pure opaque dump or a malformed half-YAML index is not acceptable. See `docs/runtime-support-files.en.md` and prefer:
+3. Match the paper against existing `@configured/Summary/*.md`. If a Summary page's `scope`, `key_topics`, or overview clearly covers the paper, append the paper under `## Key References` or `## Related` and record the matched Summary count `S`. Do not create Summary pages from `/ingest`; if `S=0`, surface it in the report with the topic-placement note.
+4. Rebuild or append new/edited page entries to `@configured/index.md` using the repository-supported format. The index must remain useful to both humans and tools: keep `# Wiki Index`, entity category headings, slugs, titles when available, and key metadata such as importance/status/confidence/tags/research modes. A pure opaque dump or a malformed half-YAML index is not acceptable. See `docs/runtime-support-files.en.md` and prefer:
 
    ```bash
-   uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
+   uv run python tools/research_wiki.py rebuild-index @configured
    ```
 
 ### Step 7: Log and rebuild
 
-Verify `$WIKI_ROOT/graph/` exists before writing to it; create the directory if missing.
+Verify `@configured/graph/` exists before writing to it; create the directory if missing.
 
 ```bash
-uv run python tools/research_wiki.py log "$WIKI_ROOT" "ingest | added papers/<slug> | updated: <list>"
+uv run python tools/research_wiki.py log @configured "ingest | added papers/<slug> | updated: <list>"
 ```
 
 Unless in INIT MODE:
 
 ```bash
-uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
-uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
-uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
+uv run python tools/research_wiki.py rebuild-index @configured
+uv run python tools/research_wiki.py rebuild-context-brief @configured
+uv run python tools/research_wiki.py rebuild-open-questions @configured
 ```
 
 ### Step 8: Report
@@ -250,15 +250,15 @@ Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges
 If the ingest falls below the normal minimum viable output (paper + concept/update + claim/update + index + log + graph), include a one-line reason rather than silently shipping a thin wiki.
 
 **Self-check** (run before finalizing the report):
-1. `$WIKI_ROOT/papers/{slug}.md` exists and frontmatter YAML parses.
+1. `@configured/papers/{slug}.md` exists and frontmatter YAML parses.
 2. At least one concept page created or materially updated with all mandatory body sections.
 3. At least one claim exists for importance ≥ 4 papers, or the report names the exception.
-4. `$WIKI_ROOT/graph/edges.jsonl` has at least one edge involving the new paper.
-5. `$WIKI_ROOT/log.md` has a new `## [today]` entry.
-6. `$WIKI_ROOT/index.md` includes the new paper and all new entities.
+4. `@configured/graph/edges.jsonl` has at least one edge involving the new paper.
+5. `@configured/log.md` has a new `## [today]` entry.
+6. `@configured/index.md` includes the new paper and all new entities.
 7. LaTeX in all written pages uses `$`/`$$` exclusively — no code-fence equations, no `\(` `\)`.
 8. Every `[prepared markdown](../sources/papers/<slug>.md)` link written by this ingest resolves to an existing file with size > 0 bytes. If any target is missing or empty, the prepared MinerU markdown got wiped after preparation — surface the missing slugs in the report and stop instead of shipping dead links. (If the user truly intends to keep concept pages without a source backing, the concept page must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.)
-9. For every concept page created or materially updated, `## My understanding` either contains the research-direction connection sentence required in Step 4 item 7, or contains a one-line scoped reason for omission, or notes that the anchor file `$WIKI_ROOT/Summary/research-direction.md` was not found.
+9. For every concept page created or materially updated, `## My understanding` either contains the research-direction connection sentence required in Step 4 item 7, or contains a one-line scoped reason for omission, or notes that the anchor file `@configured/Summary/research-direction.md` was not found.
 10. No written page contains directory-prefixed wikilinks such as `[[wiki/...]]`, `[[wiki_glm/...]]`, `[[wiki_back.../...]]`, or `[[topics/slug]]`. If Obsidian later rewrites links for disambiguation, report that as an external post-ingest change; `/ingest` itself must emit slug-only wikilinks.
 
 If any check fails, fix it before emitting the report.
@@ -272,7 +272,7 @@ When active, invoke `/discover` with the just-ingested paper as the single ancho
 ```bash
 uv run python tools/discover.py from-anchors \
   --id <doi-or-title-of-this-paper> \
-  --wiki-root "$WIKI_ROOT" \
+  --wiki-root @configured \
   --limit 10 \
   --output-checkpoint .checkpoints/ \
   --markdown
@@ -282,12 +282,12 @@ Append the markdown output to the report under a heading like "Related papers yo
 
 ## Constraints
 
-- `$RAW_ROOT/papers/`, `$RAW_ROOT/notes/`, `$RAW_ROOT/web/` are user-owned and read-only. `/ingest` does not accept direct local PDF inputs; `/ingest-local-pdf` prepares local sidecars under `$WIKI_ROOT/sources/`. INIT MODE treats all of `raw/` as read-only.
-- `$WIKI_ROOT/graph/` is tool-owned. Edit only through `tools/research_wiki.py`.
+- `@raw-root/papers/`, `@raw-root/notes/`, `@raw-root/web/` are user-owned and read-only. `/ingest` does not accept direct local PDF inputs; `/ingest-local-pdf` prepares local sidecars under `@configured-sources/`. INIT MODE treats all of `raw/` as read-only.
+- `@configured/graph/` is tool-owned. Edit only through `tools/research_wiki.py`.
 - Slugs always come from `tools/research_wiki.py slug`. Never hand-craft.
-- Every forward link writes its reverse link in the same turn — the wiki's bidirectional-link invariant. The only exception is links to `$WIKI_ROOT/foundations/`, which are terminal.
+- Every forward link writes its reverse link in the same turn — the wiki's bidirectional-link invariant. The only exception is links to `@configured/foundations/`, which are terminal.
 - In INIT MODE, do not write reverse links into pages that already exist (created by a sibling worktree or scaffold). Record the relationship via `tools/research_wiki.py add-edge` only; the parent `/init` backfills reverse links during fan-in.
-- Source format: `mineru-md` is the canonical prepared format. `/ingest` consumes prepared markdown in `$WIKI_ROOT/sources/papers/` or the INIT MODE handoff path; Zotero-selected PDFs are preprocessed through `tools/prepare_paper_source.py`. Raw local PDFs are handled by `/ingest-local-pdf`. If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than proceeding.
+- Source format: `mineru-md` is the canonical prepared format. `/ingest` consumes prepared markdown in `@configured-sources-papers/` or the INIT MODE handoff path; Zotero-selected PDFs are preprocessed through `tools/prepare_paper_source.py`. Raw local PDFs are handled by `/ingest-local-pdf`. If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than proceeding.
 - Metadata-only sources (Zotero metadata without an attachment/content source) cannot create a paper page. They may enrich a real content ingest, or be saved only when the user explicitly asks `/edit` to add a metadata note/source.
 - Ingest is conservative about new entities:
   - importance < 4: at most **1** new concept and **1** new claim per paper
@@ -307,19 +307,19 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 ### Tools (via Bash)
 
 - `uv run python tools/research_wiki.py slug "<title>"`
-- `uv run python tools/research_wiki.py find-similar-concept "$WIKI_ROOT" "<title>" --aliases "<a,b,c>"`
-- `uv run python tools/research_wiki.py find-similar-claim "$WIKI_ROOT" "<title>" --tags "<a,b,c>"`
-- `uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`
+- `uv run python tools/research_wiki.py find-similar-concept @configured "<title>" --aliases "<a,b,c>"`
+- `uv run python tools/research_wiki.py find-similar-claim @configured "<title>" --tags "<a,b,c>"`
+- `uv run python tools/research_wiki.py add-edge @configured --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`
   - `--confidence high|medium|low` is required for paper-paper and paper-concept semantic edges.
-- `uv run python tools/research_wiki.py add-citation "$WIKI_ROOT" --from papers/<citing> --to papers/<cited> --source literature_api`
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"`
-- `uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"`
-- `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --source <zotero-pdf-path> [--title "<recovered-title>"]`
+- `uv run python tools/research_wiki.py add-citation @configured --from papers/<citing> --to papers/<cited> --source literature_api`
+- `uv run python tools/research_wiki.py log @configured "<message>"`
+- `uv run python tools/research_wiki.py rebuild-index @configured`
+- `uv run python tools/research_wiki.py rebuild-context-brief @configured`
+- `uv run python tools/research_wiki.py rebuild-open-questions @configured`
+- `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <zotero-pdf-path> [--title "<recovered-title>"]`
 - `uv run python tools/fetch_zotero_metadata.py --item-key <key>` — optional after Zotero PDF lookup succeeds and only if Zotero Desktop Local API is reachable; returns Zotero metadata plus a derived `bibtex` entry
 - `uv run python tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
-- `uv run python tools/discover.py from-anchors --id <doi-or-title> --wiki-root "$WIKI_ROOT" --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
+- `uv run python tools/discover.py from-anchors --id <doi-or-title> --wiki-root @configured --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
 
 ### Shared References
 

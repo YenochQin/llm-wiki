@@ -44,11 +44,10 @@ description: Scan the full wiki to detect health issues and produce a tiered fix
 
 ## Workflow
 
-**Pre-conditions**: a configured llm-wiki repo (see `/setup`). Resolve the Python interpreter and runtime paths once and reuse them. Never hard-code `wiki/` or `raw/`; both come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-conditions**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -59,26 +58,25 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 1: Run the Automated Lint Tool
 
 **Default mode (report only)**:
 ```bash
-uv run python tools/lint.py --wiki-dir "$WIKI_ROOT" --json
+uv run python tools/lint.py --wiki-dir @configured --json
 ```
 
 **Auto-fix mode** (when user specifies `--fix`):
 ```bash
-uv run python tools/lint.py --wiki-dir "$WIKI_ROOT" --fix --json
+uv run python tools/lint.py --wiki-dir @configured --fix --json
 ```
 Auto-fixes deterministic issues (xref reverse-link completion, missing fields filled with default values) and outputs a fix report.
 
 **Preview mode** (when user specifies `--fix --dry-run`):
 ```bash
-uv run python tools/lint.py --wiki-dir "$WIKI_ROOT" --fix --dry-run --json
+uv run python tools/lint.py --wiki-dir @configured --fix --dry-run --json
 ```
 Previews what would be fixed without applying any changes.
 
@@ -177,7 +175,7 @@ Classification:
 
 Append log:
 ```bash
-uv run python tools/research_wiki.py log "$WIKI_ROOT" "check | report: N 🔴, M 🟡, K 🔵"
+uv run python tools/research_wiki.py log @configured "check | report: N 🔴, M 🟡, K 🔵"
 ```
 
 ## Constraints
@@ -198,6 +196,6 @@ uv run python tools/research_wiki.py log "$WIKI_ROOT" "check | report: N 🔴, M
 ## Dependencies
 
 ### Tools（via Bash）
-- `uv run python tools/lint.py --wiki-dir "$WIKI_ROOT" [--json] [--fix] [--dry-run] [--suggest]` — automated structural check + fix (core dependency)
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log
-- `uv run python tools/research_wiki.py stats "$WIKI_ROOT"` — get statistics (optional, for the report)
+- `uv run python tools/lint.py --wiki-dir @configured [--json] [--fix] [--dry-run] [--suggest]` — automated structural check + fix (core dependency)
+- `uv run python tools/research_wiki.py log @configured "<message>"` — append log
+- `uv run python tools/research_wiki.py stats @configured` — get statistics (optional, for the report)

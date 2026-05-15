@@ -9,6 +9,9 @@ operates purely over the user's local raw/papers/ inputs.
 Usage:
     python3 tools/init_discovery.py prepare \\
         --raw-root raw \\
+        --wiki-root wiki \\
+        --sources-output-dir wiki/sources \\
+        --cache-root .checkpoints/mineru-cache \\
         --pdf-titles-json .checkpoints/init-pdf-titles.json \\
         --output-manifest .checkpoints/init-prepare.json
     python3 tools/init_discovery.py manifest \\
@@ -29,7 +32,7 @@ from typing import Any
 
 import _env  # noqa: F401 — load .env files for child tools
 import prepare_paper_source as paper_source
-from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
+from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths, resolve_runtime_path
 from research_wiki import slugify
 
 TEXT_SUFFIXES = {".md", ".txt", ".html", ".htm"}
@@ -220,7 +223,7 @@ def _prepare_text_entry(
     path: Path,
     raw_root: Path,
     kind: str,
-    wiki_root: Path,
+    sources_output_dir: Path,
     project_root: Path,
 ) -> dict[str, Any] | None:
     text = _read_text(path, limit=120000)
@@ -228,7 +231,7 @@ def _prepare_text_entry(
         return None
     source_rel = _relative_to_project(path, raw_root, project_root=project_root)
     relative_name = path.relative_to(raw_root / kind)
-    prepared_path = wiki_root / "sources" / kind / relative_name
+    prepared_path = sources_output_dir / kind / relative_name
     prepared_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(path, prepared_path)
     prepared_rel = _relative_to_project(prepared_path, raw_root, project_root=project_root)
@@ -253,12 +256,16 @@ def _prepare_paper_entry(
     raw_root: Path,
     wiki_root: Path,
     project_root: Path,
+    sources_output_dir: Path,
+    cache_root: Path,
     title: str = "",
 ) -> dict[str, Any]:
     return paper_source.prepare_paper_source(
         path,
         raw_root,
         wiki_root=wiki_root,
+        output_dir=sources_output_dir / "papers",
+        cache_root=cache_root,
         project_root=project_root,
         title=title,
     )
@@ -266,15 +273,23 @@ def _prepare_paper_entry(
 
 def prepare_inputs(
     raw_root: Path,
-    wiki_root: Path | None = None,
+    wiki_root: Path,
     project_root: Path | None = None,
+    sources_output_dir: Path | None = None,
+    cache_root: Path | None = None,
     pdf_titles: dict[str, Any] | None = None,
     warning_sink: list[str] | None = None,
 ) -> dict[str, Any]:
     raw_root = raw_root.resolve()
     project_root = (project_root or _project_root(raw_root)).resolve()
-    wiki_root = (wiki_root or (project_root / "wiki")).resolve()
-    source_root = wiki_root / "sources"
+    wiki_root = wiki_root.resolve()
+    if sources_output_dir is None:
+        raise ValueError("prepare_inputs requires an explicit sources_output_dir")
+    sources_output_dir = sources_output_dir.resolve()
+    if cache_root is None:
+        raise ValueError("prepare_inputs requires an explicit cache_root")
+    cache_root = cache_root.resolve()
+    source_root = sources_output_dir
     (source_root / "papers").mkdir(parents=True, exist_ok=True)
     (source_root / "notes").mkdir(parents=True, exist_ok=True)
     (source_root / "web").mkdir(parents=True, exist_ok=True)
@@ -296,7 +311,7 @@ def prepare_inputs(
                 seen_title_keys.add(source_rel)
                 seen_title_keys.add(raw_relative_source_rel)
             paper_entries.append(
-                _prepare_paper_entry(entry, raw_root, wiki_root, project_root, title=recovered_title)
+                _prepare_paper_entry(entry, raw_root, wiki_root, project_root, sources_output_dir, cache_root, title=recovered_title)
             )
 
     deduped_papers: dict[str, dict[str, Any]] = {}
@@ -331,7 +346,7 @@ def prepare_inputs(
         for path in sorted(base.rglob("*")):
             if path.is_dir() or path.name == ".gitkeep" or path.suffix.lower() not in TEXT_SUFFIXES:
                 continue
-            record = _prepare_text_entry(path, raw_root, kind, wiki_root, project_root)
+            record = _prepare_text_entry(path, raw_root, kind, sources_output_dir, project_root)
             if record:
                 other_entries.append(record)
 
@@ -388,8 +403,13 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_prepare = sub.add_parser("prepare", help="Prepare local raw paper inputs into wiki/sources/ and emit a manifest")
-    p_prepare.add_argument("--raw-root", default=None, type=Path)
-    p_prepare.add_argument("--wiki-root", default=None, type=Path)
+    p_prepare.add_argument("--raw-root", default=None)
+    p_prepare.add_argument("--wiki-root", required=True,
+                           help="Explicit wiki vault root for path display and graph/wiki context.")
+    p_prepare.add_argument("--sources-output-dir", required=True,
+                           help="Explicit output directory for generated source copies, e.g. @configured-sources.")
+    p_prepare.add_argument("--cache-root", required=True,
+                           help="Explicit MinerU cache root for OCR intermediate outputs. Accepts @mineru-cache.")
     p_prepare.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path)
     p_prepare.add_argument("--pdf-titles-json")
     p_prepare.add_argument("--output-manifest", required=True)
@@ -398,8 +418,8 @@ def main() -> None:
         "manifest",
         help="Build .checkpoints/init-sources.json from a prepared manifest (local papers only)",
     )
-    p_manifest.add_argument("--raw-root", default=None, type=Path)
-    p_manifest.add_argument("--wiki-root", default=None, type=Path)
+    p_manifest.add_argument("--raw-root", default=None)
+    p_manifest.add_argument("--wiki-root", default=None)
     p_manifest.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path)
     p_manifest.add_argument("--prepared-manifest", required=True)
     p_manifest.add_argument("--output-sources", required=True)
@@ -414,11 +434,20 @@ def main() -> None:
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 parser.error(f"--pdf-titles-json: {exc}")
         warnings: list[str] = []
-        paths = load_paths(config_path=args.paths_config, wiki_root=args.wiki_root, raw_root=args.raw_root)
+        base_paths = load_paths(config_path=args.paths_config)
+        raw_root = resolve_runtime_path(args.raw_root, base_paths, role="--raw-root") if args.raw_root else base_paths.raw_root
+        wiki_root = resolve_runtime_path(args.wiki_root, base_paths, role="--wiki-root")
+        paths = load_paths(config_path=args.paths_config, wiki_root=wiki_root, raw_root=raw_root)
+        sources_output_dir = resolve_runtime_path(args.sources_output_dir, paths, role="--sources-output-dir")
+        cache_root = resolve_runtime_path(args.cache_root, paths, role="--cache-root")
+        if sources_output_dir == Path("/sources") or str(sources_output_dir).startswith("/sources/"):
+            p_prepare.error("--sources-output-dir resolved under /sources; pass @configured-sources or an absolute wiki path.")
         manifest = prepare_inputs(
             paths.raw_root,
             wiki_root=paths.wiki_root,
             project_root=paths.project_root,
+            sources_output_dir=sources_output_dir,
+            cache_root=cache_root,
             pdf_titles=pdf_titles,
             warning_sink=warnings,
         )
@@ -431,6 +460,10 @@ def main() -> None:
         return
 
     if args.command == "manifest":
+        base_paths = load_paths(config_path=args.paths_config)
+        raw_root = resolve_runtime_path(args.raw_root, base_paths, role="--raw-root") if args.raw_root else base_paths.raw_root
+        wiki_root = resolve_runtime_path(args.wiki_root, base_paths, role="--wiki-root") if args.wiki_root else base_paths.wiki_root
+        paths = load_paths(config_path=args.paths_config, wiki_root=wiki_root, raw_root=raw_root)
         prepared = _load_prepare_manifest(Path(args.prepared_manifest))
         if not prepared:
             parser.error(f"missing or unreadable prepared manifest: {args.prepared_manifest}")

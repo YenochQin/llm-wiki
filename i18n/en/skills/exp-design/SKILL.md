@@ -53,11 +53,10 @@ argument-hint: <idea-slug-or-hypothesis> [--review] [--budget <gpu-hours>]
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve runtime paths once and reuse them. Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; they come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -68,8 +67,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 1: Load Context
@@ -263,7 +261,7 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 3. **Add graph edges**:
    ```bash
    # For each experiment → target claim
-   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py add-edge @configured \
      --from "claims/{target-claim}" --to "experiments/{slug}" \
      --type tested_by --evidence "Designed by /exp-design"
    ```
@@ -276,13 +274,13 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 
 6. **Rebuild derived data**:
    ```bash
-   uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
-   uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
+   uv run python tools/research_wiki.py rebuild-context-brief @configured
+   uv run python tools/research_wiki.py rebuild-open-questions @configured
    ```
 
 7. **Append log**:
    ```bash
-   uv run python tools/research_wiki.py log "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py log @configured \
      "exp-design | {N} experiments designed for idea {slug} | claims: {claim-list}"
    ```
 
@@ -347,10 +345,10 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 
 ### Tools（via Bash）
 - `uv run python tools/research_wiki.py slug "<title>"` — generate slug
-- `uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" ...` — add graph edge
-- `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"` — rebuild query_pack
-- `uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"` — rebuild gap_map
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log
+- `uv run python tools/research_wiki.py add-edge @configured ...` — add graph edge
+- `uv run python tools/research_wiki.py rebuild-context-brief @configured` — rebuild query_pack
+- `uv run python tools/research_wiki.py rebuild-open-questions @configured` — rebuild gap_map
+- `uv run python tools/research_wiki.py log @configured "<message>"` — append log
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 5 experiment plan review (optional)

@@ -12,10 +12,10 @@ For directory inputs, process each PDF independently in deterministic order. Do 
 
 ```text
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
-    -> .mineru-cache/<sha16>/           (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
+    -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/enrich_local_pdf_bibtex    (optional metadata-only Zotero BibTeX enrichment)
     -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation, LaTeX math repair)
-    -> wiki/sources/papers/<slug>.md         + wiki/sources/papers/assets/<slug>/<hash>.jpg
+    -> <explicit-output-dir>/<slug>.md       + <explicit-output-dir>/assets/<slug>/<hash>.jpg
 ```
 
 For full details (cache layout, adapter passes, troubleshooting) open `docs/mineru-pipeline.md`.
@@ -49,8 +49,9 @@ Then run:
 
 ```bash
 uv run python tools/prepare_paper_source.py \
-  --raw-root "$RAW_ROOT" \
-  --wiki-root "$WIKI_ROOT" \
+  --raw-root @raw-root \
+  --output-dir @configured-sources-papers \
+  --cache-root @mineru-cache \
   --source <pdf-path> \
   [--title "<agent-recovered-title>"] \
   [--bibtex "$BIBTEX"]
@@ -61,7 +62,7 @@ uv run python tools/prepare_paper_source.py \
 - Pass `--bibtex` only with a BibTeX string returned by `tools/enrich_local_pdf_bibtex.py` or other authoritative metadata flow. The helper writes it into the prepared markdown body under `## BibTeX`; it must not appear in YAML frontmatter.
 - The helper automatically runs `tools/repair_latex_math.py` on the prepared body before writing. This conservative pass only edits math spans/blocks, skips code fences and inline code, converts `\(...\)` / `\[...\]` to Obsidian-compatible `$...$` / `$$...$$`, and removes common OCR-inserted spaces such as `\ alpha`, `_ {i}`, `^ {2}`, and `\left (`. It also repairs atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` into `1s^{2} \ ^{1}S_{0}` so the second superscript renders as the left superscript of the term symbol. If repairs were applied, the JSON `warnings` array includes a `latex math repaired: ...` summary and the prepared frontmatter records the repair counts.
 
-The helper writes the prepared entry under `wiki/sources/papers/` and prints a JSON record with:
+The helper writes the prepared entry under the explicit `--output-dir` (normally `@configured-sources/papers`) and prints a JSON record with:
 
 | Field | Meaning |
 |-------|---------|
@@ -91,7 +92,7 @@ From this point on, treat the prepared `.md` as the canonical source for `/inges
 Prepared math should already use `$...$` and `$$...$$`. If you need to repair an existing prepared source, inspect first:
 
 ```bash
-uv run python tools/repair_latex_math.py --dry-run "$WIKI_ROOT/sources/papers/<slug>.md"
+uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<slug>.md
 ```
 
 Only run without `--dry-run` after confirming the report is limited to math-span repairs.

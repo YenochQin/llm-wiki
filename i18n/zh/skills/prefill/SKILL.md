@@ -39,11 +39,10 @@ Manual: `/prefill [domain]` or `/prefill --add "concept name"`.
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve runtime paths once and reuse them. Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; they come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -54,8 +53,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 1: Resolve domain
@@ -128,8 +126,8 @@ Write each file to `wiki/foundations/{slug}.md`.
 ### Step 5: Refresh navigation and log
 
 ```bash
-uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"
-uv run python tools/research_wiki.py log "$WIKI_ROOT" "prefill | {N} foundations created for {domain}"
+uv run python tools/research_wiki.py rebuild-index @configured
+uv run python tools/research_wiki.py log @configured "prefill | {N} foundations created for {domain}"
 ```
 
 ### Step 6: Report
@@ -162,7 +160,7 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 
 ## Error Handling
 
-- **`wiki/foundations/` does not exist**: run `uv run python tools/research_wiki.py init "$WIKI_ROOT"` first.
+- **`wiki/foundations/` does not exist**: run `uv run python tools/research_wiki.py init @configured` first.
 - **Wikipedia 404**: log the missing page, fall back to LLM knowledge for that seed (`source_url: ""`).
 - **Network failure**: print which seeds failed and continue with the remainder; do not abort the whole batch.
 - **Catalog file missing**: print error pointing to `.claude/skills/prefill/foundations-catalog.yaml`.
@@ -172,8 +170,8 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 ### Tools (via Bash)
 - `uv run python tools/fetch_wikipedia.py summary|sections|section|wikitext "<title>" [--index N]`
 - `uv run python tools/research_wiki.py slug "<title>"`
-- `uv run python tools/research_wiki.py rebuild-index "$WIKI_ROOT"`
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"`
+- `uv run python tools/research_wiki.py rebuild-index @configured`
+- `uv run python tools/research_wiki.py log @configured "<message>"`
 
 ### Catalog
 - `.claude/skills/prefill/foundations-catalog.yaml`

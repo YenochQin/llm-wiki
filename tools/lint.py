@@ -35,7 +35,7 @@ from pathlib import Path
 import frontmatter
 import yaml
 
-from _paths import DEFAULT_CONFIG_PATH, load_paths
+from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
 
 # Schema constants — single source of truth shared with research_wiki.py.
 # See tools/_schemas.py for the spec; do not duplicate the definitions here.
@@ -1287,8 +1287,7 @@ def main():
     parser.add_argument(
         "--wiki-dir",
         default=None,
-        type=Path,
-        help="Path to wiki directory (default: config/paths.json or ./wiki)",
+        help="Path to wiki directory. Accepts @configured (default: config/paths.json or ./wiki)",
     )
     parser.add_argument(
         "--paths-config",
@@ -1314,7 +1313,9 @@ def main():
     )
     args = parser.parse_args()
 
-    paths = load_paths(config_path=args.paths_config, wiki_root=args.wiki_dir)
+    base_paths = load_paths(config_path=args.paths_config)
+    wiki_root = resolve_runtime_path(args.wiki_dir, base_paths, role="--wiki-dir") if args.wiki_dir else base_paths.wiki_root
+    paths = load_paths(config_path=args.paths_config, wiki_root=wiki_root)
     wiki_dir = paths.wiki_root
     if not wiki_dir.exists():
         print(f"Error: {wiki_dir} does not exist", file=sys.stderr)

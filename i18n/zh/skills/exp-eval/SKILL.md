@@ -54,11 +54,10 @@ argument-hint: <experiment-slug> [--auto]
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Resolve runtime paths once and reuse them. Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; they come from `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 ```bash
-# Find the project root via git so every command runs through the repository's
-# uv-managed Python environment and path configuration.
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -69,8 +68,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 Also confirm experiment status == `completed` (incomplete experiments cannot be evaluated).
@@ -188,7 +186,7 @@ Record Review LLM's verdict.
 
 3. **Add graph edge**:
    ```bash
-   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py add-edge @configured \
      --from "experiments/{slug}" --to "claims/{target-claim}" \
      --type supports --evidence "{key_result}"
    ```
@@ -204,7 +202,7 @@ Record Review LLM's verdict.
 
 2. **Add graph edge**:
    ```bash
-   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py add-edge @configured \
      --from "experiments/{slug}" --to "claims/{target-claim}" \
      --type supports --evidence "Partially supported: {limitation}"
    ```
@@ -232,7 +230,7 @@ Record Review LLM's verdict.
 
 3. **Add graph edge**:
    ```bash
-   uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py add-edge @configured \
      --from "experiments/{slug}" --to "claims/{target-claim}" \
      --type invalidates --evidence "{failure_reason}"
    ```
@@ -270,13 +268,13 @@ Record Review LLM's verdict.
 
 3. **Rebuild derived data**:
    ```bash
-   uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"
-   uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"
+   uv run python tools/research_wiki.py rebuild-context-brief @configured
+   uv run python tools/research_wiki.py rebuild-open-questions @configured
    ```
 
 4. **Append log**:
    ```bash
-   uv run python tools/research_wiki.py log "$WIKI_ROOT" \
+   uv run python tools/research_wiki.py log @configured \
      "exp-eval | {slug} → {target-claim} | verdict: {verdict} | confidence: {old}→{new}"
    ```
 
@@ -318,7 +316,7 @@ Record Review LLM's verdict.
    | Claims updated | — | — | {N} |
    | Edges | {before} | {after} | +{delta} |
    | Maturity | {level} | {level} | {unchanged/upgraded} |
-   (Data from comparing `uv run python tools/research_wiki.py maturity "$WIKI_ROOT" --json` calls at the start of Step 1 and end of Step 4.)
+   (Data from comparing `uv run python tools/research_wiki.py maturity @configured --json` calls at the start of Step 1 and end of Step 4.)
    ```
 
 ## Constraints
@@ -346,10 +344,10 @@ Record Review LLM's verdict.
 ## Dependencies
 
 ### Tools（via Bash）
-- `uv run python tools/research_wiki.py add-edge "$WIKI_ROOT" ...` — add graph edge
-- `uv run python tools/research_wiki.py rebuild-context-brief "$WIKI_ROOT"` — rebuild query_pack
-- `uv run python tools/research_wiki.py rebuild-open-questions "$WIKI_ROOT"` — rebuild gap_map
-- `uv run python tools/research_wiki.py log "$WIKI_ROOT" "<message>"` — append log
+- `uv run python tools/research_wiki.py add-edge @configured ...` — add graph edge
+- `uv run python tools/research_wiki.py rebuild-context-brief @configured` — rebuild query_pack
+- `uv run python tools/research_wiki.py rebuild-open-questions @configured` — rebuild gap_map
+- `uv run python tools/research_wiki.py log @configured "<message>"` — append log
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 2 Review LLM independent verdict

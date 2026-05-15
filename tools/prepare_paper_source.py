@@ -17,7 +17,7 @@ Pipeline:
 
 Cache layout (kept across runs for cheap re-prep):
 
-    .mineru-cache/<sha16>/
+    <explicit-cache-root>/<sha16>/
         <stem>.md               raw MinerU markdown
         <stem>.json             MinerU content_list block list
         full.md                 adapter-canonical copy of <stem>.md
@@ -28,6 +28,8 @@ CLI (preserves OmegaWiki's contract — `/ingest` invocations are unchanged):
 
     python3 tools/prepare_paper_source.py \\
         --raw-root raw \\
+        --output-dir wiki/sources/papers \\
+        --cache-root .checkpoints/mineru-cache \\
         --source raw/papers/example.pdf \\
         [--title "Recovered Paper Title"]
 
@@ -49,7 +51,7 @@ from pathlib import Path
 
 import frontmatter
 import _mineru
-from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
+from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths, resolve_runtime_path
 from repair_latex_math import repair_latex_math
 from research_wiki import slugify
 
@@ -614,10 +616,16 @@ def _project_root(raw_root: Path) -> Path:
     return raw_root.resolve().parent
 
 
-def _source_output_dir(raw_root: Path, wiki_root: Path | None = None) -> Path:
+def _source_output_dir(
+    raw_root: Path,
+    wiki_root: Path | None = None,
+    output_dir: Path | None = None,
+) -> Path:
+    if output_dir is not None:
+        return output_dir.resolve()
     if wiki_root is not None:
         return wiki_root.resolve() / "sources" / "papers"
-    return _project_root(raw_root) / "wiki" / "sources" / "papers"
+    raise ValueError("prepare_paper_source requires an explicit output_dir")
 
 
 def prepare(
@@ -630,6 +638,7 @@ def prepare(
     backend: str = "api",
     overwrite: bool = False,
     wiki_root: Path | None = None,
+    output_dir: Path | None = None,
     project_root: Path | None = None,
 ) -> dict:
     """Run MinerU on a PDF and write a structured markdown source to wiki/sources/papers/.
@@ -637,7 +646,7 @@ def prepare(
     Returns the manifest `/ingest` consumes.
     """
     warnings: list[str] = []
-    output_dir = _source_output_dir(raw_root, wiki_root=wiki_root)
+    output_dir = _source_output_dir(raw_root, wiki_root=wiki_root, output_dir=output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     display_root = project_root or _project_root(raw_root)
 
@@ -652,7 +661,9 @@ def prepare(
             "usable": False,
         }
 
-    cache_root = cache_root or Path(".mineru-cache")
+    if cache_root is None:
+        raise ValueError("prepare_paper_source requires an explicit cache_root")
+    cache_root = cache_root.resolve()
     cache_dir = cache_root / _sha16_of_file(pdf)
 
     try:
@@ -681,62 +692,6 @@ def prepare(
     )
     slug = slugify(title)
     out_path = output_dir / f"{slug}.md"
-    legacy_prepared_path = raw_root / PREPARED_SUBDIR / "papers" / f"{slug}.md"
-    legacy_out_path = raw_root / LEGACY_PREPARED_SUBDIR / "papers" / f"{slug}.md"
-    if not out_path.exists() and legacy_prepared_path.exists() and not overwrite:
-        existing_front = _read_existing_frontmatter(legacy_prepared_path)
-        existing_source = existing_front.get("source", "")
-        if _same_source(existing_source, pdf):
-            existing_text = legacy_prepared_path.read_text(encoding="utf-8", errors="ignore")
-            migrated_text = _upsert_bibtex_body(existing_text, bibtex_override)
-            if migrated_text != existing_text:
-                existing_text = migrated_text
-                legacy_prepared_path.write_text(existing_text, encoding="utf-8")
-            repaired_text, latex_report = _repair_prepared_text(existing_text)
-            latex_warnings = []
-            if latex_report.get("changed"):
-                existing_text = repaired_text
-                legacy_prepared_path.write_text(existing_text, encoding="utf-8")
-                latex_warnings.append(_latex_warning(latex_report))
-            return {
-                "canonical_ingest_path": display_path(legacy_prepared_path, display_root),
-                "prepared_path": display_path(legacy_prepared_path, display_root),
-                "ingest_format": "mineru-md",
-                "title": existing_front.get("title") or title,
-                "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
-                "warnings": [
-                    f"legacy prepared source reused: {display_path(legacy_prepared_path, display_root)}",
-                    f"new prepared sources are written under {display_path(output_dir, display_root)}",
-                ] + latex_warnings,
-                "usable": True,
-            }
-    if not out_path.exists() and legacy_out_path.exists() and not overwrite:
-        existing_front = _read_existing_frontmatter(legacy_out_path)
-        existing_source = existing_front.get("source", "")
-        if _same_source(existing_source, pdf):
-            existing_text = legacy_out_path.read_text(encoding="utf-8", errors="ignore")
-            migrated_text = _upsert_bibtex_body(existing_text, bibtex_override)
-            if migrated_text != existing_text:
-                existing_text = migrated_text
-                legacy_out_path.write_text(existing_text, encoding="utf-8")
-            repaired_text, latex_report = _repair_prepared_text(existing_text)
-            latex_warnings = []
-            if latex_report.get("changed"):
-                existing_text = repaired_text
-                legacy_out_path.write_text(existing_text, encoding="utf-8")
-                latex_warnings.append(_latex_warning(latex_report))
-            return {
-                "canonical_ingest_path": display_path(legacy_out_path, display_root),
-                "prepared_path": display_path(legacy_out_path, display_root),
-                "ingest_format": "mineru-md",
-                "title": existing_front.get("title") or title,
-                "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
-                "warnings": [
-                    f"legacy prepared source reused: {display_path(legacy_out_path, display_root)}",
-                    f"new prepared sources are written under {display_path(output_dir, display_root)}",
-                ] + latex_warnings,
-                "usable": True,
-            }
     if out_path.exists() and not overwrite:
         existing_front = _read_existing_frontmatter(out_path)
         existing_source = existing_front.get("source", "")
@@ -780,7 +735,7 @@ def prepare(
 
     if not body.strip():
         return {
-            "canonical_ingest_path": display_path(_source_output_dir(raw_root, wiki_root=wiki_root) / f"{slug}.md", display_root),
+            "canonical_ingest_path": display_path(output_dir / f"{slug}.md", display_root),
             "prepared_path": None,
             "ingest_format": "mineru-md",
             "title": title,
@@ -852,6 +807,8 @@ def prepare_paper_source(
     bibtex: str = "",
     overwrite: bool = False,
     wiki_root: Path | None = None,
+    output_dir: Path | None = None,
+    cache_root: Path | None = None,
     project_root: Path | None = None,
 ) -> dict:
     """Compatibility wrapper used by init_discovery.py."""
@@ -860,8 +817,10 @@ def prepare_paper_source(
         raw_root=raw_root,
         title_override=title,
         bibtex_override=bibtex,
+        cache_root=cache_root,
         overwrite=overwrite,
         wiki_root=wiki_root,
+        output_dir=output_dir,
         project_root=project_root,
     )
     result.setdefault("candidate_id", _local_candidate_id(path, raw_root))
@@ -909,10 +868,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Prepare a local PDF for /ingest via the MinerU pipeline.",
     )
-    parser.add_argument("--raw-root", default=None, type=Path,
-                        help="Raw source root. Defaults to config/paths.json or ./raw.")
-    parser.add_argument("--wiki-root", default=None, type=Path,
-                        help="Wiki vault root. Defaults to config/paths.json or ./wiki.")
+    parser.add_argument("--raw-root", default=None,
+                        help="Raw source root used for source resolution. Accepts @raw-root. Defaults to config/paths.json or ./raw.")
+    parser.add_argument("--wiki-root", default=None,
+                        help="Optional wiki vault root for path display/config resolution. Accepts @wiki-root; does not replace --output-dir.")
+    parser.add_argument("--output-dir", required=True,
+                        help="Explicit directory for prepared paper markdown output, e.g. @configured-sources-papers.")
     parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path,
                         help="Path config JSON (default: config/paths.json).")
     parser.add_argument("--source", required=True, type=Path,
@@ -921,8 +882,8 @@ def main() -> None:
                         help="Confident agent-recovered title. Used verbatim when set.")
     parser.add_argument("--bibtex", default="",
                         help="Derived Zotero BibTeX string to persist in the prepared source body under ## BibTeX.")
-    parser.add_argument("--cache-root", default=None, type=Path,
-                        help="MinerU cache root (default: .mineru-cache at CWD).")
+    parser.add_argument("--cache-root", required=True,
+                        help="Explicit MinerU cache root for OCR intermediate outputs. Accepts @mineru-cache.")
     parser.add_argument("--language", default="en", help="Document language for MinerU.")
     parser.add_argument("--backend", default="api", choices=("api", "local"),
                         help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).")
@@ -930,18 +891,26 @@ def main() -> None:
                         help="Replace an existing wiki/sources/papers/<slug>.md after user confirmation.")
     args = parser.parse_args()
 
-    paths = load_paths(config_path=args.paths_config, wiki_root=args.wiki_root, raw_root=args.raw_root)
+    base_paths = load_paths(config_path=args.paths_config)
+    raw_root = resolve_runtime_path(args.raw_root, base_paths, role="--raw-root") if args.raw_root else base_paths.raw_root
+    wiki_root = resolve_runtime_path(args.wiki_root, base_paths, role="--wiki-root") if args.wiki_root else base_paths.wiki_root
+    paths = load_paths(config_path=args.paths_config, wiki_root=wiki_root, raw_root=raw_root)
+    output_dir = resolve_runtime_path(args.output_dir, paths, role="--output-dir")
+    cache_root = resolve_runtime_path(args.cache_root, paths, role="--cache-root")
+    if output_dir == Path("/sources/papers") or str(output_dir).startswith("/sources/"):
+        parser.error("--output-dir resolved under /sources; pass @configured-sources-papers or an absolute wiki path.")
     source = _resolve_source_path(args.source, paths.raw_root, paths.project_root)
     result = prepare(
         pdf=source,
         raw_root=paths.raw_root,
         title_override=args.title,
         bibtex_override=args.bibtex,
-        cache_root=args.cache_root,
+        cache_root=cache_root,
         language=args.language,
         backend=args.backend,
         overwrite=args.overwrite,
         wiki_root=paths.wiki_root,
+        output_dir=output_dir,
         project_root=paths.project_root,
     )
     print(json.dumps(result, ensure_ascii=False))

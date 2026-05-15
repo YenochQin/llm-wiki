@@ -13,9 +13,10 @@ Use this local reference on demand:
 
 ## Workflow
 
-**Pre-condition**: resolve the repository root and runtime paths once, then reuse them for every preprocessing command. `wiki/` and `raw/` may live outside the repository via `config/paths.json` (or `LLM_WIKI_WIKI_ROOT` / `LLM_WIKI_RAW_ROOT`):
+**Pre-condition**: run from the repository root. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources-papers`, and `@mineru-cache`:
 
 ```bash
+# Run all commands from the repository root; runtime paths are resolved by tool aliases.
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
 PROJECT_ROOT=""
 if [ -n "$GIT_COMMON_DIR" ]; then
@@ -26,8 +27,7 @@ if [ -z "$PROJECT_ROOT" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-eval "$(uv run python -c 'import shlex, sys; sys.path.insert(0, "tools"); from _paths import load_paths; p = load_paths(); print("WIKI_ROOT=" + shlex.quote(str(p.wiki_root))); print("RAW_ROOT=" + shlex.quote(str(p.raw_root))); print("PROJECT_ROOT=" + shlex.quote(str(p.project_root)))')"
-export PROJECT_ROOT WIKI_ROOT RAW_ROOT
+uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 1. Resolve the input path.
@@ -57,8 +57,8 @@ export PROJECT_ROOT WIKI_ROOT RAW_ROOT
 ### Tools (via Bash)
 
 - `uv run python tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<recovered-title>"]` -- optional metadata-only Zotero enrichment; returns `.bibtex` when confident
-- `uv run python tools/prepare_paper_source.py --raw-root "$RAW_ROOT" --wiki-root "$WIKI_ROOT" --source <local-path> [--title "<recovered-title>"] [--bibtex "$BIBTEX"]`
-- `uv run python tools/repair_latex_math.py --dry-run "$WIKI_ROOT/sources/papers/<slug>.md"` -- optional inspection command for existing prepared markdown; `prepare_paper_source.py` already runs this repair during new PDF preprocessing
+- `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <local-path> [--title "<recovered-title>"] [--bibtex "$BIBTEX"]`
+- `uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<slug>.md` -- optional inspection command for existing prepared markdown; `prepare_paper_source.py` already runs this repair during new PDF preprocessing
 
 ### Skills
 

@@ -35,6 +35,7 @@ from typing import Any
 import _env  # noqa: F401 — load .env files
 
 import fetch_literature
+from _paths import load_paths, resolve_runtime_path
 
 
 # ---------- candidate normalization ----------------------------------------
@@ -503,7 +504,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     common_args: list[tuple[str, dict[str, Any]]] = [
-        ("--wiki-root", {"type": Path, "default": None, "help": "Wiki root for dedup against existing papers"}),
+        ("--wiki-root", {"default": None, "help": "Wiki root for dedup against existing papers. Accepts @configured"}),
         ("--limit", {"type": int, "default": 10, "help": "Max shortlist size (default 10)"}),
         ("--per-anchor-limit", {"type": int, "default": 50, "help": "Recs requested per anchor (default 50)"}),
         ("--output-checkpoint", {"default": None, "help": "Also write JSON to this file or directory path"}),
@@ -536,6 +537,9 @@ def main() -> None:
         p_wiki.add_argument(flag, **kwargs)
 
     args = parser.parse_args()
+    if getattr(args, "wiki_root", None):
+        paths = load_paths()
+        args.wiki_root = resolve_runtime_path(args.wiki_root, paths, role="--wiki-root")
 
     if args.command == "from-anchors":
         payload = build_shortlist(

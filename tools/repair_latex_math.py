@@ -14,6 +14,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from _paths import load_paths, resolve_runtime_path
+
 
 @dataclass(frozen=True)
 class LatexRepairReport:
@@ -418,11 +420,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Repair OCR-spaced LaTeX math in Markdown files.",
     )
-    parser.add_argument("paths", nargs="+", type=Path, help="Markdown files or directories.")
+    parser.add_argument("paths", nargs="+", help="Markdown files or directories. Supports configured-path aliases.")
     parser.add_argument("--dry-run", action="store_true", help="Report changes without writing files.")
     args = parser.parse_args()
 
-    for path in _iter_markdown_files(args.paths):
+    runtime_paths = load_paths()
+    resolved_paths = [resolve_runtime_path(path, runtime_paths, role="path") for path in args.paths]
+    for path in _iter_markdown_files([p for p in resolved_paths if p is not None]):
         original = path.read_text(encoding="utf-8", errors="ignore")
         repaired, report = repair_latex_math(original)
         if report.changed and not args.dry_run:
