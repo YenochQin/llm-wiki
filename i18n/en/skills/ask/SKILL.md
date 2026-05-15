@@ -151,7 +151,7 @@ Choose the crystallize target based on answer content:
 1. If the answer reveals a new concept: create `wiki/concepts/{slug}.md` using the CLAUDE.md concept template
 2. maturity: emerging
 3. key_papers: extracted from answer citations
-4. Add `## Source excerpts` with short exact original-language fragments from the cited prepared markdown files (`wiki/sources/papers/<paper-slug>.md`), linked from the concept page as `../sources/papers/<paper-slug>.md`
+4. Add `## Source excerpts` with short exact original-language fragments from the cited prepared markdown files (`wiki/sources/papers/<source-slug>.md`), linked from the concept page as `../sources/papers/<source-slug>.md`
 5. Add graph edges (concept → papers)
 6. Append reverse links to relevant paper pages under `## Related`
 

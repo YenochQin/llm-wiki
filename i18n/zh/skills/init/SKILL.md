@@ -80,8 +80,8 @@ uv run python tools/init_discovery.py prepare --raw-root @raw-root --wiki-root @
 ```
 
 - before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }`, `{ "@raw-root/papers/foo.pdf": "Recovered Paper Title" }`, or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`
-- use `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <local-path> [--title "<recovered-title>"]` for local paper normalization
-- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown at `wiki/sources/papers/<slug>.md`
+- use `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <local-path> [--title "<recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]` for local paper normalization; the helper also attempts Zotero metadata enrichment and uses the citation key for source naming when available; enrichment failure is non-blocking and falls back to `author_year_veryshorttitle` source naming
+- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown at `wiki/sources/papers/<source-slug>.md`; `<source-slug>` uses the sanitized Zotero citation key when metadata enrichment finds one, otherwise `author_year_veryshorttitle`
 - when the agent supplied a PDF title, treat that title as authoritative for the prepared manifest; fetched/source titles are sanitized fallback metadata only and must not overwrite it
 - metadata or filename titles may remain as provisional display labels only; they are not trusted identity or title-search inputs
 - keep notes/web on their original source paths; `/init` reads them directly during scaffolding
@@ -122,7 +122,7 @@ Provisional note: seeded from raw/notes or raw/web during /init; pending validat
 
 ### Step 5: Parallel paper ingest with worktree isolation
 
-Paper sources for this step come strictly from `.checkpoints/init-sources.json`. Every entry is `origin=user_local` with a canonical prepared `wiki/sources/papers/<slug>.md` (MinerU output); the helper refuses to fall back to a raw PDF.
+Paper sources for this step come strictly from `.checkpoints/init-sources.json`. Every entry is `origin=user_local` with a canonical prepared `wiki/sources/papers/<source-slug>.md` (MinerU output); the helper refuses to fall back to a raw PDF.
 
 Parallel local ingest contract:
 
@@ -207,7 +207,7 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 - `uv run python tools/research_wiki.py rebuild-context-brief @configured`
 - `uv run python tools/research_wiki.py rebuild-open-questions @configured`
 - `uv run python tools/research_wiki.py log @configured "<message>"`
-- `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <local-path> [--title "<recovered-title>"]`
+- `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <local-path> [--title "<recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]`
 - `uv run python tools/init_discovery.py prepare --raw-root @raw-root --wiki-root @configured --sources-output-dir @configured-sources --cache-root @mineru-cache --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`
 - `uv run python tools/init_discovery.py manifest --raw-root @raw-root --wiki-root @configured --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json`
 - `uv run python tools/lint.py --wiki-dir @configured --fix`

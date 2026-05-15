@@ -14,7 +14,7 @@ This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
     -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation, LaTeX math repair)
-    -> <explicit-output-dir>/<slug>.md       + <explicit-output-dir>/assets/<slug>/<hash>.jpg
+    -> <explicit-output-dir>/<source-slug>.md       + <explicit-output-dir>/assets/<source-slug>/<hash>.jpg
 ```
 
 For full details (cache layout, adapter passes, troubleshooting) open `docs/mineru-pipeline.md`.
@@ -40,10 +40,15 @@ uv run python tools/prepare_paper_source.py \
   --output-dir @configured-sources-papers \
   --cache-root @mineru-cache \
   --source <zotero-pdf-path> \
+  [--citation-key "<zotero-citation-key>"] \
+  [--authors "<author-list>"] \
+  [--year <year>] \
+  [--bibtex "$BIBTEX"] \
   [--title "<zotero-or-agent-recovered-title>"]
 ```
 
 - Pass `--title` when Zotero metadata or first-page inspection gives a confident title. Do not pass a title derived from PDF metadata or from the filename — those poison the literature enrichment lookup.
+- Pass `--citation-key` when Zotero/Better BibTeX provides one; it is the preferred prepared-source filename stem. If no citation key is available, pass `--authors`, `--year`, and `--title` so the helper names the source as `author_year_veryshorttitle`.
 - Omit the flag when no title is confident. The helper falls back cleanly.
 - The helper automatically runs `tools/repair_latex_math.py` on the prepared body before writing. This conservative pass only edits math spans/blocks, skips code fences and inline code, converts `\(...\)` / `\[...\]` to Obsidian-compatible `$...$` / `$$...$$`, and removes common OCR-inserted spaces such as `\ alpha`, `_ {i}`, `^ {2}`, and `\left (`. It also repairs atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` into `1s^{2} \ ^{1}S_{0}` so the second superscript renders as the left superscript of the term symbol. If repairs were applied, the JSON `warnings` array includes a `latex math repaired: ...` summary and the prepared frontmatter records the repair counts.
 
@@ -81,7 +86,7 @@ sections:
   - {level: 2, title: "Related work", line: 84}
   - ...
 figures:
-  - {id: "fig-1", path: "assets/<slug>/abc123.jpg", caption: "..."}
+  - {id: "fig-1", path: "assets/<source-slug>/abc123.jpg", caption: "..."}
   - ...
 skippedSectionHeadings: ["Acknowledgments", "Disclosure Statement"]  # optional
 droppedHeadings: ["URL stub", "Contents"]
@@ -99,7 +104,7 @@ Use the frontmatter as your structural anchor when extracting concepts, claims, 
 Prepared math should already use `$...$` and `$$...$$`. If you still see visibly broken formulas in the prepared markdown, run a dry report first:
 
 ```bash
-uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<slug>.md
+uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<source-slug>.md
 ```
 
 Only rewrite existing prepared sources after confirming the report is limited to math-span repairs.
@@ -108,8 +113,8 @@ Only rewrite existing prepared sources after confirming the report is limited to
 
 A successful preprocessing pass produces:
 
-- `wiki/sources/papers/<slug>.md` — frontmatter + cleaned body
-- `wiki/sources/papers/assets/<slug>/<hash>.jpg` — only the figures that survived the cut
+- `wiki/sources/papers/<source-slug>.md` — frontmatter + cleaned body. `<source-slug>` is the sanitized Zotero citation key when available; otherwise it is `author_year_veryshorttitle`.
+- `wiki/sources/papers/assets/<source-slug>/<hash>.jpg` — only the figures that survived the cut
 
 From this point on, treat the prepared `.md` as the canonical source for the rest of `/ingest`. Do not re-copy the PDF into `raw/papers/`; the original Zotero attachment remains the user-owned artifact.
 

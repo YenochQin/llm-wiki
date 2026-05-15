@@ -8,7 +8,7 @@ INIT MODE is active for any `/ingest` invocation whose source path originates fr
 
 In INIT MODE:
 
-- the source is always a `canonical_ingest_path` already prepared by `/init` (a `wiki/sources/papers/<slug>.md` path produced by MinerU)
+- the source is always a `canonical_ingest_path` already prepared by `/init` (a `wiki/sources/papers/<source-slug>.md` path produced by MinerU)
 - `raw/` is strictly read-only — do not write to `wiki/sources/` or anywhere else under `raw/`
 - `fetch_literature.py citations <doi-or-title>` and `fetch_literature.py references <doi-or-title>` are **skipped** — the parent `/init` does a unified citation sweep at fan-in
 - `rebuild-context-brief` and `rebuild-open-questions` are **skipped** — the parent runs them once after all subagents merge

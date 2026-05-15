@@ -44,6 +44,7 @@ class ItemRecord:
     doi: str
     year: str
     creators: list[str]
+    citation_key: str = ""
 
 
 def _normalize_text(value: str) -> str:
@@ -289,6 +290,7 @@ def _all_parent_items(conn: sqlite3.Connection) -> list[ItemRecord]:
                 doi=_normalize_doi(_value_for_field(conn, item_id, field_ids, ["DOI"])),
                 year=_value_for_field(conn, item_id, field_ids, ["date"])[:4],
                 creators=_creators_for_item(conn, item_id),
+                citation_key=_value_for_field(conn, item_id, field_ids, ["citationKey"]),
             )
         )
     return records
@@ -504,6 +506,7 @@ def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: i
                 "doi": item.doi,
                 "year": item.year,
                 "creators": item.creators,
+                "citation_key": item.citation_key,
                 "attachments": attachments,
                 "best_attachment": {
                     "path": best_attachment_path,

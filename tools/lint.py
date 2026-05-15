@@ -387,7 +387,7 @@ def check_concept_source_excerpts(
                     "concept-source-excerpts",
                     rel,
                     "Missing body section: ## Source excerpts",
-                    suggestion="Add brief original-language excerpts linked to wiki/sources/papers/<slug>.md",
+                    suggestion="Add brief original-language excerpts linked to the actual wiki/sources/papers/<source-slug>.md path",
                 )
             )
             continue
@@ -398,7 +398,7 @@ def check_concept_source_excerpts(
                     "concept-source-excerpts",
                     rel,
                     "Source excerpts section has no wiki source markdown link",
-                    suggestion="Link each excerpt to ../sources/papers/<paper-slug>.md",
+                    suggestion="Link each excerpt to the actual ../sources/papers/<source-slug>.md prepared source path",
                 )
             )
         if ">" not in section:

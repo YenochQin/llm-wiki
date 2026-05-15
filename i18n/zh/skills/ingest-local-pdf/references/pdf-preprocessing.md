@@ -15,7 +15,7 @@ PDF -> tools/_mineru.extract            (cloud API by default; local backend opt
     -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/enrich_local_pdf_bibtex    (optional metadata-only Zotero BibTeX enrichment)
     -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation, LaTeX math repair)
-    -> <explicit-output-dir>/<slug>.md       + <explicit-output-dir>/assets/<slug>/<hash>.jpg
+    -> <explicit-output-dir>/<source-slug>.md       + <explicit-output-dir>/assets/<source-slug>/<hash>.jpg
 ```
 
 For full details (cache layout, adapter passes, troubleshooting) open `docs/mineru-pipeline.md`.
@@ -42,7 +42,7 @@ uv run python tools/enrich_local_pdf_bibtex.py \
 ```
 
 - Use this only to enrich metadata/BibTeX for the same local PDF. Do not switch the content source to Zotero's PDF from this skill.
-- If the helper returns `status: ok`, use the returned `.bibtex` verbatim.
+- If the helper returns `status: ok`, use the returned `.bibtex` verbatim and pass `.citation_key`, `.authors`, and `.year` to the prep tool when present.
 - If the helper returns `not_found` or `metadata_error`, continue without BibTeX and report the reason. The user can open Zotero Desktop / enable Local API access and rerun if needed.
 
 Then run:
@@ -54,12 +54,16 @@ uv run python tools/prepare_paper_source.py \
   --cache-root @mineru-cache \
   --source <pdf-path> \
   [--title "<agent-recovered-title>"] \
+  [--citation-key "<zotero-citation-key>"] \
+  [--authors "<author-list>"] \
+  [--year <year>] \
   [--bibtex "$BIBTEX"]
 ```
 
 - Pass `--title` only when the title is confident. Do not pass a title derived from PDF metadata or the filename.
 - Omit the flag when no title is confident. The helper falls back cleanly.
 - Pass `--bibtex` only with a BibTeX string returned by `tools/enrich_local_pdf_bibtex.py` or other authoritative metadata flow. The helper writes it into the prepared markdown body under `## BibTeX`; it must not appear in YAML frontmatter.
+- Pass `--citation-key` when Zotero/Better BibTeX provides one; it is the preferred prepared-source filename stem. If no citation key is available, pass `--authors`, `--year`, and `--title` so the helper names the source as `author_year_veryshorttitle`.
 - The helper automatically runs `tools/repair_latex_math.py` on the prepared body before writing. This conservative pass only edits math spans/blocks, skips code fences and inline code, converts `\(...\)` / `\[...\]` to Obsidian-compatible `$...$` / `$$...$$`, and removes common OCR-inserted spaces such as `\ alpha`, `_ {i}`, `^ {2}`, and `\left (`. It also repairs atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` into `1s^{2} \ ^{1}S_{0}` so the second superscript is rendered as the left superscript of the term symbol. If repairs were applied, the JSON `warnings` array includes a `latex math repaired: ...` summary and the prepared frontmatter records the repair counts.
 
 The helper writes the prepared entry under the explicit `--output-dir` (normally `@configured-sources/papers`) and prints a JSON record with:
@@ -84,15 +88,15 @@ When the agent supplied a confident title, treat that title as authoritative for
 
 A successful preprocessing pass produces:
 
-- `wiki/sources/papers/<slug>.md` — frontmatter + cleaned body
-- `wiki/sources/papers/assets/<slug>/<hash>.jpg` — only the figures that survived the cut
+- `wiki/sources/papers/<source-slug>.md` — frontmatter + cleaned body. `<source-slug>` is the sanitized Zotero citation key when available; otherwise it is `author_year_veryshorttitle`.
+- `wiki/sources/papers/assets/<source-slug>/<hash>.jpg` — only the figures that survived the cut
 
 From this point on, treat the prepared `.md` as the canonical source for `/ingest`. Do not re-copy the PDF into `raw/papers/`; the original path remains the user-owned artifact.
 
 Prepared math should already use `$...$` and `$$...$$`. If you need to repair an existing prepared source, inspect first:
 
 ```bash
-uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<slug>.md
+uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<source-slug>.md
 ```
 
 Only run without `--dry-run` after confirming the report is limited to math-span repairs.

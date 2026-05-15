@@ -12,8 +12,8 @@ Pipeline:
       -> _normalize_cache(...)                   # synthesize Zotero-style manifest
       -> _convert_to_markdown(...)               # adapter: cleans cover/headings/figures
       -> repair_latex_math(...)                  # conservative math delimiter/spacing fixes
-      -> wiki/sources/papers/<slug>.md                # canonical_ingest_path
-      -> wiki/sources/papers/assets/<slug>/*.jpg      # extracted figure crops
+      -> wiki/sources/papers/<source-slug>.md         # canonical_ingest_path
+      -> wiki/sources/papers/assets/<source-slug>/*.jpg  # extracted figure crops
 
 Cache layout (kept across runs for cheap re-prep):
 
@@ -46,6 +46,7 @@ import json
 import re
 import shutil
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -53,7 +54,6 @@ import frontmatter
 import _mineru
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths, resolve_runtime_path
 from repair_latex_math import repair_latex_math
-from research_wiki import slugify
 
 PREPARED_SUBDIR = "prepared"
 LEGACY_PREPARED_SUBDIR = "tmp"
@@ -117,6 +117,15 @@ BIBTEX_SECTION_RE = re.compile(
     r"\n*## BibTeX\s*\n+```bibtex\n.*?\n```\s*",
     re.DOTALL,
 )
+BIBTEX_ENTRY_RE = re.compile(r"@\s*[A-Za-z]+\s*\{\s*([^,\s]+)\s*,", re.MULTILINE)
+BIBTEX_FIELD_RE = re.compile(
+    r"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*=\s*[{'\"](?P<value>.*?)[}'\"]\s*,?\s*$",
+    re.MULTILINE,
+)
+TITLE_STOP_WORDS = {
+    "a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of",
+    "on", "or", "the", "to", "using", "via", "with",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -601,6 +610,95 @@ def _latex_warning(report: dict[str, int | bool]) -> str:
     )
 
 
+def _safe_source_slug_part(value: str, *, separator: str = "-") -> str:
+    """Return a filesystem-safe source slug component."""
+    text = unicodedata.normalize("NFKD", value.strip().lower()).encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"\\[a-zA-Z]+\*?", " ", text)
+    text = text.replace("$", " ")
+    text = re.sub(r"[{}\\^]", " ", text)
+    text = re.sub(r"[^a-z0-9]+", separator, text)
+    text = re.sub(rf"{re.escape(separator)}+", separator, text)
+    return text.strip(separator)
+
+
+def _safe_citation_key(value: str) -> str:
+    """Normalize a Zotero/Better BibTeX citation key for use as a file stem."""
+    text = unicodedata.normalize("NFKD", value.strip()).encode("ascii", "ignore").decode("ascii")
+    if not text:
+        return ""
+    text = re.sub(r"\\[a-zA-Z]+\*?", "", text)
+    text = text.replace("$", "")
+    text = re.sub(r"[{}\\^]", "", text)
+    text = re.sub(r"[^A-Za-z0-9_.+-]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-._")
+    return text
+
+
+def _bibtex_entry_key(bibtex: str) -> str:
+    match = BIBTEX_ENTRY_RE.search(bibtex or "")
+    return _safe_citation_key(match.group(1)) if match else ""
+
+
+def _bibtex_field(bibtex: str, field_name: str) -> str:
+    for match in BIBTEX_FIELD_RE.finditer(bibtex or ""):
+        if match.group(1).lower() == field_name.lower():
+            return " ".join(match.group("value").split())
+    return ""
+
+
+def _first_author_from_bibtex(bibtex: str) -> str:
+    authors = _bibtex_field(bibtex, "author")
+    if not authors:
+        return ""
+    return authors.split(" and ", 1)[0].strip()
+
+
+def _author_token(authors: str, bibtex: str) -> str:
+    first_author = (authors or "").split(",", 1)[0].strip() or _first_author_from_bibtex(bibtex)
+    if not first_author:
+        return "unknown"
+    if "," in first_author:
+        surname = first_author.split(",", 1)[0]
+    else:
+        parts = first_author.split()
+        surname = parts[-1] if parts else first_author
+    return _safe_source_slug_part(surname, separator="-") or "unknown"
+
+
+def _year_token(year: str, bibtex: str) -> str:
+    match = re.search(r"\d{4}", str(year or "")) or re.search(r"\d{4}", _bibtex_field(bibtex, "year"))
+    return match.group(0) if match else "nodate"
+
+
+def _very_short_title(title: str, bibtex: str, max_words: int = 3) -> str:
+    title_text = title.strip() or _bibtex_field(bibtex, "title")
+    title_text = unicodedata.normalize("NFKD", title_text).encode("ascii", "ignore").decode("ascii")
+    tokens = [
+        token
+        for token in re.split(r"[^A-Za-z0-9]+", re.sub(r"\\[a-zA-Z]+\*?", " ", title_text).lower())
+        if len(token) >= 2 and token not in TITLE_STOP_WORDS
+    ]
+    return "-".join(tokens[:max_words]) or "untitled"
+
+
+def _source_slug(
+    *,
+    title: str,
+    citation_key: str = "",
+    authors: str = "",
+    year: str = "",
+    bibtex: str = "",
+) -> str:
+    """Prepared-source file stem: citationKey first, then author_year_veryshorttitle."""
+    key = _safe_citation_key(citation_key) or _bibtex_entry_key(bibtex)
+    if key:
+        return key
+    author = _author_token(authors, bibtex)
+    year_part = _year_token(year, bibtex)
+    short_title = _very_short_title(title, bibtex)
+    return f"{author}_{year_part}_{short_title}"
+
+
 # ---------------------------------------------------------------------------
 # Top-level pipeline
 # ---------------------------------------------------------------------------
@@ -633,6 +731,9 @@ def prepare(
     raw_root: Path,
     title_override: str = "",
     bibtex_override: str = "",
+    citation_key: str = "",
+    authors: str = "",
+    year: str = "",
     cache_root: Path | None = None,
     language: str = "en",
     backend: str = "api",
@@ -690,7 +791,13 @@ def prepare(
         or pdf.stem.replace("-", " ").replace("_", " ")
         or "Untitled"
     )
-    slug = slugify(title)
+    slug = _source_slug(
+        title=title,
+        citation_key=citation_key,
+        authors=authors,
+        year=year,
+        bibtex=bibtex_override,
+    )
     out_path = output_dir / f"{slug}.md"
     if out_path.exists() and not overwrite:
         existing_front = _read_existing_frontmatter(out_path)
@@ -758,12 +865,16 @@ def prepare(
     front: dict = {
         "title": title,
         "source": str(pdf),
+        "sourceSlug": slug,
         "ingestedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "sourceType": "pdf",
         "pipeline": "mineru",
         "totalPages": int(manifest.get("totalPages", 0) or 0),
         "totalChars": int(manifest.get("totalChars", 0) or 0),
     }
+    key = _safe_citation_key(citation_key) or _bibtex_entry_key(bibtex_override)
+    if key:
+        front["citationKey"] = key
     if latex_report.get("changed"):
         front["latexRepairReplacements"] = int(latex_report.get("replacements", 0) or 0)
         front["latexRepairConvertedDelimiters"] = int(latex_report.get("converted_delimiters", 0) or 0)
@@ -805,6 +916,9 @@ def prepare_paper_source(
     raw_root: Path,
     title: str = "",
     bibtex: str = "",
+    citation_key: str = "",
+    authors: str = "",
+    year: str = "",
     overwrite: bool = False,
     wiki_root: Path | None = None,
     output_dir: Path | None = None,
@@ -817,6 +931,9 @@ def prepare_paper_source(
         raw_root=raw_root,
         title_override=title,
         bibtex_override=bibtex,
+        citation_key=citation_key,
+        authors=authors,
+        year=year,
         cache_root=cache_root,
         overwrite=overwrite,
         wiki_root=wiki_root,
@@ -882,13 +999,19 @@ def main() -> None:
                         help="Confident agent-recovered title. Used verbatim when set.")
     parser.add_argument("--bibtex", default="",
                         help="Derived Zotero BibTeX string to persist in the prepared source body under ## BibTeX.")
+    parser.add_argument("--citation-key", default="",
+                        help="Preferred Zotero/Better BibTeX citation key for the prepared source filename.")
+    parser.add_argument("--authors", default="",
+                        help="Author string used for fallback source filename author_year_veryshorttitle.")
+    parser.add_argument("--year", default="",
+                        help="Publication year used for fallback source filename author_year_veryshorttitle.")
     parser.add_argument("--cache-root", required=True,
                         help="Explicit MinerU cache root for OCR intermediate outputs. Accepts @mineru-cache.")
     parser.add_argument("--language", default="en", help="Document language for MinerU.")
     parser.add_argument("--backend", default="api", choices=("api", "local"),
                         help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).")
     parser.add_argument("--overwrite", action="store_true",
-                        help="Replace an existing wiki/sources/papers/<slug>.md after user confirmation.")
+                        help="Replace an existing wiki/sources/papers/<source-slug>.md after user confirmation.")
     args = parser.parse_args()
 
     base_paths = load_paths(config_path=args.paths_config)
@@ -905,6 +1028,9 @@ def main() -> None:
         raw_root=paths.raw_root,
         title_override=args.title,
         bibtex_override=args.bibtex,
+        citation_key=args.citation_key,
+        authors=args.authors,
+        year=args.year,
         cache_root=cache_root,
         language=args.language,
         backend=args.backend,

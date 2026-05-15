@@ -9,8 +9,8 @@ raw/papers/<file>.pdf
     -> tools/_mineru.extract           (cloud API or local backend)
     -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source     (adapter: heading hierarchy, cover normalization, cutoffs, image relocation, LaTeX math repair)
-    -> <explicit-output-dir>/<slug>.md        + <explicit-output-dir>/assets/<slug>/<hash>.jpg
-    -> /ingest reads canonical_ingest_path = wiki/sources/papers/<slug>.md
+    -> <explicit-output-dir>/<source-slug>.md        + <explicit-output-dir>/assets/<source-slug>/<hash>.jpg
+    -> /ingest reads canonical_ingest_path = wiki/sources/papers/<source-slug>.md
 ```
 
 `prepare_paper_source.py` returns a JSON manifest with:
@@ -51,7 +51,8 @@ uv run python tools/prepare_paper_source.py \
 Output is a JSON manifest on stdout (consumed by `/ingest`). Side effects:
 
 - Populates the explicit cache root, e.g. `.checkpoints/mineru-cache/<sha16>/` (reused on subsequent runs).
-- Writes to the explicit output directory, e.g. `@configured-sources-papers/<slug>.md` + `@configured-sources-papers/assets/<slug>/`.
+- Writes to the explicit output directory, e.g. `@configured-sources-papers/<source-slug>.md` + `@configured-sources-papers/assets/<source-slug>/`.
+- Prepared source filenames prefer the sanitized Zotero citation key when `--citation-key` or a BibTeX entry key is available; otherwise they use `author_year_veryshorttitle`.
 
 Zotero-backed ingest uses a separate cache under `config/zotero-cache/` so the
 lookup helper can query a local SQLite snapshot even when Zotero is still open.
@@ -73,11 +74,11 @@ lookup helper can query a local SQLite snapshot even when Zotero is still open.
 
 ```
 wiki/sources/papers/
-    <slug>.md                        # frontmatter + body (this is canonical_ingest_path)
-    assets/<slug>/<hash>.jpg         # only images that survive the adapter cut
+    <source-slug>.md                 # frontmatter + body (this is canonical_ingest_path)
+    assets/<source-slug>/<hash>.jpg         # only images that survive the adapter cut
 ```
 
-Frontmatter on `<slug>.md` includes `title`, `source`, `ingestedAt`, `totalPages`, `totalChars`, `skippedSectionHeadings`, `droppedHeadings`, plus structured `sections` and `figures` arrays. `/ingest` mines this for paper-level metadata, concept candidates, figure cross-references, and bibliography-backed citation expansion.
+Frontmatter on `<source-slug>.md` includes `title`, `source`, `ingestedAt`, `totalPages`, `totalChars`, `skippedSectionHeadings`, `droppedHeadings`, plus structured `sections` and `figures` arrays. `/ingest` mines this for paper-level metadata, concept candidates, figure cross-references, and bibliography-backed citation expansion.
 
 ## What the adapter cleans up
 
@@ -89,15 +90,15 @@ MinerU's raw markdown is flat and noisy. The adapter applies nine passes (mirror
 4. **Junk filtering.** Drops URL-like headings, "Contents", margin glossaries ending in `:`, and journal-name covers. Unnumbered headings are demoted to bold unless they are in the `KEEP_UNNUMBERED` allowlist (Abstract, Keywords, Introduction, Methods, Results, Discussion, Conclusion, …).
 5. **Reference preservation.** Keeps References, Bibliography, and Literature Cited sections in the canonical markdown so inline `(Author, year)` citations remain resolvable during later discovery and graph expansion.
 6. **Administrative-section skipping.** Skips acknowledgement, disclosure, funding, author-contribution, competing-interest, data-availability, appendix, and supplementary-material sections when they are parsed as standalone headings, without truncating the rest of the document.
-7. **Image relocation.** Rewrites `images/<hash>` references to `assets/<slug>/<hash>` and copies only the images that survive the filtering passes.
+7. **Image relocation.** Rewrites `images/<hash>` references to `assets/<source-slug>/<hash>` and copies only the images that survive the filtering passes.
 8. **LaTeX math repair.** Runs `tools/repair_latex_math.py` on the cleaned body before writing. Repair counts are reported through JSON `warnings` as `latex math repaired: ...` and stored in prepared frontmatter fields `latexRepairReplacements`, `latexRepairConvertedDelimiters`, and `latexRepairMathSpans` when nonzero.
 9. **Frontmatter emission.** Writes the YAML described above.
 
 To inspect or repair existing prepared markdown, use:
 
 ```bash
-uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<slug>.md
-uv run python tools/repair_latex_math.py @configured-sources-papers/<slug>.md
+uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<source-slug>.md
+uv run python tools/repair_latex_math.py @configured-sources-papers/<source-slug>.md
 ```
 
 ## Troubleshooting

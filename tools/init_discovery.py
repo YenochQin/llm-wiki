@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 import _env  # noqa: F401 — load .env files for child tools
+import enrich_local_pdf_bibtex
 import prepare_paper_source as paper_source
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths, resolve_runtime_path
 from research_wiki import slugify
@@ -260,6 +261,13 @@ def _prepare_paper_entry(
     cache_root: Path,
     title: str = "",
 ) -> dict[str, Any]:
+    enrichment: dict[str, Any] = {}
+    try:
+        enrichment = enrich_local_pdf_bibtex.enrich(path, title=title)
+    except Exception:
+        enrichment = {}
+    metadata = enrichment.get("metadata") if enrichment.get("status") == "ok" else {}
+    authors = metadata.get("authors") if isinstance(metadata, dict) else []
     return paper_source.prepare_paper_source(
         path,
         raw_root,
@@ -268,6 +276,10 @@ def _prepare_paper_entry(
         cache_root=cache_root,
         project_root=project_root,
         title=title,
+        bibtex=str(enrichment.get("bibtex") or ""),
+        citation_key=str(enrichment.get("citation_key") or ""),
+        authors=", ".join(str(author) for author in authors) if isinstance(authors, list) else str(authors or ""),
+        year=str(enrichment.get("year") or ""),
     )
 
 
