@@ -91,7 +91,7 @@
 [[flash-attention]]          ← 链接到 concepts/flash-attention.md
 ```
 
-**命名约定**：全小写、连字符分隔、无空格。
+**命名约定**：非论文页面全小写、连字符分隔、无空格；论文页面使用 `citationKey` 或 `author_year_veryshorttitle`，因此可包含大小写、下划线、点、加号或连字符。
 
 ---
 
@@ -157,7 +157,7 @@
 - **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest-local-pdf` 和 `/init` 产出/消费 `wiki/sources/papers/<slug>.md`；`/ingest` 只消费已准备好的 `wiki/sources/papers/<slug>.md`、INIT MODE 交接路径，或 Zotero 定位后的论文源，不要直接消费原始 PDF。
 - **每次 ingest 都更新 index.md**；`log.md` 只追加。
 - **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
-- **Slug 生成规则**：论文标题关键词，用连字符连接，全小写。
+- **Slug 生成规则**：论文页 `papers/{slug}.md` 使用 Zotero/Better BibTeX `citationKey`；没有 citation key 时使用 `author_year_veryshorttitle`。非论文页面仍使用标题关键词 slug：全小写、连字符连接、无空格。
 - **重要性评分**：1 = 小众，2 = 有用，3 = 领域标准，4 = 有影响力，5 = 开创性。
 - **失败 idea 必须记录原因**：`failure_reason` 是反重复记忆，防止重复探索已知死路。
 - **Claim confidence 范围**：0.0-1.0；每次 evidence 变化都重新评估。
@@ -165,7 +165,7 @@
 - **MinerU API token**：`MINERU_API_TOKEN` 环境变量驱动默认云端后端。没有它 PDF ingest 会失败；离线可安装本地后端（`uv sync --extra local`）。
 - **文献检索**：`tools/fetch_literature.py` 使用无需 API key 的 Crossref 搜索和元数据检索。由于公开源暴露的 citation graph 较少，引用图覆盖是 best-effort。
 - **仓库和 wiki 可分离**：使用 `tools/separate_wiki_repository.py` 将 `wiki/`、`raw/` 复制/移动到外部绝对路径并写入 `config/paths.json`；使用 `tools/clean_wiki_repository.py` 清理仓库内残留的 `wiki/`、`raw/`。清理脚本默认 dry-run，只有 `--yes` 才会删除。
-- **Zotero 集成**：`tools/find_zotero_pdf.py`、`tools/fetch_zotero_metadata.py` 和 `tools/_zotero_snapshot.py` 支持从本地 Zotero 数据库按 `--title`、`--doi`、`--item-key` 查找 PDF 和父条目 metadata；Zotero 根目录通过 `config/zotero-roots.json` 或 `--zotero-root` 指定。`/ingest` 可利用此功能自动定位 Zotero 附件，并从 Zotero metadata 直接派生 plain BibTeX；BibTeX 写入正文 `## BibTeX` fenced code block，不写入 YAML frontmatter；原始本地 PDF 归 `/ingest-local-pdf` 处理。
+- **Zotero 集成**：`tools/find_zotero_pdf.py`、`tools/fetch_zotero_metadata.py` 和 `tools/_zotero_snapshot.py` 支持从本地 Zotero 数据库按 `--title`、`--doi` 查找 PDF，并在选中候选后用内部 `item_key` 读取父条目 metadata；`--item-key` 不作为 `/ingest` 或 `/reingest` 的用户可见论文选择通道。Zotero 根目录通过 `config/zotero-roots.json` 或 `--zotero-root` 指定。`/ingest` 可利用此功能自动定位 Zotero 附件，并从 Zotero metadata 直接派生 plain BibTeX；BibTeX 写入正文 `## BibTeX` fenced code block，不写入 YAML frontmatter；原始本地 PDF 归 `/ingest-local-pdf` 处理。
 - **`tools/_schemas.py` 双向同步**：该模块是实体 schema（目录、边类型、必需字段、枚举值）的机器可消费副本。修改此文件时，必须同步更新 `i18n/*/CLAUDE.md` 中对应的人可读规范，反之亦然。
 
 ---

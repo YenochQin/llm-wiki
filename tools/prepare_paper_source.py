@@ -875,6 +875,7 @@ def prepare(
     key = _safe_citation_key(citation_key) or _bibtex_entry_key(bibtex_override)
     if key:
         front["citationKey"] = key
+        front["paperSlug"] = key
     if latex_report.get("changed"):
         front["latexRepairReplacements"] = int(latex_report.get("replacements", 0) or 0)
         front["latexRepairConvertedDelimiters"] = int(latex_report.get("converted_delimiters", 0) or 0)

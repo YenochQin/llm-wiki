@@ -93,3 +93,5 @@ After Step 8 (report), run this self-check before considering the ingest complet
 12. Summary placement reported: the final report names the number of `@configured/Summary/*.md` pages matched. If `S=0`, the report includes a one-line suggestion to add or update a Summary page.
 
 If any check fails, fix it before emitting the final report.
+
+This checklist is scoped to pages and graph rows created or materially edited by the current `/ingest`. Do not run or report a full-wiki `tools/lint.py` audit here. If a lint-backed check is useful, restrict it to touched files with `tools/lint.py --wiki-dir @configured --only "<wiki-relative-file>"`; unrelated pre-existing 🔴/🟡/🔵 counts belong in `/check`, not in the ingest success report.

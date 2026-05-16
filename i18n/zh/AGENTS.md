@@ -108,7 +108,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 [[flash-attention]]          ← 链接到 concepts/flash-attention.md
 ```
 
-**命名约定**：全小写、连字符分隔、无空格。
+**命名约定**：非论文页面全小写、连字符分隔、无空格；论文页面使用 `citationKey` 或 `author_year_veryshorttitle`，因此可包含大小写、下划线、点、加号或连字符。
 
 ---
 
@@ -173,7 +173,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 - **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest-local-pdf` 和 `/init` 产出/消费 `wiki/sources/papers/<slug>.md`；`/ingest` 只消费已准备好的 `wiki/sources/papers/<slug>.md`、INIT MODE 交接路径，或 Zotero 定位后的论文源，不要直接消费原始 PDF。
 - **每次 ingest 都更新 index.md**；`log.md` 只追加。
 - **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
-- **Slug 生成规则**：论文标题关键词，用连字符连接，全小写。
+- **Slug 生成规则**：论文页 `papers/{slug}.md` 使用 Zotero/Better BibTeX `citationKey`；没有 citation key 时使用 `author_year_veryshorttitle`。非论文页面仍使用标题关键词 slug：全小写、连字符连接、无空格。
 - **重要性评分**：1 = 小众，2 = 有用，3 = 领域标准，4 = 有影响力，5 = 开创性。
 - **失败 idea 必须记录原因**：`failure_reason` 是反重复记忆，防止重复探索已知死路。
 - **Claim confidence 范围**：0.0-1.0；每次 evidence 变化都重新评估。

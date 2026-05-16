@@ -23,6 +23,7 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 - never delete concept/claim/people pages during reingest. If an entity appears obsolete, mark it as stale/deprecated where the schema supports it and report it.
 - `wiki/graph/*` is updated only through `tools/research_wiki.py`.
 - user-created custom sections in the old paper page should be preserved unless the user explicitly asks for a full rewrite.
+- `/reingest` does not accept Zotero `--item-key` as a user-facing paper selector. Match the existing paper from the prepared source's `paperSlug`/`sourceSlug`, DOI, title, or existing page path; if Zotero metadata is refreshed, use candidate `item_key` only as an internal call to `tools/fetch_zotero_metadata.py`.
 
 ## Workflow
 
@@ -65,10 +66,14 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
 
 ### Step 2: Match existing paper
 
-1. Read the prepared markdown frontmatter title and generate slug:
+1. Read the prepared markdown frontmatter title and identity metadata. If the prepared frontmatter contains a non-empty `paperSlug`, or refreshed Zotero metadata contains a non-empty `paper_slug`, use it directly as the existing paper-page slug. Otherwise generate the fallback paper slug with the paper-page rule:
 
    ```bash
-   uv run python tools/research_wiki.py slug "<title>"
+   uv run python tools/research_wiki.py paper-slug "<title>" \
+     --citation-key "<citationKey-or-empty>" \
+     --authors "<authors>" \
+     --year "<year>" \
+     --bibtex "<bibtex-or-empty>"
    ```
 
 2. If `wiki/papers/{slug}.md` does not exist, stop and suggest `/ingest`; do not silently create a new paper page.

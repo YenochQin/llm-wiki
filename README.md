@@ -34,7 +34,7 @@ Then pick the agent you want to drive the wiki with.
 claude
 /setup                           # guided API key configuration
 /init <topic>                    # seed the wiki around a research topic
-/ingest --item-key <zotero-key>  # add a Zotero-backed paper
+/ingest --doi <doi>              # add a Zotero-backed paper
 /ingest-local-pdf <pdf>          # normalize a local PDF, then ingest it
 /ask <question>                  # query the wiki with citations
 ```
@@ -46,7 +46,7 @@ Codex reads `AGENTS.md` and the same skill files under `skills/` (via the `.agen
 ```text
 read and follow skills/setup/SKILL.md
 read and follow skills/init/SKILL.md with: <topic>
-read and follow skills/ingest/SKILL.md with: --item-key <zotero-key>
+read and follow skills/ingest/SKILL.md with: --doi <doi>
 read and follow skills/ingest-local-pdf/SKILL.md with: <pdf>
 read and follow skills/ask/SKILL.md with: <question>
 ```
@@ -111,7 +111,7 @@ Grouped by workflow phase:
 PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. Canonical ingest format is `mineru-md`.
 
 - **`/ingest-local-pdf`** — for raw PDFs or directory batches. Prepares `wiki/sources/papers/*.md` and hands off to `/ingest`.
-- **`/ingest`** — consumes prepared markdown or resolves a Zotero attachment via `--title`, `--doi`, or `--item-key`. Scans the cross-platform candidates in `config/zotero-roots.json`; override with `--zotero-root <Zotero data dir>`. The Zotero helper snapshots `zotero.sqlite` into `config/zotero-cache/` and queries it read-only. If Zotero Desktop's local API is running, metadata (title, DOI, year, venue, creators, abstract, tags, `bibtex`) is pulled from there and falls back to SQLite + Crossref.
+- **`/ingest`** — consumes prepared markdown or resolves a Zotero attachment via `--title` or `--doi`. Scans the cross-platform candidates in `config/zotero-roots.json`; override with `--zotero-root <Zotero data dir>`. The Zotero helper snapshots `zotero.sqlite` into `config/zotero-cache/` and queries it read-only. If Zotero Desktop's local API is running, metadata (title, DOI, year, venue, creators, abstract, tags, citation key, `bibtex`) is pulled from there and falls back to SQLite + Crossref. Zotero `--item-key` is not a user-facing `/ingest` selector; selected candidates may still use their internal `item_key` for metadata enrichment.
 - **`/reingest`** — rerun the adapter and migrate linked entities after the PDF adapter, template, or analysis policy changes. `--paper-only` skips the entity audit.
 
 Metadata-only inputs don't create paper pages on their own — they enrich an existing content source (prepared markdown, note, or web clip).

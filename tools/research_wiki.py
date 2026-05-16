@@ -57,6 +57,7 @@ import json
 import re
 import subprocess
 import sys
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -162,6 +163,105 @@ def slugify(title: str) -> str:
         return "untitled"
     # Cap at 6 keywords to keep slugs manageable
     return "-".join(keywords[:6])
+
+
+TITLE_STOP_WORDS = frozenset({
+    "a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of",
+    "on", "or", "the", "to", "using", "via", "with",
+})
+
+BIBTEX_ENTRY_RE = re.compile(r"@\s*[A-Za-z]+\s*\{\s*([^,\s]+)\s*,", re.MULTILINE)
+BIBTEX_FIELD_RE = re.compile(
+    r"^\s*([A-Za-z][A-Za-z0-9_-]*)\s*=\s*[{'\"](?P<value>.*?)[}'\"]\s*,?\s*$",
+    re.MULTILINE,
+)
+
+
+def _safe_source_slug_part(value: str, *, separator: str = "-") -> str:
+    text = unicodedata.normalize("NFKD", value.strip().lower()).encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"\\[a-zA-Z]+\*?", " ", text)
+    text = text.replace("$", " ")
+    text = re.sub(r"[{}\\^]", " ", text)
+    text = re.sub(r"[^a-z0-9]+", separator, text)
+    text = re.sub(rf"{re.escape(separator)}+", separator, text)
+    return text.strip(separator)
+
+
+def _safe_citation_key(value: str) -> str:
+    text = unicodedata.normalize("NFKD", value.strip()).encode("ascii", "ignore").decode("ascii")
+    if not text:
+        return ""
+    text = re.sub(r"\\[a-zA-Z]+\*?", "", text)
+    text = text.replace("$", "")
+    text = re.sub(r"[{}\\^]", "", text)
+    text = re.sub(r"[^A-Za-z0-9_.+-]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-._")
+    return text
+
+
+def _bibtex_entry_key(bibtex: str) -> str:
+    match = BIBTEX_ENTRY_RE.search(bibtex or "")
+    return _safe_citation_key(match.group(1)) if match else ""
+
+
+def _bibtex_field(bibtex: str, field_name: str) -> str:
+    for match in BIBTEX_FIELD_RE.finditer(bibtex or ""):
+        if match.group(1).lower() == field_name.lower():
+            return " ".join(match.group("value").split())
+    return ""
+
+
+def _first_author_from_bibtex(bibtex: str) -> str:
+    authors = _bibtex_field(bibtex, "author")
+    if not authors:
+        return ""
+    return authors.split(" and ", 1)[0].strip()
+
+
+def _paper_author_token(authors: str, bibtex: str) -> str:
+    first_author = (authors or "").split(",", 1)[0].strip() or _first_author_from_bibtex(bibtex)
+    if not first_author:
+        return "unknown"
+    if "," in first_author:
+        surname = first_author.split(",", 1)[0]
+    else:
+        parts = first_author.split()
+        surname = parts[-1] if parts else first_author
+    return _safe_source_slug_part(surname, separator="-") or "unknown"
+
+
+def _paper_year_token(year: str, bibtex: str) -> str:
+    match = re.search(r"\d{4}", str(year or "")) or re.search(r"\d{4}", _bibtex_field(bibtex, "year"))
+    return match.group(0) if match else "nodate"
+
+
+def _paper_very_short_title(title: str, bibtex: str, max_words: int = 3) -> str:
+    title_text = title.strip() or _bibtex_field(bibtex, "title")
+    title_text = unicodedata.normalize("NFKD", title_text).encode("ascii", "ignore").decode("ascii")
+    tokens = [
+        token
+        for token in re.split(r"[^A-Za-z0-9]+", re.sub(r"\\[a-zA-Z]+\*?", " ", title_text).lower())
+        if len(token) >= 2 and token not in TITLE_STOP_WORDS
+    ]
+    return "-".join(tokens[:max_words]) or "untitled"
+
+
+def paper_slugify(
+    title: str,
+    *,
+    citation_key: str = "",
+    authors: str = "",
+    year: str = "",
+    bibtex: str = "",
+) -> str:
+    """Generate a paper page slug from citationKey or author_year_veryshorttitle."""
+    key = _safe_citation_key(citation_key) or _bibtex_entry_key(bibtex)
+    if key:
+        return key
+    author = _paper_author_token(authors, bibtex)
+    year_part = _paper_year_token(year, bibtex)
+    short_title = _paper_very_short_title(title, bibtex)
+    return f"{author}_{year_part}_{short_title}"
 
 
 # ---------------------------------------------------------------------------
@@ -2630,6 +2730,14 @@ def main():
     p = sub.add_parser("slug", help="Generate kebab-case slug from title")
     p.add_argument("title", help="Paper or concept title")
 
+    # paper-slug
+    p = sub.add_parser("paper-slug", help="Generate citation-key style slug for a paper page")
+    p.add_argument("title", help="Paper title")
+    p.add_argument("--citation-key", default="", help="Zotero/Better BibTeX citation key")
+    p.add_argument("--authors", default="", help="Author string; first author is used for fallback")
+    p.add_argument("--year", default="", help="Publication year; used for fallback")
+    p.add_argument("--bibtex", default="", help="BibTeX entry; citekey/author/title/year are used when provided")
+
     # add-edge
     p = sub.add_parser("add-edge", help="Add typed edge to graph")
     p.add_argument("wiki_root")
@@ -2808,6 +2916,14 @@ def main():
         init_wiki(args.wiki_root)
     elif args.command == "slug":
         print(slugify(args.title))
+    elif args.command == "paper-slug":
+        print(paper_slugify(
+            args.title,
+            citation_key=args.citation_key,
+            authors=args.authors,
+            year=args.year,
+            bibtex=args.bibtex,
+        ))
     elif args.command == "add-edge":
         add_edge(args.wiki_root, args.from_id, args.to_id,
                  args.edge_type, args.evidence, args.confidence,

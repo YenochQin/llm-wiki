@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from typing import Any
 from urllib.error import URLError
 from urllib.parse import urlencode
@@ -44,6 +45,19 @@ def _clean_text(value: Any) -> str:
 
 def _key_fragment(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def _safe_citation_key(value: str) -> str:
+    """Normalize Zotero/Better BibTeX citation keys for wiki file stems."""
+    text = unicodedata.normalize("NFKD", value.strip()).encode("ascii", "ignore").decode("ascii")
+    if not text:
+        return ""
+    text = re.sub(r"\\[a-zA-Z]+\*?", "", text)
+    text = text.replace("$", "")
+    text = re.sub(r"[{}\\^]", "", text)
+    text = re.sub(r"[^A-Za-z0-9_.+-]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-._")
+    return text
 
 
 def _plain_note(value: str | None) -> str:
@@ -267,6 +281,7 @@ def normalize_item(item: dict[str, Any]) -> dict[str, Any]:
         "doi": doi,
         "citekey": citation_key,
         "citation_key": citation_key,
+        "paper_slug": _safe_citation_key(citation_key),
         "year": _year_from_date(data.get("date")),
         "date": _clean_text(data.get("date")),
         "venue": venue,

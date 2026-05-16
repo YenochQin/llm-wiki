@@ -1,6 +1,6 @@
 ---
 description: Ingest a Zotero-backed paper into the wiki — creates pages (papers + concepts + people + claims) and builds all cross-references and graph edges. Trigger whenever the user says "ingest", "add this paper", or asks to fold a Zotero-backed paper into the knowledge base.
-argument-hint: "[--zotero-root <dir>] (--title <str>| --doi <doi>| --item-key <key>) [--discover]"
+argument-hint: "[--zotero-root <dir>] (--title <str>| --doi <doi>) [--discover]"
 ---
 
 # /ingest
@@ -25,8 +25,8 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 - `source`: Zotero lookup arguments. Prepared `@configured-sources-papers/*.md` and `canonical_ingest_path` values are internal handoffs from `/ingest-local-pdf` or `/init` only (see `references/init-mode.md`). The prepared format is `mineru-md` — structured markdown with `sections`/`figures` frontmatter.
 - Existing MinerU Markdown may be consumed only when handed off by `/ingest-local-pdf` or `/init`; do not expose prepared markdown as a normal `/ingest` user-facing input.
 - Optional reference metadata usually comes directly from Zotero Local API when the source is a Zotero item; this includes Zotero/Better BibTeX fields such as `citationKey` and a derived `bibtex` entry that is compatible with the three `bibbst/` styles in this repo. Use that Zotero-derived `bibtex` string directly in the paper body under `## BibTeX`; never store BibTeX in YAML frontmatter and do not route `/ingest` through `.bib` or reference-metadata sidecars.
-- Zotero lookup form: one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`, optionally plus `--zotero-root <dir>`. If `--zotero-root` is omitted, read `config/zotero-roots.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
-- Zotero metadata enrichment is optional: after a Zotero lookup selects an `item_key`, try `tools/fetch_zotero_metadata.py --item-key <key>` to read richer metadata from Zotero Desktop's local API. If Zotero Desktop is closed or local API access is disabled, continue with the existing SQLite/Crossref path.
+- Zotero lookup form: one or more of `--title <str>` or `--doi <doi>`, optionally plus `--zotero-root <dir>`. Do not expose or accept `--item-key` as a user-facing `/ingest` selector; Zotero item keys are internal identifiers and can point at attachments or parent items in ways that poison paper slug selection. If `--zotero-root` is omitted, read `config/zotero-roots.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
+- Zotero metadata enrichment is optional: after a DOI/title Zotero lookup selects an unambiguous candidate, use that candidate's internal `item_key` with `tools/fetch_zotero_metadata.py --item-key <key>` to read richer metadata from Zotero Desktop's local API. This internal metadata call is allowed; a user-supplied `--item-key` lookup path is not. If Zotero Desktop is closed or local API access is disabled, continue with the existing SQLite/Crossref path.
 - Zotero metadata by itself is not a grounded source. If the user only provides metadata with no PDF, prepared Markdown, source note, or web/notes content, do not create a paper page; ask for a content source or record the metadata as a future ingest aid only when explicitly requested.
 - `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
@@ -105,29 +105,34 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
    ```bash
    uv run python tools/find_zotero_pdf.py \
      [--zotero-root <dir>] \
-     [--title "<title>"] [--doi <doi>] [--item-key <key>]
+     [--title "<title>"] [--doi <doi>]
    ```
 
-   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `item-key`, `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Keep the selected candidate's `citation_key`, `creators`, `year`, and PDF path for preprocessing. Do not copy it into `@raw-root/papers/`.
-4. If the selected Zotero candidate has an `item_key`, try:
+   If `--zotero-root` is omitted, the helper scans `config/zotero-roots.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Keep the selected candidate's internal `item_key`, `citation_key`, `creators`, `year`, and PDF path for preprocessing. Do not copy it into `@raw-root/papers/`.
+4. If the selected Zotero candidate has an internal `item_key`, try:
 
    ```bash
    uv run python tools/fetch_zotero_metadata.py --item-key <key>
    ```
 
-   Treat a successful response as authoritative bibliographic metadata from the user's local library. Use it to prefer `title`, `doi`, `year`, `venue`, `creators`/authors, `abstract`, `tags`, `url`, `zotero_select`, `citationKey`/`citekey`, `external_ids.zotero_key`, and the returned `bibtex` string. If the command fails, note the fallback only if it affects the report; do not block ingest.
-5. Preprocess Zotero PDFs with `tools/prepare_paper_source.py` using the selected candidate's SQLite `citation_key` when present; otherwise pass Zotero Local API `citationKey`/`citekey`, authors, year, title, and BibTeX metadata so the prepared source filename can fall back to `author_year_veryshorttitle`. This preprocessing includes the conservative LaTeX math repair pass and may report `latex math repaired: ...` in its warnings. Carry the Zotero-derived `bibtex` string into the body of both the prepared source markdown and `@configured/papers/{slug}.md` under a `## BibTeX` fenced `bibtex` code block. Do not put `bibtex` in frontmatter. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. The derived BibTeX entry must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`; do not include URL, tags/keywords, abstract, language, or rights in the BibTeX block. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
+   Treat a successful response as authoritative bibliographic metadata from the user's local library. Use it to prefer `title`, `doi`, `year`, `venue`, `creators`/authors, `abstract`, `tags`, `url`, `zotero_select`, `citationKey`/`citekey`, `paper_slug`, `external_ids.zotero_key`, and the returned `bibtex` string. `metadata.paper_slug` is the Zotero/Better BibTeX citation key normalized for a wiki filename; if it is non-empty, use it directly as the paper page slug. If the command fails, note the fallback only if it affects the report; do not block ingest.
+5. Preprocess Zotero PDFs with `tools/prepare_paper_source.py` using the Zotero Local API `citationKey`/`citekey` when available; otherwise use the selected candidate's SQLite `citation_key`; otherwise pass authors, year, title, and BibTeX metadata so the prepared source filename can fall back to `author_year_veryshorttitle`. This preprocessing includes the conservative LaTeX math repair pass and may report `latex math repaired: ...` in its warnings. Carry the Zotero-derived `bibtex` string into the body of both the prepared source markdown and `@configured/papers/{slug}.md` under a `## BibTeX` fenced `bibtex` code block. Do not put `bibtex` in frontmatter. Keep it as plain BibTeX so the three `bibbst/` styles (`gbt7714-numerical.bst`, `apsrev4-2.bst`, `elsarticle-num.bst`) can consume it directly. The derived BibTeX entry must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`; do not include URL, tags/keywords, abstract, language, or rights in the BibTeX block. Do not route `/ingest` through `.bib` or reference-metadata sidecars.
 
 Raw persistence rule: never copy or duplicate a file already under `@configured-sources/` or `@raw-root/papers/` into a different raw subtree.
 
 ### Step 2: Paper identity and enrichment
 
-1. Generate the paper slug:
+1. Determine the paper slug from the Zotero metadata already fetched in Step 1. If `tools/fetch_zotero_metadata.py` returned a non-empty `metadata.paper_slug`, or the prepared source frontmatter contains non-empty `paperSlug`, use that value directly for `@configured/papers/{slug}.md`; do not rederive it from the title. If Zotero metadata is unavailable or has no citation key, fall back to the same paper identity metadata used for preprocessing:
 
    ```bash
-   uv run python tools/research_wiki.py slug "<paper-title>"
+   uv run python tools/research_wiki.py paper-slug "<paper-title>" \
+     --citation-key "<zotero-citation-key-or-empty>" \
+     --authors "<author-list>" \
+     --year "<year>" \
+     --bibtex "<zotero-derived-bibtex-or-empty>"
    ```
 
+   This paper-page slug should normally match the prepared source `sourceSlug`, unless a deliberate source-level disambiguation suffix was needed for split chapters.
 2. Stop-if-exists: if `@configured/papers/{slug}.md` already exists and the title or DOI matches, report and exit. If they differ, resolve the collision per `references/error-handling.md`.
 3. When Zotero Local API metadata is available, prefer it for identity fields (`title`, `doi`, `year`, `venue`, authors/creators, abstract, tags, URL, `citationKey`/`citekey`, and `external_ids`) and use the derived `bibtex` string only for the body `## BibTeX` block.
 4. When a DOI or confident title is available, query the no-key literature lookup:
@@ -263,6 +268,14 @@ If the ingest falls below the normal minimum viable output (paper + concept/upda
 
 If any check fails, fix it before emitting the report.
 
+Do not run or report an unrestricted full-wiki `tools/lint.py` audit during `/ingest`. Historical lint debt belongs to `/check` and should not be mixed into the success report for a newly ingested paper. If you need a lint-backed verification, restrict it to the files created or materially edited in this ingest, for example:
+
+```bash
+uv run python tools/lint.py --wiki-dir @configured --only "papers/{slug}.md" --only "concepts/{new-or-edited}.md"
+```
+
+Report only the scoped results. Do not summarize unrelated pre-existing 🔴/🟡/🔵 counts in the `/ingest` final answer.
+
 ### Step 9: Optional discovery (only if `--discover` is set)
 
 Skip this step unless the user explicitly passed `--discover`. Also skip it in INIT MODE — `/init`'s parent process decides whether to run discovery at fan-in, not individual subagents.
@@ -284,7 +297,7 @@ Append the markdown output to the report under a heading like "Related papers yo
 
 - `@raw-root/papers/`, `@raw-root/notes/`, `@raw-root/web/` are user-owned and read-only. `/ingest` does not accept direct local PDF inputs; `/ingest-local-pdf` prepares local sidecars under `@configured-sources/`. INIT MODE treats all of `raw/` as read-only.
 - `@configured/graph/` is tool-owned. Edit only through `tools/research_wiki.py`.
-- Slugs always come from `tools/research_wiki.py slug`. Never hand-craft.
+- Paper slugs come first from Zotero metadata: use `metadata.paper_slug` returned by `tools/fetch_zotero_metadata.py` whenever it is non-empty. Use `tools/research_wiki.py paper-slug` only as the fallback when Zotero metadata or citation keys are unavailable. Use `tools/research_wiki.py slug` for concepts, claims, people, topics, ideas, experiments, outputs, and other non-paper pages. Never hand-craft.
 - Every forward link writes its reverse link in the same turn — the wiki's bidirectional-link invariant. The only exception is links to `@configured/foundations/`, which are terminal.
 - In INIT MODE, do not write reverse links into pages that already exist (created by a sibling worktree or scaffold). Record the relationship via `tools/research_wiki.py add-edge` only; the parent `/init` backfills reverse links during fan-in.
 - Source format: `mineru-md` is the canonical prepared format. `/ingest` consumes prepared markdown in `@configured-sources-papers/` or the INIT MODE handoff path; Zotero-selected PDFs are preprocessed through `tools/prepare_paper_source.py`. Raw local PDFs are handled by `/ingest-local-pdf`. If preparation fails (unusable manifest with `usable: false`), surface the warnings to the user rather than proceeding.
@@ -295,6 +308,7 @@ Append the markdown output to the report under a heading like "Related papers yo
   - Any further candidates must be merged into their nearest `find-similar-*` result, or left out for `/check` to flag. Rationale and matching rules: `references/dedup-policy.md`.
 - LaTeX notation: use `$...$` for inline math and `$$...$$` for display math in all wiki pages. Code fences for equations and `\(` `\)` notation are not Obsidian-compatible and must not appear. PDF-derived formulas pass through `tools/repair_latex_math.py` during preprocessing; if you manually copy formulas, keep the same repaired style.
 - `/ingest` runs a shape check on its own output (required keys, enum ranges, YAML parses) and stops there. Backlink symmetry, dangling nodes, and full semantic audits belong to `/check`. Do not re-implement them here.
+- `/ingest` must not surface full-wiki lint counts from pre-existing pages. Use `tools/lint.py --only <touched-file>` only for scoped verification when needed, and leave whole-wiki lint reporting to `/check`.
 - Assume another `/ingest` may run concurrently in a sibling worktree. All shared-file writes (`graph/edges.jsonl`, `graph/citations.jsonl`, `index.md`, `log.md`) must go through `tools/research_wiki.py` or use append-only semantics. See `references/init-mode.md`.
 - In INIT MODE, skip `fetch_literature.py citations`, `fetch_literature.py references`, and the `rebuild-*` commands — the parent `/init` runs them once after fan-in.
 
@@ -306,7 +320,8 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 
 ### Tools (via Bash)
 
-- `uv run python tools/research_wiki.py slug "<title>"`
+- `uv run python tools/research_wiki.py paper-slug "<paper-title>" --citation-key "<key>" --authors "<authors>" --year "<year>" --bibtex "<bibtex>"` — fallback paper page slug generation when Zotero metadata did not return `metadata.paper_slug`
+- `uv run python tools/research_wiki.py slug "<title>"` — non-paper slug generation
 - `uv run python tools/research_wiki.py find-similar-concept @configured "<title>" --aliases "<a,b,c>"`
 - `uv run python tools/research_wiki.py find-similar-claim @configured "<title>" --tags "<a,b,c>"`
 - `uv run python tools/research_wiki.py add-edge @configured --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`
@@ -317,7 +332,7 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `uv run python tools/research_wiki.py rebuild-context-brief @configured`
 - `uv run python tools/research_wiki.py rebuild-open-questions @configured`
 - `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source <zotero-pdf-path> [--title "<zotero-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]`
-- `uv run python tools/fetch_zotero_metadata.py --item-key <key>` — optional after Zotero PDF lookup succeeds and only if Zotero Desktop Local API is reachable; returns Zotero metadata plus a derived `bibtex` entry
+- `uv run python tools/fetch_zotero_metadata.py --item-key <key>` — internal metadata enrichment only after DOI/title Zotero PDF lookup selects an unambiguous candidate; returns Zotero metadata, `metadata.paper_slug`, and a derived `bibtex` entry
 - `uv run python tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
 - `uv run python tools/discover.py from-anchors --id <doi-or-title> --wiki-root @configured --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
 

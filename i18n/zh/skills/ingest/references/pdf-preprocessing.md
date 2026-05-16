@@ -26,7 +26,7 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
    - a confident paper title from the first-page title when Zotero metadata is unavailable or incomplete
    Zotero Local API metadata remains preferred for title/DOI/authors when available.
 2. **Zotero metadata.**
-   Prefer `tools/fetch_zotero_metadata.py --item-key <key>` for identity fields and the derived `bibtex` entry.
+   After `/ingest` has selected a DOI/title-matched Zotero candidate, prefer `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` for identity fields and the derived `bibtex` entry. This is an internal enrichment call only; do not expose `--item-key` as a user-facing `/ingest` selector.
 
 ## Invocation
 

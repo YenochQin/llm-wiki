@@ -151,6 +151,7 @@ def enrich(
         },
         "metadata": metadata,
         "citation_key": str(metadata.get("citation_key") or metadata.get("citekey") or ""),
+        "paper_slug": str(metadata.get("paper_slug") or ""),
         "authors": metadata.get("authors") or [],
         "year": metadata.get("year") or "",
         "bibtex": bibtex,

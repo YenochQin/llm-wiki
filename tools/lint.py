@@ -1095,6 +1095,33 @@ def lint(wiki_dir: Path) -> list[LintIssue]:
     return issues
 
 
+def _normalize_rel_path(raw: str, wiki_dir: Path) -> str:
+    path = Path(raw).expanduser()
+    if path.is_absolute():
+        try:
+            return str(path.resolve().relative_to(wiki_dir.resolve()))
+        except ValueError:
+            return str(path)
+    return str(path).lstrip("./")
+
+
+def _filter_issues_by_paths(
+    issues: list[LintIssue],
+    wiki_dir: Path,
+    paths: list[str],
+) -> list[LintIssue]:
+    if not paths:
+        return issues
+    wanted = {_normalize_rel_path(path, wiki_dir) for path in paths if str(path).strip()}
+    wanted_dirs = {path.rstrip("/") + "/" for path in wanted if path.endswith("/")}
+    return [
+        issue
+        for issue in issues
+        if issue.file in wanted
+        or any(issue.file.startswith(prefix) for prefix in wanted_dirs)
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Auto-fix functions
 # ---------------------------------------------------------------------------
@@ -1311,6 +1338,12 @@ def main():
         action="store_true",
         help="Show actionable suggestions for non-auto-fixable issues",
     )
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        help="Report only issues whose primary file matches this wiki-relative path or directory. May repeat.",
+    )
     args = parser.parse_args()
 
     base_paths = load_paths(config_path=args.paths_config)
@@ -1321,7 +1354,7 @@ def main():
         print(f"Error: {wiki_dir} does not exist", file=sys.stderr)
         sys.exit(1)
 
-    issues = lint(wiki_dir)
+    issues = _filter_issues_by_paths(lint(wiki_dir), wiki_dir, args.only)
 
     # Apply fixes if requested
     fixes: list[FixResult] = []

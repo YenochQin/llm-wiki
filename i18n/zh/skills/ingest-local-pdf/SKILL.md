@@ -41,7 +41,7 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
      --source <local-path> \
      [--title "<agent-recovered-title>"]
    ```
-   If it returns `status: ok`, capture `.bibtex` exactly and pass it to `prepare_paper_source.py` with `--bibtex`; also pass `.citation_key`, `.authors`, and `.year` when present so the prepared source filename can use the Zotero citation key or fall back to `author_year_veryshorttitle`. If it returns `not_found` or `metadata_error`, continue without BibTeX and mention the reason in the report; do not block PDF ingest.
+   If it returns `status: ok`, capture `.bibtex` exactly and pass it to `prepare_paper_source.py` with `--bibtex`; also pass `.citation_key`, `.authors`, and `.year` when present so the prepared source filename can use the Zotero citation key or fall back to `author_year_veryshorttitle`. Preserve `.paper_slug` for the downstream `/ingest` paper page slug when present. If it returns `not_found` or `metadata_error`, continue without BibTeX and mention the reason in the report; do not block PDF ingest.
 3. Preprocess each PDF with `tools/prepare_paper_source.py` into `wiki/sources/papers/<source-slug>.md`. This step includes the conservative LaTeX math repair pass documented in `references/pdf-preprocessing.md`; report any `latex math repaired: ...` warning in the final summary.
 4. If `prepare_paper_source.py` reports `usable: false`, surface the warnings and skip that file.
 5. Hand each prepared `wiki/sources/papers/<source-slug>.md` to `/ingest` for the paper-page workflow, preserving the prepared source's `## BibTeX` block as the preferred BibTeX when present.
