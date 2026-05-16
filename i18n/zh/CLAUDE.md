@@ -179,6 +179,7 @@
 | `/init` | `skills/init/SKILL.md` | 手动 |
 | `/prefill` | `skills/prefill/SKILL.md` | 手动（`[domain] [--add concept]`） |
 | `/ingest` | `skills/ingest/SKILL.md` | 手动 |
+| `/ingest-light` | `skills/ingest-light/SKILL.md` | 手动（学位论文引言/背景文献轻量入库） |
 | `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | 手动 |
 | `/reingest` | `skills/reingest/SKILL.md` | 手动（重新 ingest 已有论文页面） |
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |

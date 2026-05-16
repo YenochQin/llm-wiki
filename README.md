@@ -112,6 +112,7 @@ PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pip
 
 - **`/ingest-local-pdf`** — for raw PDFs or directory batches. Prepares `wiki/sources/papers/*.md` and hands off to `/ingest`.
 - **`/ingest`** — consumes prepared markdown or resolves a Zotero attachment via `--title` or `--doi`. Scans the cross-platform candidates in `config/zotero-roots.json`; override with `--zotero-root <Zotero data dir>`. The Zotero helper snapshots `zotero.sqlite` into `config/zotero-cache/` and queries it read-only. If Zotero Desktop's local API is running, metadata (title, DOI, year, venue, creators, abstract, tags, citation key, `bibtex`) is pulled from there and falls back to SQLite + Crossref. Zotero `--item-key` is not a user-facing `/ingest` selector; selected candidates may still use their internal `item_key` for metadata enrichment.
+- **`/ingest-light`** — lightweight intake for dissertation-introduction or background papers. Creates a compact paper page, tags it for `thesis-introduction`, and links it to a target Summary without expanding the full concept/claim/people graph.
 - **`/reingest`** — rerun the adapter and migrate linked entities after the PDF adapter, template, or analysis policy changes. `--paper-only` skips the entity audit.
 
 Metadata-only inputs don't create paper pages on their own — they enrich an existing content source (prepared markdown, note, or web clip).
