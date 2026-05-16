@@ -117,6 +117,23 @@ PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pip
 
 Metadata-only inputs don't create paper pages on their own — they enrich an existing content source (prepared markdown, note, or web clip).
 
+### Zotero citation keys
+
+PDF ingest expects Zotero items to have a Better BibTeX citation key. This project uses that key as the preferred filename stem for both prepared sources and paper pages:
+
+```text
+wiki/sources/papers/<citationKey>.md
+wiki/papers/<citationKey>.md
+```
+
+The configured Better BibTeX key pattern is:
+
+```text
+auth.lower + "_" + year + "_" + veryshorttitle
+```
+
+If a Zotero citation key is unavailable, the tools fall back to an equivalent `author_year_veryshorttitle` stem derived from available metadata.
+
 ## Python tooling
 
 All Python operations run through `uv` — no manual venv activation:
