@@ -95,6 +95,7 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 `@configured` must resolve to the actual wiki vault root, not the code repository root. `tools/research_wiki.py` rejects the code repository root to prevent accidental creation of root-level `graph/`, `index.md`, or `log.md`.
+If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 ### Step 1: Resolve the source
 

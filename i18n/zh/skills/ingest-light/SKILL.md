@@ -63,6 +63,8 @@ No default writes to:
 uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
+If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+
 Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured`, `@configured-sources`, and `@configured-sources-papers`.
 
 ### Step 1: Resolve and prepare source

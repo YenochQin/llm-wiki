@@ -65,6 +65,8 @@ cd "$PROJECT_ROOT"
 uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
+If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+
 ### Step 1: Initialize wiki structure
 
 ```bash

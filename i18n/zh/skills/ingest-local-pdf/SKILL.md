@@ -32,6 +32,8 @@ cd "$PROJECT_ROOT"
 uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
+If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+
 1. Resolve the input path.
    - If the input is a single PDF, inspect the first page and recover a confident title only when the title is clear.
    - If the input is a directory, enumerate readable PDFs in deterministic order and process each file separately.
