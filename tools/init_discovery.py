@@ -39,6 +39,25 @@ from research_wiki import slugify
 TEXT_SUFFIXES = {".md", ".txt", ".html", ".htm"}
 
 
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _reject_repo_wiki_output(parser: argparse.ArgumentParser, output_dir: Path, paths) -> None:
+    repo_wiki = (paths.project_root / "wiki").resolve()
+    configured_wiki = paths.wiki_root.resolve()
+    if configured_wiki != repo_wiki and _is_relative_to(output_dir, repo_wiki):
+        parser.error(
+            "--sources-output-dir resolved inside the code repository's wiki/ directory, "
+            "but config/paths.json points at an external wiki root. "
+            "Pass @configured-sources or the external wiki/sources path."
+        )
+
+
 def _paper_entry_match_key(entry: dict[str, Any]) -> tuple[str, str]:
     return ("", _normalize_text(str(entry.get("title") or "")))
 
@@ -454,6 +473,7 @@ def main() -> None:
         cache_root = resolve_runtime_path(args.cache_root, paths, role="--cache-root")
         if sources_output_dir == Path("/sources") or str(sources_output_dir).startswith("/sources/"):
             p_prepare.error("--sources-output-dir resolved under /sources; pass @configured-sources or an absolute wiki path.")
+        _reject_repo_wiki_output(p_prepare, sources_output_dir, paths)
         legacy_cache = (paths.project_root / ".mineru-cache").resolve()
         if cache_root == legacy_cache:
             p_prepare.error("--cache-root resolved to legacy .mineru-cache; pass @mineru-cache so cache files go under .checkpoints/mineru-cache.")

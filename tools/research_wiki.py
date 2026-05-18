@@ -103,6 +103,14 @@ def _looks_like_project_root(path: Path) -> bool:
     return (path / "pyproject.toml").exists() and (path / "tools").is_dir()
 
 
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 def _validate_cli_wiki_root(raw_wiki_root: str) -> str:
     """Reject ambiguous wiki roots that would write wiki files into the repo."""
     value = str(raw_wiki_root or "").strip()
@@ -128,6 +136,21 @@ def _validate_cli_wiki_root(raw_wiki_root: str) -> str:
                 "Pass @configured or the external wiki root explicitly."
             ),
             "wiki_root": str(root),
+            "project_root": str(project_root),
+        }, ensure_ascii=False))
+        sys.exit(2)
+    repo_wiki = project_root / "wiki"
+    configured_wiki = load_paths().wiki_root.resolve()
+    if configured_wiki != repo_wiki.resolve() and _is_relative_to(root, repo_wiki):
+        print(json.dumps({
+            "status": "error",
+            "message": (
+                "Refusing to use the code repository's wiki/ directory as wiki_root "
+                "while config/paths.json points at an external wiki root. "
+                "Pass @configured or the external wiki root explicitly."
+            ),
+            "wiki_root": str(root),
+            "configured_wiki_root": str(configured_wiki),
             "project_root": str(project_root),
         }, ensure_ascii=False))
         sys.exit(2)

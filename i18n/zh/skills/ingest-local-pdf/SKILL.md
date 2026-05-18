@@ -42,7 +42,7 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
      [--title "<agent-recovered-title>"]
    ```
    If it returns `status: ok`, capture `.bibtex` exactly and pass it to `prepare_paper_source.py` with `--bibtex`; also pass `.citation_key`, `.authors`, and `.year` when present so the prepared source filename can use the Zotero citation key or fall back to `author_year_veryshorttitle`. Preserve `.paper_slug` for the downstream `/ingest` paper page slug when present. If it returns `not_found` or `metadata_error`, continue without BibTeX and mention the reason in the report; do not block PDF ingest.
-3. Preprocess each PDF with `tools/prepare_paper_source.py` into `wiki/sources/papers/<source-slug>.md`. This step includes the conservative LaTeX math repair pass documented in `references/pdf-preprocessing.md`; report any `latex math repaired: ...` warning in the final summary.
+3. Preprocess each PDF with `tools/prepare_paper_source.py --output-dir @configured-sources-papers --cache-root @mineru-cache` into the configured wiki source directory. This step includes the conservative LaTeX math repair pass documented in `references/pdf-preprocessing.md`; report any `latex math repaired: ...` warning in the final summary.
 4. If `prepare_paper_source.py` reports `usable: false`, surface the warnings and skip that file.
 5. Hand each prepared `wiki/sources/papers/<source-slug>.md` to `/ingest` for the paper-page workflow, preserving the prepared source's `## BibTeX` block as the preferred BibTeX when present.
 6. If the source is already a prepared `wiki/sources/papers/*.md`, skip preprocessing and pass it straight to `/ingest`.
@@ -51,7 +51,8 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
 
 - Do not use Zotero as the content source here; selected content must still be the user-provided local PDF/prepared markdown. Zotero lookup in this skill is metadata-only, for BibTeX enrichment of the local PDF.
 - Do not write directly to `wiki/papers/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/people/` from this skill.
-- Keep raw PDFs in their original location; only the prepared markdown and extracted assets belong under `wiki/sources/`.
+- Keep raw PDFs in their original location; only the prepared markdown and extracted assets belong under the configured wiki source directory.
+- Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured-sources-papers`.
 - If the directory contains mixed file types, ignore non-PDF files unless the user explicitly points at a prepared markdown file.
 
 ## Dependencies

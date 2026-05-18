@@ -63,6 +63,8 @@ No default writes to:
 uv run python tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
+Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured`, `@configured-sources`, and `@configured-sources-papers`.
+
 ### Step 1: Resolve and prepare source
 
 1. If the input is a prepared `@configured-sources-papers/*.md`, read it directly.

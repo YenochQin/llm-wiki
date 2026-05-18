@@ -726,6 +726,25 @@ def _source_output_dir(
     raise ValueError("prepare_paper_source requires an explicit output_dir")
 
 
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _reject_repo_wiki_output(parser: argparse.ArgumentParser, output_dir: Path, paths) -> None:
+    repo_wiki = (paths.project_root / "wiki").resolve()
+    configured_wiki = paths.wiki_root.resolve()
+    if configured_wiki != repo_wiki and _is_relative_to(output_dir, repo_wiki):
+        parser.error(
+            "--output-dir resolved inside the code repository's wiki/ directory, "
+            "but config/paths.json points at an external wiki root. "
+            "Pass @configured-sources-papers or the external wiki/sources/papers path."
+        )
+
+
 def prepare(
     pdf: Path,
     raw_root: Path,
@@ -1030,6 +1049,7 @@ def main() -> None:
     cache_root = resolve_runtime_path(args.cache_root, paths, role="--cache-root")
     if output_dir == Path("/sources/papers") or str(output_dir).startswith("/sources/"):
         parser.error("--output-dir resolved under /sources; pass @configured-sources-papers or an absolute wiki path.")
+    _reject_repo_wiki_output(parser, output_dir, paths)
     legacy_cache = (paths.project_root / ".mineru-cache").resolve()
     if cache_root == legacy_cache:
         parser.error("--cache-root resolved to legacy .mineru-cache; pass @mineru-cache so cache files go under .checkpoints/mineru-cache.")
