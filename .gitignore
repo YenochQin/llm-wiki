@@ -25,3 +25,5 @@ config/zotero-cache/
 raw/prepared/papers/assets/*
 raw/tmp/
 wiki/
+
+todolist.md
