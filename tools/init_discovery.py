@@ -454,6 +454,9 @@ def main() -> None:
         cache_root = resolve_runtime_path(args.cache_root, paths, role="--cache-root")
         if sources_output_dir == Path("/sources") or str(sources_output_dir).startswith("/sources/"):
             p_prepare.error("--sources-output-dir resolved under /sources; pass @configured-sources or an absolute wiki path.")
+        legacy_cache = (paths.project_root / ".mineru-cache").resolve()
+        if cache_root == legacy_cache:
+            p_prepare.error("--cache-root resolved to legacy .mineru-cache; pass @mineru-cache so cache files go under .checkpoints/mineru-cache.")
         manifest = prepare_inputs(
             paths.raw_root,
             wiki_root=paths.wiki_root,

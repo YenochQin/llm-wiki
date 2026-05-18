@@ -141,7 +141,11 @@ All Python operations run through `uv` — no manual venv activation:
 ```bash
 uv run python tools/research_wiki.py --help
 uv run python tools/lint.py
-uv run python tools/prepare_paper_source.py --source raw/papers/<file>.pdf
+uv run python tools/prepare_paper_source.py \
+  --raw-root @raw-root \
+  --output-dir @configured-sources-papers \
+  --cache-root @mineru-cache \
+  --source raw/papers/<file>.pdf
 ```
 
 Optional local MinerU backend (downloads several GB of models on first run):

@@ -1013,6 +1013,13 @@ def main() -> None:
                         help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).")
     parser.add_argument("--overwrite", action="store_true",
                         help="Replace an existing wiki/sources/papers/<source-slug>.md after user confirmation.")
+    raw_args = sys.argv[1:]
+    if any(arg == "--item-key" or arg.startswith("--item-key=") for arg in raw_args):
+        parser.error(
+            "prepare_paper_source.py does not accept --item-key. "
+            "Use tools/fetch_zotero_metadata.py --item-key only for metadata, "
+            "and pass the selected PDF path to this tool with --source."
+        )
     args = parser.parse_args()
 
     base_paths = load_paths(config_path=args.paths_config)
@@ -1023,6 +1030,9 @@ def main() -> None:
     cache_root = resolve_runtime_path(args.cache_root, paths, role="--cache-root")
     if output_dir == Path("/sources/papers") or str(output_dir).startswith("/sources/"):
         parser.error("--output-dir resolved under /sources; pass @configured-sources-papers or an absolute wiki path.")
+    legacy_cache = (paths.project_root / ".mineru-cache").resolve()
+    if cache_root == legacy_cache:
+        parser.error("--cache-root resolved to legacy .mineru-cache; pass @mineru-cache so cache files go under .checkpoints/mineru-cache.")
     source = _resolve_source_path(args.source, paths.raw_root, paths.project_root)
     result = prepare(
         pdf=source,

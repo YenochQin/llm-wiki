@@ -69,10 +69,28 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
 2. If the input is DOI/title, follow the Zotero lookup/preparation flow from `/ingest` Step 1:
    - call `tools/find_zotero_pdf.py` with `--doi` or `--title`;
    - select only an unambiguous candidate with exactly one existing PDF attachment;
+   - set `<selected-pdf-path>` to the candidate's `best_attachment.path` when present, otherwise its single `pdf_paths[0]`;
    - fetch Zotero metadata with internal `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` when available;
-   - run `tools/prepare_paper_source.py` with explicit `--output-dir @configured-sources-papers` and `--cache-root @mineru-cache`.
+   - run `tools/prepare_paper_source.py` with explicit `--source <selected-pdf-path>`, `--output-dir @configured-sources-papers`, and `--cache-root @mineru-cache`.
 3. Preserve Zotero `metadata.paper_slug` or prepared frontmatter `paperSlug` as the paper slug. Use `tools/research_wiki.py paper-slug` only when no citation key is available.
 4. Stop if preparation reports `usable: false`.
+
+Correct preparation command shape:
+
+```bash
+uv run python tools/prepare_paper_source.py \
+  --raw-root @raw-root \
+  --output-dir @configured-sources-papers \
+  --cache-root @mineru-cache \
+  --source "<selected-pdf-path>" \
+  [--title "<zotero-title>"] \
+  [--citation-key "<zotero-citation-key>"] \
+  [--authors "<author-list>"] \
+  [--year "<year>"] \
+  [--bibtex "$BIBTEX"]
+```
+
+Never pass Zotero `item_key` to `tools/prepare_paper_source.py`. `item_key` is only for `tools/fetch_zotero_metadata.py`; MinerU preparation requires a real local PDF path via `--source`. Never pass `.mineru-cache` as `--cache-root`; use `@mineru-cache`, which resolves to `.checkpoints/mineru-cache`.
 
 ### Step 2: Create or update the light paper page
 
