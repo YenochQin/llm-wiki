@@ -53,9 +53,9 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
      --raw-root @raw-root \
      --output-dir @configured-sources-papers \
      --cache-root @mineru-cache \
-     --source <pdf-path> \
-     [--citation-key "<zotero-citation-key>"] \
-     [--authors "<author-list>"] \
+     --source '<pdf-path>' \
+     [--citation-key '<zotero-citation-key>'] \
+     [--authors '<author-list>'] \
      [--year <year>] \
      --overwrite
    ```

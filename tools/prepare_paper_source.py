@@ -989,7 +989,15 @@ def _project_relative(path: Path, raw_root: Path, project_root: Path | None = No
 
 def _resolve_source_path(source: Path, raw_root: Path, project_root: Path) -> Path:
     if source.is_absolute():
-        return source.resolve()
+        resolved = source.resolve()
+        if resolved.exists():
+            return resolved
+        parent = resolved.parent
+        if parent.name and parent.parent.name == "storage" and parent.exists():
+            pdfs = sorted(parent.glob("*.pdf"))
+            if len(pdfs) == 1:
+                return pdfs[0].resolve()
+        return resolved
     candidates = [(project_root / source).resolve(), (raw_root / source).resolve()]
     parts = source.parts
     if parts and parts[0] == "raw":

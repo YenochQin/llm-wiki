@@ -37,8 +37,8 @@ Once you have the title (possibly empty), first try metadata-only Zotero enrichm
 
 ```bash
 uv run python tools/enrich_local_pdf_bibtex.py \
-  --source <pdf-path> \
-  [--title "<agent-recovered-title>"]
+  --source '<pdf-path>' \
+  [--title '<agent-recovered-title>']
 ```
 
 - Use this only to enrich metadata/BibTeX for the same local PDF. Do not switch the content source to Zotero's PDF from this skill.
@@ -52,10 +52,10 @@ uv run python tools/prepare_paper_source.py \
   --raw-root @raw-root \
   --output-dir @configured-sources-papers \
   --cache-root @mineru-cache \
-  --source <pdf-path> \
-  [--title "<agent-recovered-title>"] \
-  [--citation-key "<zotero-citation-key>"] \
-  [--authors "<author-list>"] \
+  --source '<pdf-path>' \
+  [--title '<agent-recovered-title>'] \
+  [--citation-key '<zotero-citation-key>'] \
+  [--authors '<author-list>'] \
   [--year <year>] \
   [--bibtex "$BIBTEX"]
 ```

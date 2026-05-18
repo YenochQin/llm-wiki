@@ -84,13 +84,15 @@ uv run python tools/prepare_paper_source.py \
   --raw-root @raw-root \
   --output-dir @configured-sources-papers \
   --cache-root @mineru-cache \
-  --source "<selected-pdf-path>" \
-  [--title "<zotero-title>"] \
-  [--citation-key "<zotero-citation-key>"] \
-  [--authors "<author-list>"] \
+  --source '<selected-pdf-path>' \
+  [--title '<zotero-title>'] \
+  [--citation-key '<zotero-citation-key>'] \
+  [--authors '<author-list>'] \
   [--year "<year>"] \
   [--bibtex "$BIBTEX"]
 ```
+
+Use single quotes around Zotero-derived PDF paths and metadata values in shell commands. Some Zotero filenames contain `$` or TeX math such as `$$^{143-147}$$`; double quotes allow Bash to expand `$$` into the process id and corrupt the path.
 
 Never pass Zotero `item_key` to `tools/prepare_paper_source.py`. `item_key` is only for `tools/fetch_zotero_metadata.py`; MinerU preparation requires a real local PDF path via `--source`. Never pass `.mineru-cache` as `--cache-root`; use `@mineru-cache`, which resolves to `.checkpoints/mineru-cache`.
 
