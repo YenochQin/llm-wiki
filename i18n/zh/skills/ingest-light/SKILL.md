@@ -81,7 +81,7 @@ Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or 
    - fetch Zotero metadata with internal `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` when available;
    - run `tools/prepare_paper_source.py` with explicit `--source <selected-pdf-path>`, `--output-dir @configured-sources-papers`, and `--cache-root @mineru-cache`.
 3. Preserve Zotero `metadata.paper_slug` or prepared frontmatter `paperSlug` as the paper slug. Use `tools/research_wiki.py paper-slug` only when no citation key is available.
-4. Stop if preparation reports `usable: false`.
+4. Stop if preparation reports `usable: false`. Do not read `full.md`, MinerU cache files, or other intermediate cache artifacts as a substitute canonical source. A non-empty MinerU cache with `usable: false` means the adapter/filtering layer needs to be fixed or the failure must be reported to the user.
 
 Correct preparation command shape:
 

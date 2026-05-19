@@ -250,6 +250,25 @@ def _normalize_heading_text(heading: str) -> str:
     return re.sub(r"^(\d+(?:\.\d+)*\.)([A-Za-z])", r"\1 \2", heading.strip())
 
 
+def _plain_title_key(text: str) -> str:
+    text = re.sub(r"\\circ\b", " o ", text)
+    text = re.sub(r"\\[A-Za-z]+\s*(?:\{([^{}]*)\})?", r" \1 ", text)
+    text = re.sub(r"[$^_{}\\]", " ", text)
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", "", text.lower())
+
+
+def _same_title_heading(heading: str, title: str) -> bool:
+    if not heading or not title:
+        return False
+    heading_key = _plain_title_key(heading)
+    title_key = _plain_title_key(title)
+    if not heading_key or not title_key:
+        return False
+    return heading_key == title_key
+
+
 # ---------------------------------------------------------------------------
 # Manifest synthesis (from MinerU content_list block list)
 # ---------------------------------------------------------------------------
@@ -432,7 +451,7 @@ def _transform_markdown(
                 continue
 
             # Title heading in papers without explicit section headings (e.g. PRL)
-            if in_cover and title_norm and heading_text.lower() == title_norm:
+            if in_cover and title_norm and _same_title_heading(heading_text, detected_title):
                 in_cover = False
                 if not title_emitted:
                     out.append(f"# {heading_text}")
@@ -454,7 +473,7 @@ def _transform_markdown(
                     out.append("")
                     title_emitted = True
 
-            if title_norm and heading_text.lower() == title_norm:
+            if title_norm and _same_title_heading(heading_text, detected_title):
                 if not title_emitted:
                     out.append(f"# {heading_text}")
                     title_emitted = True
