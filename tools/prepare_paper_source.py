@@ -431,6 +431,16 @@ def _transform_markdown(
                 skip_body = True
                 continue
 
+            # Title heading in papers without explicit section headings (e.g. PRL)
+            if in_cover and title_norm and heading_text.lower() == title_norm:
+                in_cover = False
+                if not title_emitted:
+                    out.append(f"# {heading_text}")
+                    out.append("")
+                    title_emitted = True
+                skip_body = False
+                continue
+
             is_content = _is_numbered(heading_text) or _is_allowed_unnumbered(heading_text)
 
             if in_cover and not is_content:

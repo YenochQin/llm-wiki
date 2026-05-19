@@ -159,6 +159,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 - skill 通过 `uv run python tools/<name>.py …` 运行工具（uv 会按 `pyproject.toml` 自动定位 `.venv`）；当 `.venv/` 已存在时，等价写法是 `.venv/bin/python tools/<name>.py …`
 - Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
 - 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；`active_profile: auto` 会按系统选择 `macos`、`windows` 或 `linux`，也可用 `LLM_WIKI_PATH_PROFILE` 临时指定；未配置时回退到仓库内 `wiki/` 和 `raw/`
+- `@configured`、`@raw-root`、`@configured-sources-papers` 等别名只由支持 `tools/_paths.py` 的 Python 工具解析。对直接文件编辑、`cat`、`cp`、`mkdir`、shell 重定向等普通文件操作，必须先运行 `uv run python tools/resolve_path_alias.py ...` 得到绝对路径，再使用绝对路径；禁止创建字面目录 `@configured/` 或 `@raw-root/`。
 - 可选 MinerU 本地后端需显式启用：`uv sync --extra local`（首次会下载数 GB 模型权重）
 
 ---
@@ -194,6 +195,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 | `/prefill` | `skills/prefill/SKILL.md` | 手动（`[domain] [--add concept]`） |
 | `/ingest` | `skills/ingest/SKILL.md` | 手动 |
 | `/ingest-light` | `skills/ingest-light/SKILL.md` | 手动（学位论文引言/背景文献轻量入库） |
+| `/promote-light-ingest` | `skills/promote-light-ingest/SKILL.md` | 手动（筛选轻量入库文献，建议升级为完整 ingest） |
 | `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | 手动 |
 | `/reingest` | `skills/reingest/SKILL.md` | 手动（重生成已有论文页） |
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |

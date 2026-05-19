@@ -41,19 +41,21 @@ If the user omits `--role`, read `references/role-selection.md`, infer one prima
 
 ## Outputs
 
-- `@configured/papers/{slug}.md` — CREATE or UPDATE as a light paper page.
-- `@configured/sources/papers/{source-slug}.md` — created when a Zotero PDF must be prepared.
-- `@configured/Summary/{target-summary}.md` — UPDATE unless `--depth paper-only`.
-- `@configured/index.md` — rebuild or append through `tools/research_wiki.py rebuild-index`.
-- `@configured/log.md` — append via `tools/research_wiki.py log`.
+For Python tools, pass aliases such as `@configured` and `@configured-sources-papers` directly. For direct file reads/writes through editor tools, first resolve the alias with `tools/resolve_path_alias.py` and then use the absolute path. Never create literal directories named `@configured` or `@raw-root`.
+
+- `<resolved-wiki-root>/papers/{slug}.md` — CREATE or UPDATE as a light paper page.
+- `<resolved-wiki-root>/sources/papers/{source-slug}.md` — created when a Zotero PDF must be prepared through `tools/prepare_paper_source.py`.
+- `<resolved-wiki-root>/Summary/{target-summary}.md` — UPDATE unless `--depth paper-only`.
+- `<resolved-wiki-root>/index.md` — rebuild or append through `tools/research_wiki.py rebuild-index`.
+- `<resolved-wiki-root>/log.md` — append via `tools/research_wiki.py log`.
 
 No default writes to:
 
-- `@configured/concepts/`
-- `@configured/claims/`
-- `@configured/people/`
-- `@configured/graph/edges.jsonl`
-- `@configured/graph/citations.jsonl`
+- `<resolved-wiki-root>/concepts/`
+- `<resolved-wiki-root>/claims/`
+- `<resolved-wiki-root>/people/`
+- `<resolved-wiki-root>/graph/edges.jsonl`
+- `<resolved-wiki-root>/graph/citations.jsonl`
 
 ## Workflow
 
@@ -61,11 +63,13 @@ No default writes to:
 
 ```bash
 uv run python tools/research_wiki.py stats @configured --json >/dev/null
+uv run python tools/resolve_path_alias.py @configured @configured-sources-papers
 ```
 
 If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured`, `@configured-sources`, and `@configured-sources-papers`.
+Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or plain shell commands such as `cat`, `cp`, `mkdir`, or redirection. They do not resolve aliases and will create literal directories in the code repository.
 
 ### Step 1: Resolve and prepare source
 
@@ -112,7 +116,7 @@ Requirements:
 - `## Related` must include `[[{target-summary}]]` unless `--depth paper-only`.
 - Do not create new concept/claim/people pages. Link existing pages only when clearly useful.
 
-If `@configured/papers/{slug}.md` already exists, update only light-ingest metadata/sections that are missing or stale. Do not overwrite a full `/ingest` page with a lighter page.
+If `<resolved-wiki-root>/papers/{slug}.md` already exists, update only light-ingest metadata/sections that are missing or stale. Do not overwrite a full `/ingest` page with a lighter page.
 
 ### Step 3: Update the target Summary
 
@@ -120,7 +124,7 @@ Skip this step for `--depth paper-only`.
 
 Follow `references/summary-update.md`.
 
-Add the paper under a role-based subsection in `@configured/Summary/{target-summary}.md`, preserving existing prose. If the target Summary does not exist, create it using the Summary template with a concise scope and the required sections.
+Add the paper under a role-based subsection in `<resolved-wiki-root>/Summary/{target-summary}.md`, preserving existing prose. If the target Summary does not exist, create it using the Summary template with a concise scope and the required sections.
 
 ### Step 4: Navigation and log
 
