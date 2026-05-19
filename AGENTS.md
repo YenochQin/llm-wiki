@@ -194,6 +194,8 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 | `/prefill` | `skills/prefill/SKILL.md` | 手动（`[domain] [--add concept]`） |
 | `/ingest` | `skills/ingest/SKILL.md` | 手动 |
 | `/ingest-light` | `skills/ingest-light/SKILL.md` | 手动（学位论文引言/背景文献轻量入库） |
+| `/promote-light-ingest` | `skills/promote-light-ingest/SKILL.md` | 手动（筛选轻量入库文献，建议升级为完整 ingest） |
+| `/zotero-collection-list` | `skills/zotero-collection-list/SKILL.md` | 手动（按 Zotero 分类/子分类列出 citationKey、title、DOI） |
 | `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | 手动 |
 | `/reingest` | `skills/reingest/SKILL.md` | 手动（重生成已有论文页） |
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |

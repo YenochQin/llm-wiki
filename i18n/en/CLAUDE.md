@@ -179,6 +179,9 @@ Standard log line:
 | `/init` | `skills/init/SKILL.md` | manual |
 | `/prefill` | `skills/prefill/SKILL.md` | manual (`[domain] [--add concept]`) |
 | `/ingest` | `skills/ingest/SKILL.md` | manual |
+| `/ingest-light` | `skills/ingest-light/SKILL.md` | manual (lightly ingest dissertation-introduction/background papers) |
+| `/promote-light-ingest` | `skills/promote-light-ingest/SKILL.md` | manual (rank light-ingested papers for promotion to full ingest) |
+| `/zotero-collection-list` | `skills/zotero-collection-list/SKILL.md` | manual (list citationKey, title, and DOI by Zotero collection/subcollection) |
 | `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | manual |
 | `/reingest` | `skills/reingest/SKILL.md` | manual (re-ingest an existing paper page) |
 | `/discover` | `skills/discover/SKILL.md` | manual / internal (called by `/ingest --discover`) |

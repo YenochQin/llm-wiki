@@ -220,6 +220,21 @@ $ARGUMENTS
 ```
 EOF
 
+cat > ".claude/commands/zotero-collection-list.md" <<'EOF'
+---
+description: List Zotero collection papers with citationKey, title, and DOI.
+argument-hint: "<collection-path> [--zotero-root <dir>] [--no-recursive] [--output-md <path>]"
+---
+
+Read and follow @skills/zotero-collection-list/SKILL.md exactly.
+
+Use these user-provided invocation arguments for the skill:
+
+```
+$ARGUMENTS
+```
+EOF
+
 echo "$LANG_CODE" > .claude/.current-lang
 echo "$LANG_CODE" > .agents/.current-lang
 ok "Language files activated ($LANG_CODE)"
@@ -264,6 +279,7 @@ check_tool_import "tools/init_discovery.py" "from init_discovery import prepare_
 check_tool_import "tools/fetch_literature.py" "from fetch_literature import search"
 check_tool_import "tools/research_wiki.py" "from research_wiki import slugify"
 check_tool_import "tools/lint.py" "from lint import check_missing_fields"
+check_tool_import "tools/list_zotero_collection.py" "from list_zotero_collection import list_collection"
 
 # MinerU API token diagnostic (warn-only). The api backend reads process env or
 # the unified llm-wiki user config.
