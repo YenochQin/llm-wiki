@@ -12,6 +12,7 @@ from typing import Any
 
 import frontmatter
 
+from _cli_io import configure_utf8_stdio
 import enrich_local_pdf_bibtex
 from _paths import DEFAULT_CONFIG_PATH, load_paths
 
@@ -208,4 +209,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     raise SystemExit(main())

@@ -51,6 +51,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import frontmatter
+from _cli_io import configure_utf8_stdio
 import _mineru
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths, resolve_runtime_path
 from repair_latex_math import repair_latex_math
@@ -1113,4 +1114,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

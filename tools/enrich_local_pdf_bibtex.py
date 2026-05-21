@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from _cli_io import configure_utf8_stdio
 import fetch_zotero_metadata
 import find_zotero_pdf
 
@@ -188,6 +189,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     try:
         main()
     except Exception as exc:

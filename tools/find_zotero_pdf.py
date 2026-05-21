@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from _cli_io import configure_utf8_stdio
 from _zotero_snapshot import prepare_snapshot
 
 ATTACHMENT_LINK_MODE_IMPORTED_URL = 0
@@ -598,6 +599,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     try:
         main()
     except sqlite3.DatabaseError as exc:

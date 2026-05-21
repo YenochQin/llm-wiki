@@ -22,6 +22,8 @@ from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from _cli_io import configure_utf8_stdio
+
 DEFAULT_API_BASE = "http://127.0.0.1:23119/api"
 DEFAULT_TIMEOUT = 5
 ENTRY_TYPE_MAP = {
@@ -367,4 +369,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

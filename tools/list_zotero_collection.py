@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from _cli_io import configure_utf8_stdio
 import find_zotero_pdf
 from _zotero_snapshot import prepare_snapshot
 
@@ -318,6 +319,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     try:
         main()
     except sqlite3.DatabaseError as exc:
