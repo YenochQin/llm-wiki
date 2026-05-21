@@ -20,6 +20,7 @@ import argparse
 import glob
 import json
 import os
+import platform
 import re
 import sqlite3
 import sys
@@ -32,7 +33,7 @@ from _zotero_snapshot import prepare_snapshot
 ATTACHMENT_LINK_MODE_IMPORTED_URL = 0
 ATTACHMENT_LINK_MODE_IMPORTED_FILE = 1
 ATTACHMENT_LINK_MODE_LINKED_FILE = 2
-DEFAULT_CONFIG_PATH = Path("config/zotero-roots.json")
+DEFAULT_CONFIG_PATH = Path("config/paths.json")
 
 
 @dataclass
@@ -107,6 +108,37 @@ def _expand_path_template(value: str) -> str:
     return os.path.expanduser(expanded)
 
 
+def _current_platform_profile() -> str:
+    system = platform.system().lower()
+    if system == "darwin":
+        return "macos"
+    if system == "windows":
+        return "windows"
+    if system == "linux":
+        return "linux"
+    return system or "unknown"
+
+
+def _select_paths_profile(payload: dict) -> tuple[str, dict]:
+    profiles = payload.get("profiles")
+    if not isinstance(profiles, dict):
+        return "legacy", payload
+
+    requested = os.environ.get("LLM_WIKI_PATH_PROFILE", "").strip()
+    active = requested or str(payload.get("active_profile") or "auto")
+    selected = _current_platform_profile() if active == "auto" else active
+    profile_cfg = profiles.get(selected)
+
+    if not isinstance(profile_cfg, dict):
+        fallback = payload.get("fallback_profile")
+        if isinstance(fallback, str) and isinstance(profiles.get(fallback), dict):
+            selected = fallback
+            profile_cfg = profiles[fallback]
+        else:
+            profile_cfg = {}
+    return selected, profile_cfg
+
+
 def _unescape_pref_string(value: str) -> str:
     try:
         return bytes(value, "utf-8").decode("unicode_escape")
@@ -153,15 +185,27 @@ def _resolve_zotero_root(input_root: Path) -> tuple[Path, list[str]]:
 def _candidate_roots_from_config(config_path: Path) -> tuple[list[Path], list[str]]:
     notes: list[str] = []
     if not config_path.exists():
-        return [], [f"zotero roots config not found: {config_path}"]
+        return [], [f"path config not found: {config_path}"]
     try:
         payload = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        return [], [f"failed to read zotero roots config {config_path}: {exc}"]
+        return [], [f"failed to read path config {config_path}: {exc}"]
 
-    raw_entries = payload.get("roots", payload) if isinstance(payload, dict) else payload
+    profile_note = ""
+    if isinstance(payload, dict) and "profiles" in payload:
+        profile_name, profile_cfg = _select_paths_profile(payload)
+        raw_entries = profile_cfg.get("zotero_roots") or payload.get("zotero_roots") or []
+        profile_note = f" for profile {profile_name}"
+    elif isinstance(payload, dict):
+        raw_entries = payload.get("zotero_roots", payload.get("roots", payload))
+        if "roots" in payload:
+            profile_note = " from legacy roots config"
+    else:
+        raw_entries = payload
+        profile_note = " from legacy roots config"
+
     if not isinstance(raw_entries, list):
-        return [], [f"zotero roots config must contain a list or a roots list: {config_path}"]
+        return [], [f"path config must contain a zotero_roots list or legacy roots list: {config_path}"]
 
     roots: list[Path] = []
     seen: set[str] = set()
@@ -187,7 +231,7 @@ def _candidate_roots_from_config(config_path: Path) -> tuple[list[Path], list[st
                 continue
             roots.append(path)
             seen.add(key)
-    notes.append(f"loaded {len(roots)} zotero root candidate(s) from {config_path}")
+    notes.append(f"loaded {len(roots)} zotero root candidate(s){profile_note} from {config_path}")
     return roots, notes
 
 
@@ -533,9 +577,9 @@ def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: i
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--zotero-root", type=Path,
-                        help="Zotero data directory containing zotero.sqlite and storage/, or a profile directory with prefs.js. If omitted, config/zotero-roots.json is scanned.")
+                        help="Zotero data directory containing zotero.sqlite and storage/, or a profile directory with prefs.js. If omitted, config/paths.json is scanned.")
     parser.add_argument("--zotero-config", default=DEFAULT_CONFIG_PATH, type=Path,
-                        help="JSON file listing Zotero root/profile candidates (default: config/zotero-roots.json).")
+                        help="JSON path config with profile zotero_roots, or a legacy roots file (default: config/paths.json).")
     parser.add_argument("--query", default="", help="Paper title or free-text query.")
     parser.add_argument("--title", default="", help="Paper title. Alias for --query.")
     parser.add_argument("--doi", default="", help="DOI to match.")

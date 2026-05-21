@@ -43,8 +43,8 @@ These are the **minimum permissions** for LLM-Wiki skills to function. Claude Co
 ### `paths.json.example`
 
 Cross-platform paths that connect this code repository to an external wiki
-vault and raw source directory. Copy it to `config/paths.json` and fill in the
-profiles you use:
+vault, raw source directory, and Zotero lookup candidates. Copy it to
+`config/paths.json` and fill in the profiles you use:
 
 ```bash
 cp config/paths.json.example config/paths.json
@@ -58,15 +58,27 @@ Then edit the profile values:
   "profiles": {
     "macos": {
       "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
-      "raw_root": "/Users/you/Documents/ResearchWiki/raw"
+      "raw_root": "/Users/you/Documents/ResearchWiki/raw",
+      "zotero_roots": [
+        "~/Library/Application Support/Zotero/Profiles/*",
+        "~/Zotero"
+      ]
     },
     "windows": {
       "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
-      "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw"
+      "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw",
+      "zotero_roots": [
+        "%APPDATA%/Zotero/Zotero/Profiles/*",
+        "%USERPROFILE%/Zotero"
+      ]
     },
     "linux": {
       "wiki_root": "~/Documents/ResearchWiki/wiki",
-      "raw_root": "~/Documents/ResearchWiki/raw"
+      "raw_root": "~/Documents/ResearchWiki/raw",
+      "zotero_roots": [
+        "~/.zotero/zotero/*",
+        "~/Zotero"
+      ]
     }
   }
 }
@@ -83,21 +95,10 @@ accepted, but the profiled format is preferred for synced multi-platform use.
 Most tools read this file automatically; `tools/research_wiki.py` accepts
 `@wiki` as a shortcut for the configured wiki root.
 
-Helpers:
-
-```bash
-uv run python tools/separate_wiki_repository.py --wiki-root /abs/wiki --raw-root /abs/raw
-uv run python tools/clean_wiki_repository.py --target all
-```
-
-### `zotero-roots.json`
-
-Cross-platform Zotero lookup candidates used by `/ingest` when the user passes
-`--title`, `--doi`, or `--item-key` without an explicit `--zotero-root`.
-
-The file is meant to be synced with the wiki. Put every machine's likely Zotero
-data directory or profile directory in the `roots` list; nonexistent paths are
-ignored. Entries support `~`, Unix environment variables such as
+`zotero_roots` is used by `/ingest` when the user passes `--title` or `--doi`
+without an explicit `--zotero-root`. Put each platform's likely Zotero data
+directory or profile directory in that platform's profile; nonexistent paths
+are ignored. Entries support `~`, Unix environment variables such as
 `$HOME/Zotero`, Windows variables such as `%APPDATA%`, and glob patterns such
 as `~/Library/Application Support/Zotero/Profiles/*`.
 
@@ -105,7 +106,7 @@ Each entry may be either a string path or an object:
 
 ```json
 {
-  "roots": [
+  "zotero_roots": [
     "~/Zotero",
     {
       "label": "work laptop profile",
@@ -124,6 +125,13 @@ Optional richer metadata comes from Zotero Desktop's local API. Keep Zotero
 Desktop open and enable local API access, then `tools/fetch_zotero_metadata.py`
 can read `http://127.0.0.1:23119/api` by item key. Override the endpoint with
 `ZOTERO_LOCAL_API` only when Zotero is exposed at a different local address.
+
+Helpers:
+
+```bash
+uv run python tools/separate_wiki_repository.py --wiki-root /abs/wiki --raw-root /abs/raw
+uv run python tools/clean_wiki_repository.py --target all
+```
 
 ## All Done by `setup.sh`
 

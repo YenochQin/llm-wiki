@@ -3,15 +3,51 @@
   "profiles": {
     "macos": {
       "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
-      "raw_root": "/Users/you/Documents/ResearchWiki/raw"
+      "raw_root": "/Users/you/Documents/ResearchWiki/raw",
+      "zotero_roots": [
+        {
+          "label": "macOS default profile candidates",
+          "path": "~/Library/Application Support/Zotero/Profiles/*",
+          "enabled": true
+        },
+        {
+          "label": "macOS default data directory",
+          "path": "~/Zotero",
+          "enabled": true
+        }
+      ]
     },
     "windows": {
       "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
-      "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw"
+      "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw",
+      "zotero_roots": [
+        {
+          "label": "Windows profile candidates",
+          "path": "%APPDATA%/Zotero/Zotero/Profiles/*",
+          "enabled": true
+        },
+        {
+          "label": "Windows default data directory",
+          "path": "%USERPROFILE%/Zotero",
+          "enabled": true
+        }
+      ]
     },
     "linux": {
       "wiki_root": "~/Documents/ResearchWiki/wiki",
-      "raw_root": "~/Documents/ResearchWiki/raw"
+      "raw_root": "~/Documents/ResearchWiki/raw",
+      "zotero_roots": [
+        {
+          "label": "Linux default profile candidates",
+          "path": "~/.zotero/zotero/*",
+          "enabled": true
+        },
+        {
+          "label": "Linux default data directory",
+          "path": "~/Zotero",
+          "enabled": true
+        }
+      ]
     }
   }
 }

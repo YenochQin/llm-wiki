@@ -154,14 +154,26 @@ def resolve_runtime_path(value: str | Path | None, paths: RuntimePaths, *, role:
 
 
 def write_paths_config(config_path: Path, wiki_root: Path, raw_root: Path) -> None:
+    existing = _read_json(config_path)
+    profiles = existing.get("profiles")
+    if not isinstance(profiles, dict):
+        profiles = {}
+
+    profile_name = current_platform_profile()
+    profile_cfg = profiles.get(profile_name)
+    if not isinstance(profile_cfg, dict):
+        profile_cfg = {}
+    profile_cfg = {
+        **profile_cfg,
+        "wiki_root": str(wiki_root.resolve()),
+        "raw_root": str(raw_root.resolve()),
+    }
+    profiles[profile_name] = profile_cfg
+
     payload = {
-        "active_profile": current_platform_profile(),
-        "profiles": {
-            current_platform_profile(): {
-                "wiki_root": str(wiki_root.resolve()),
-                "raw_root": str(raw_root.resolve()),
-            }
-        },
+        **existing,
+        "active_profile": existing.get("active_profile") or profile_name,
+        "profiles": profiles,
     }
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

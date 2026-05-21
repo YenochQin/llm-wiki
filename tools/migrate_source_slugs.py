@@ -494,7 +494,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wiki-root", default="@configured", help="Wiki root path or runtime alias (default: @configured)")
     parser.add_argument("--zotero-root", default="", help="Optional Zotero data root")
-    parser.add_argument("--zotero-config", default="config/zotero-roots.json", help="Zotero roots config")
+    parser.add_argument("--zotero-config", default=str(find_zotero_pdf.DEFAULT_CONFIG_PATH), help="Path config containing zotero_roots")
     parser.add_argument("--report", default=".checkpoints/source-slug-migration.json", help="Write JSON report here")
     parser.add_argument("--yes", action="store_true", help="Apply the migration")
     parser.add_argument("--validate", action="store_true", help="Validate current wiki links/sourceSlug consistency")
