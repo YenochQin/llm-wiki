@@ -43,16 +43,8 @@ def venv-python [project_root: string] {
     }
 }
 
-def normalize-link-target [target: string] {
-    if ((sys host | get name | str downcase) | str contains "windows") {
-        if ($target | path type) == null {
-            $target
-        } else {
-            $target | path expand
-        }
-    } else {
-        $target
-    }
+def powershell-single-quote [value: string] {
+    "'" + ($value | str replace --all "'" "''") + "'"
 }
 
 def force-symlink [target: string, link_path: string] {
@@ -60,13 +52,32 @@ def force-symlink [target: string, link_path: string] {
         rm -r -f $link_path
     }
 
-    let normalized_target = (normalize-link-target $target)
-    try {
-        ln -s $normalized_target $link_path
-    } catch { |err|
-        fail $"Could not create symlink ($link_path) -> ($normalized_target)"
-        print "      On Windows, enable Developer Mode or run Nushell as Administrator."
-        error make { msg: $err.msg }
+    let result = if (command-exists "ln") {
+        ln -s $target $link_path | complete
+    } else if ((sys host | get name | str downcase) | str contains "windows") {
+        let ps_dir = (powershell-single-quote ($link_path | path dirname))
+        let ps_name = (powershell-single-quote ($link_path | path basename))
+        let ps_target = (powershell-single-quote $target)
+        let ps_command = $"Set-Location -LiteralPath ($ps_dir); New-Item -ItemType SymbolicLink -Path ($ps_name) -Target ($ps_target) | Out-Null"
+        ^powershell -NoProfile -Command $ps_command | complete
+    } else {
+        {
+            exit_code: 127,
+            stdout: "",
+            stderr: "ln command not found"
+        }
+    }
+    if $result.exit_code != 0 {
+        fail $"Could not create symlink ($link_path) -> ($target)"
+        let detail = ((($result.stderr | default "") + ($result.stdout | default "")) | str trim)
+        if ($detail | is-not-empty) {
+            print $"      symlink output: ($detail)"
+        }
+        if ((sys host | get name | str downcase) | str contains "windows") {
+            print "      On Windows, enable Developer Mode or run Nushell as Administrator."
+            print "      If Developer Mode was just enabled, close this terminal and open a new one."
+        }
+        error make { msg: "symlink creation failed" }
     }
 }
 
@@ -236,17 +247,9 @@ def main [
     cp --force ($i18n_dir | path join "CLAUDE.md") ($project_root | path join "CLAUDE.md")
     cp --force ($i18n_dir | path join "AGENTS.md") ($project_root | path join "AGENTS.md")
 
-    let root_skills_target = ($i18n_dir | path join "skills")
-    let shared_references_target = if ((sys host | get name | str downcase) | str contains "windows") {
-        $i18n_dir | path join "shared-references"
-    } else {
-        "../shared-references"
-    }
-    let app_skills_target = if ((sys host | get name | str downcase) | str contains "windows") {
-        $project_root | path join "skills"
-    } else {
-        "../skills"
-    }
+    let root_skills_target = ("i18n" | path join $lang_code "skills")
+    let shared_references_target = "../shared-references"
+    let app_skills_target = "../skills"
 
     force-symlink $root_skills_target ($project_root | path join "skills")
     force-symlink $shared_references_target ($i18n_dir | path join "skills" "shared-references")
@@ -322,9 +325,9 @@ def main [
     if $errors == 0 and $warnings == 0 {
         print $"  (ansi green)Setup complete!(ansi reset)"
     } else if $errors == 0 {
-        print ((ansi yellow) + $"  Setup complete with ($warnings) warning(s)" + (ansi reset))
+        print ((ansi yellow) + $"  Setup complete with ($warnings) warnings" + (ansi reset))
     } else {
-        print ((ansi yellow) + $"  Setup complete with ($errors) error(s) and ($warnings) warning(s)" + (ansi reset))
+        print ((ansi yellow) + $"  Setup complete with ($errors) errors and ($warnings) warnings" + (ansi reset))
     }
     print "============================================"
     print ""

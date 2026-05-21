@@ -26,6 +26,14 @@ bash setup.sh                # or: ./setup.sh --lang zh
 #    (setup.sh seeded the file from config/.env.example)
 ```
 
+On Windows, run the Nushell setup from an Administrator terminal because it
+creates Git-tracked symlinks for `skills/`, `.claude/skills`, and
+`.agents/skills`:
+
+```powershell
+nu setup.nu --lang zh
+```
+
 Then pick the agent you want to drive the wiki with.
 
 ### Using Claude Code
