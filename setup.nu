@@ -43,23 +43,25 @@ def venv-python [project_root: string] {
     }
 }
 
-def powershell-single-quote [value: string] {
-    "'" + ($value | str replace --all "'" "''") + "'"
-}
-
 def force-symlink [target: string, link_path: string] {
     if ($link_path | path exists --no-symlink) {
         rm -r -f $link_path
     }
 
-    let result = if (command-exists "ln") {
-        ln -s $target $link_path | complete
-    } else if ((sys host | get name | str downcase) | str contains "windows") {
-        let ps_dir = (powershell-single-quote ($link_path | path dirname))
-        let ps_name = (powershell-single-quote ($link_path | path basename))
-        let ps_target = (powershell-single-quote $target)
-        let ps_command = $"Set-Location -LiteralPath ($ps_dir); New-Item -ItemType SymbolicLink -Path ($ps_name) -Target ($ps_target) | Out-Null"
-        ^powershell -NoProfile -Command $ps_command | complete
+    let is_windows = ((sys host | get name | str downcase) | str contains "windows")
+    let link_dir = ($link_path | path dirname)
+    let link_name = ($link_path | path basename)
+
+    let result = if $is_windows {
+        do {
+            cd $link_dir
+            ^cmd /d /c mklink /D $link_name $target
+        } | complete
+    } else if (command-exists "ln") {
+        do {
+            cd $link_dir
+            ln -s $target $link_name
+        } | complete
     } else {
         {
             exit_code: 127,
@@ -73,7 +75,7 @@ def force-symlink [target: string, link_path: string] {
         if ($detail | is-not-empty) {
             print $"      symlink output: ($detail)"
         }
-        if ((sys host | get name | str downcase) | str contains "windows") {
+        if $is_windows {
             print "      On Windows, enable Developer Mode or run Nushell as Administrator."
             print "      If Developer Mode was just enabled, close this terminal and open a new one."
         }
@@ -84,7 +86,10 @@ def force-symlink [target: string, link_path: string] {
 def write-lines [path: string, lines: list<string>] {
     let newline = (char nl)
     let content = (($lines | str join $newline) + $newline)
-    $content | save --force $path
+    let existing = if ($path | path exists) { open --raw $path } else { null }
+    if $existing != $content {
+        $content | save --force $path
+    }
 }
 
 def write-command-file [
@@ -248,8 +253,8 @@ def main [
     cp --force ($i18n_dir | path join "AGENTS.md") ($project_root | path join "AGENTS.md")
 
     let root_skills_target = ("i18n" | path join $lang_code "skills")
-    let shared_references_target = "../shared-references"
-    let app_skills_target = "../skills"
+    let shared_references_target = (".." | path join "shared-references")
+    let app_skills_target = (".." | path join "skills")
 
     force-symlink $root_skills_target ($project_root | path join "skills")
     force-symlink $shared_references_target ($i18n_dir | path join "skills" "shared-references")

@@ -158,7 +158,7 @@ if [ -L "skills" ]; then
 else
     rm -rf "skills"
 fi
-ln -sfn "$I18N_DIR/skills" "skills"
+ln -sfn "i18n/$LANG_CODE/skills" "skills"
 ln -sfn "../shared-references" "$I18N_DIR/skills/shared-references"
 
 if [ -L ".claude/skills" ]; then
