@@ -59,19 +59,10 @@ argument-hint: <artifact-slug-or-path> [--max-rounds N] [--target-score N] [--di
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Initialize
@@ -156,9 +147,9 @@ Classify and handle each actionable item:
 #### 2e. Rebuild Derived Data (if wiki was changed)
 
 If this round had wiki changes (Category C):
-```bash
-uv run python tools/research_wiki.py rebuild-context-brief @configured
-uv run python tools/research_wiki.py rebuild-open-questions @configured
+```shell
+uv run python tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python tools/research_wiki.py rebuild-open-questions '@configured'
 ```
 
 ### Step 3: Final Report
@@ -203,9 +194,8 @@ After iteration ends, generate the REFINE_REPORT:
 ```
 
 Append log:
-```bash
-uv run python tools/research_wiki.py log @configured \
-  "refine | {artifact-slug} | {N} rounds | score {initial}→{final} | verdict: {verdict}"
+```shell
+uv run python tools/research_wiki.py log '@configured' "refine | {artifact-slug} | {N} rounds | score {initial}→{final} | verdict: {verdict}"
 ```
 
 ## Constraints
@@ -228,11 +218,11 @@ uv run python tools/research_wiki.py log @configured \
 
 ## Dependencies
 
-### Tools（via Bash）
-- `uv run python tools/research_wiki.py rebuild-context-brief @configured` — rebuild query_pack
-- `uv run python tools/research_wiki.py rebuild-open-questions @configured` — rebuild gap_map
-- `uv run python tools/research_wiki.py add-edge @configured ...` — add graph edge (if needed)
-- `uv run python tools/research_wiki.py log @configured "<message>"` — append log entry
+### Tools
+- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
+- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
+- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge (if needed)
+- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log entry
 
 ### Skills（via Skill tool）
 - `/review` — each round's review (core dependency)

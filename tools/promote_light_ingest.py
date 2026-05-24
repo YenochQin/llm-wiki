@@ -12,6 +12,7 @@ from typing import Any
 
 import frontmatter
 
+from _cli_io import configure_utf8_stdio
 from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
 
 ROLE_WEIGHTS = {
@@ -276,4 +277,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

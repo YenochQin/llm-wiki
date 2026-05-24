@@ -59,19 +59,10 @@ argument-hint: <review-file-or-path> [--paper-slug <slug>] [--venue <venue>] [--
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 Additional steps:
@@ -311,9 +302,8 @@ Additional Experiments (if applicable):
 **6d. Update wiki**:
 - For claims with evidence gaps: append reviewer-identified gaps to `## Open questions` in `wiki/claims/{slug}.md`
 - Append log:
-  ```bash
-  uv run python tools/research_wiki.py log @configured \
-    "rebuttal | {N} concerns addressed | {M} evidence gaps | stress-test avg: {score}/5"
+  ```shell
+  uv run python tools/research_wiki.py log '@configured' "rebuttal | {N} concerns addressed | {M} evidence gaps | stress-test avg: {score}/5"
   ```
 
 ## Constraints
@@ -340,9 +330,9 @@ Additional Experiments (if applicable):
 
 ## Dependencies
 
-### Tools（via Bash）
+### Tools
 - `uv run python tools/research_wiki.py slug "{title}"` — generate rebuttal slug
-- `uv run python tools/research_wiki.py log @configured "<message>"` — append log entry
+- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log entry
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 5 stress-test first round

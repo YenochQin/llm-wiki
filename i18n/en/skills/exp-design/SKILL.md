@@ -55,19 +55,10 @@ argument-hint: <idea-slug-or-hypothesis> [--review] [--budget <gpu-hours>]
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Load Context
@@ -202,7 +193,7 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 
 1. **Create experiment pages**:
    For each experiment block:
-   ```bash
+   ```shell
    uv run python tools/research_wiki.py slug "<experiment-title>"
    ```
    Create `wiki/experiments/{slug}.md`:
@@ -253,17 +244,15 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
    ```
 
 2. **Create new claims (if missing claims were identified in Step 2)**:
-   ```bash
+   ```shell
    uv run python tools/research_wiki.py slug "<claim-title>"
    ```
    Create `wiki/claims/{slug}.md` (status: proposed, confidence: 0.3)
 
 3. **Add graph edges**:
-   ```bash
+   ```shell
    # For each experiment → target claim
-   uv run python tools/research_wiki.py add-edge @configured \
-     --from "claims/{target-claim}" --to "experiments/{slug}" \
-     --type tested_by --evidence "Designed by /exp-design"
+   uv run python tools/research_wiki.py add-edge '@configured' --from "claims/{target-claim}" --to "experiments/{slug}" --type tested_by --evidence "Designed by /exp-design"
    ```
 
 4. **Update idea page** (if idea came from wiki):
@@ -273,15 +262,14 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 5. **Update index.md**: append entries under the experiments and claims (if new) categories
 
 6. **Rebuild derived data**:
-   ```bash
-   uv run python tools/research_wiki.py rebuild-context-brief @configured
-   uv run python tools/research_wiki.py rebuild-open-questions @configured
+   ```shell
+   uv run python tools/research_wiki.py rebuild-context-brief '@configured'
+   uv run python tools/research_wiki.py rebuild-open-questions '@configured'
    ```
 
 7. **Append log**:
-   ```bash
-   uv run python tools/research_wiki.py log @configured \
-     "exp-design | {N} experiments designed for idea {slug} | claims: {claim-list}"
+   ```shell
+   uv run python tools/research_wiki.py log '@configured' "exp-design | {N} experiments designed for idea {slug} | claims: {claim-list}"
    ```
 
 8. **Print EXPERIMENT_PLAN_REPORT to terminal**:
@@ -343,12 +331,12 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 
 ## Dependencies
 
-### Tools（via Bash）
+### Tools
 - `uv run python tools/research_wiki.py slug "<title>"` — generate slug
-- `uv run python tools/research_wiki.py add-edge @configured ...` — add graph edge
-- `uv run python tools/research_wiki.py rebuild-context-brief @configured` — rebuild query_pack
-- `uv run python tools/research_wiki.py rebuild-open-questions @configured` — rebuild gap_map
-- `uv run python tools/research_wiki.py log @configured "<message>"` — append log
+- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge
+- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
+- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
+- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 5 experiment plan review (optional)

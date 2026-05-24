@@ -41,19 +41,10 @@ Manual: `/prefill [domain]` or `/prefill --add "concept name"`.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Resolve domain
@@ -73,7 +64,7 @@ For each seed, check `wiki/foundations/{slug}.md`. If it already exists, **skip*
 
 For each remaining seed, call `tools/fetch_wikipedia.py`:
 
-```bash
+```shell
 uv run python tools/fetch_wikipedia.py summary "<title>"
 uv run python tools/fetch_wikipedia.py sections "<title>"
 uv run python tools/fetch_wikipedia.py section "<title>" --index <N>   # for relevant sections
@@ -125,9 +116,9 @@ Write each file to `wiki/foundations/{slug}.md`.
 
 ### Step 5: Refresh navigation and log
 
-```bash
-uv run python tools/research_wiki.py rebuild-index @configured
-uv run python tools/research_wiki.py log @configured "prefill | {N} foundations created for {domain}"
+```shell
+uv run python tools/research_wiki.py rebuild-index '@configured'
+uv run python tools/research_wiki.py log '@configured' "prefill | {N} foundations created for {domain}"
 ```
 
 ### Step 6: Report
@@ -160,18 +151,18 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 
 ## Error Handling
 
-- **`wiki/foundations/` does not exist**: run `uv run python tools/research_wiki.py init @configured` first.
+- **`wiki/foundations/` does not exist**: run `uv run python tools/research_wiki.py init '@configured'` first.
 - **Wikipedia 404**: log the missing page, fall back to LLM knowledge for that seed (`source_url: ""`).
 - **Network failure**: print which seeds failed and continue with the remainder; do not abort the whole batch.
 - **Catalog file missing**: print error pointing to `.claude/skills/prefill/foundations-catalog.yaml`.
 
 ## Dependencies
 
-### Tools (via Bash)
+### Tools
 - `uv run python tools/fetch_wikipedia.py summary|sections|section|wikitext "<title>" [--index N]`
 - `uv run python tools/research_wiki.py slug "<title>"`
-- `uv run python tools/research_wiki.py rebuild-index @configured`
-- `uv run python tools/research_wiki.py log @configured "<message>"`
+- `uv run python tools/research_wiki.py rebuild-index '@configured'`
+- `uv run python tools/research_wiki.py log '@configured' "<message>"`
 
 ### Catalog
 - `.claude/skills/prefill/foundations-catalog.yaml`

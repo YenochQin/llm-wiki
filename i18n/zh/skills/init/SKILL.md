@@ -50,40 +50,31 @@ Use these local references on demand:
 
 **Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.json`. Run Python tools through `uv run python`, matching `README.md`. Do not hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources`, `@configured-sources-papers`, and `@mineru-cache`. By default, `tools/_paths.py` loads `config/paths.json` and the documented `LLM_WIKI_*` overrides; only override these roots when the user explicitly requests it.
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
-If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 ### Step 1: Initialize wiki structure
 
-```bash
-uv run python tools/research_wiki.py init @configured
+```shell
+uv run python tools/research_wiki.py init '@configured'
 ```
 
 Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log.md`. Do not add a second init log entry here.
 
 ### Step 2: Prepare local inputs into `wiki/sources/`
 
-```bash
-uv run python tools/init_discovery.py prepare --raw-root @raw-root --wiki-root @configured --sources-output-dir @configured-sources --cache-root @mineru-cache --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json
+```shell
+uv run python tools/init_discovery.py prepare --raw-root '@raw-root' --wiki-root '@configured' --sources-output-dir '@configured-sources' --cache-root '@mineru-cache' --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json
 ```
 
 - before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }`, `{ "@raw-root/papers/foo.pdf": "Recovered Paper Title" }`, or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`
-- use `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source '<local-path>' [--title '<recovered-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]` for local paper normalization; the helper also attempts Zotero metadata enrichment and uses the citation key for source naming when available; enrichment failure is non-blocking and falls back to `author_year_veryshorttitle` source naming
-- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown under `@configured-sources-papers/<source-slug>.md`; `<source-slug>` uses the sanitized Zotero citation key when metadata enrichment finds one, otherwise `author_year_veryshorttitle`
+- use `uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<local-path>' [--title '<recovered-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]` for local paper normalization; the helper also attempts Zotero metadata enrichment and uses the citation key for source naming when available; enrichment failure is non-blocking and falls back to `author_year_veryshorttitle` source naming
+- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown under `'@configured-sources-papers/<source-slug>.md'`; `<source-slug>` uses the sanitized Zotero citation key when metadata enrichment finds one, otherwise `author_year_veryshorttitle`
 - never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured-sources` and `@configured-sources-papers`.
 - when the agent supplied a PDF title, treat that title as authoritative for the prepared manifest; fetched/source titles are sanitized fallback metadata only and must not overwrite it
 - metadata or filename titles may remain as provisional display labels only; they are not trusted identity or title-search inputs
@@ -94,8 +85,8 @@ uv run python tools/init_discovery.py prepare --raw-root @raw-root --wiki-root @
 
 ### Step 3: Build the source manifest
 
-```bash
-uv run python tools/init_discovery.py manifest --raw-root @raw-root --wiki-root @configured --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json
+```shell
+uv run python tools/init_discovery.py manifest --raw-root '@raw-root' --wiki-root '@configured' --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json
 ```
 
 - `manifest` reads `.checkpoints/init-prepare.json` and emits one `origin=user_local` entry per usable prepared paper
@@ -154,13 +145,13 @@ After all subagents complete:
 - resolve true concept / claim conflicts conservatively: merge, do not multiply near-duplicates
 - run:
 
-```bash
-uv run python tools/research_wiki.py dedup-edges @configured
-uv run python tools/research_wiki.py dedup-citations @configured
-uv run python tools/research_wiki.py rebuild-index @configured
-uv run python tools/research_wiki.py rebuild-context-brief @configured
-uv run python tools/research_wiki.py rebuild-open-questions @configured
-uv run python tools/lint.py --wiki-dir @configured --fix
+```shell
+uv run python tools/research_wiki.py dedup-edges '@configured'
+uv run python tools/research_wiki.py dedup-citations '@configured'
+uv run python tools/research_wiki.py rebuild-index '@configured'
+uv run python tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+uv run python tools/lint.py --wiki-dir '@configured' --fix
 ```
 
 Report separately:
@@ -199,21 +190,21 @@ If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoin
 
 ## Dependencies
 
-### Tools (via Bash)
+### Tools
 
-- `uv run python tools/research_wiki.py init @configured`
-- `uv run python tools/research_wiki.py checkpoint-set-meta @configured init-session <key> <value>`
-- `uv run python tools/research_wiki.py checkpoint-save/load/clear @configured init-session ...`
-- `uv run python tools/research_wiki.py dedup-edges @configured`
-- `uv run python tools/research_wiki.py dedup-citations @configured`
-- `uv run python tools/research_wiki.py rebuild-index @configured`
-- `uv run python tools/research_wiki.py rebuild-context-brief @configured`
-- `uv run python tools/research_wiki.py rebuild-open-questions @configured`
-- `uv run python tools/research_wiki.py log @configured "<message>"`
-- `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source '<local-path>' [--title '<recovered-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]`
-- `uv run python tools/init_discovery.py prepare --raw-root @raw-root --wiki-root @configured --sources-output-dir @configured-sources --cache-root @mineru-cache --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`
-- `uv run python tools/init_discovery.py manifest --raw-root @raw-root --wiki-root @configured --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json`
-- `uv run python tools/lint.py --wiki-dir @configured --fix`
+- `uv run python tools/research_wiki.py init '@configured'`
+- `uv run python tools/research_wiki.py checkpoint-set-meta '@configured' init-session <key> <value>`
+- `uv run python tools/research_wiki.py checkpoint-save/load/clear '@configured' init-session ...`
+- `uv run python tools/research_wiki.py dedup-edges '@configured'`
+- `uv run python tools/research_wiki.py dedup-citations '@configured'`
+- `uv run python tools/research_wiki.py rebuild-index '@configured'`
+- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'`
+- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'`
+- `uv run python tools/research_wiki.py log '@configured' "<message>"`
+- `uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<local-path>' [--title '<recovered-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]`
+- `uv run python tools/init_discovery.py prepare --raw-root '@raw-root' --wiki-root '@configured' --sources-output-dir '@configured-sources' --cache-root '@mineru-cache' --pdf-titles-json .checkpoints/init-pdf-titles.json --output-manifest .checkpoints/init-prepare.json`
+- `uv run python tools/init_discovery.py manifest --raw-root '@raw-root' --wiki-root '@configured' --prepared-manifest .checkpoints/init-prepare.json --output-sources .checkpoints/init-sources.json`
+- `uv run python tools/lint.py --wiki-dir '@configured' --fix`
 
 ### Skills
 

@@ -29,35 +29,20 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+When running these commands in PowerShell, quote aliases that start with `@`, for example `'@configured'`, because bare `@configured` is parsed as PowerShell splatting syntax.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+Run commands from the repository root.
+
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Resolve and refresh source
 
 1. If input is a PDF, run:
 
-   ```bash
-   uv run python tools/prepare_paper_source.py \
-     --raw-root @raw-root \
-     --output-dir @configured-sources-papers \
-     --cache-root @mineru-cache \
-     --source '<pdf-path>' \
-     [--citation-key '<zotero-citation-key>'] \
-     [--authors '<author-list>'] \
-     [--year <year>] \
-     --overwrite
+   ```shell
+   uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<pdf-path>' [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] --overwrite
    ```
 
    Pass `--title` only when confidently recovered from the PDF itself or an existing trusted paper page. Pass `--citation-key` when Zotero/Better BibTeX provides one; otherwise pass authors/year/title so the source filename falls back to `author_year_veryshorttitle`.
@@ -68,16 +53,27 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
 
 1. Read the prepared markdown frontmatter title and identity metadata. If the prepared frontmatter contains a non-empty `paperSlug`, or refreshed Zotero metadata contains a non-empty `paper_slug`, use it directly as the existing paper-page slug. Otherwise generate the fallback paper slug with the paper-page rule:
 
-   ```bash
-   uv run python tools/research_wiki.py paper-slug "<title>" \
-     --citation-key "<citationKey-or-empty>" \
-     --authors "<authors>" \
-     --year "<year>" \
-     --bibtex "<bibtex-or-empty>"
+   ```shell
+   uv run python tools/research_wiki.py paper-slug "<title>" --citation-key "<citationKey-or-empty>" --authors "<authors>" --year "<year>" --bibtex "<bibtex-or-empty>"
    ```
 
-2. If `wiki/papers/{slug}.md` does not exist, stop and suggest `/ingest`; do not silently create a new paper page.
-3. Read the existing paper page and preserve:
+2. Resolve the configured wiki root with the supported alias resolver when you need a concrete filesystem path:
+
+   ```shell
+   uv run python tools/resolve_path_alias.py '@configured'
+   ```
+
+   Do not call `tools/research_wiki.py resolve-path`; that subcommand does not exist.
+
+3. Check for the existing paper page as `@configured/papers/{slug}.md`. For a CLI lookup, use:
+
+   ```shell
+   uv run python tools/research_wiki.py find '@configured' papers --slug "<slug>"
+   ```
+
+   Do not pass `papers/<slug>` as the `find` entity type. The second positional argument to `find` is always one of the entity directories such as `papers`, `concepts`, or `claims`.
+4. If `wiki/papers/{slug}.md` does not exist, stop and suggest `/ingest`; do not silently create a new paper page.
+5. Read the existing paper page and preserve:
    - `cited_by`
    - stable identity metadata not present in the new source (`external_ids`, `code_url`, manually curated `importance` rationale)
    - existing `## Related` links unless the regenerated analysis still includes them elsewhere
@@ -110,7 +106,7 @@ Unless `--paper-only` is explicitly set, review all existing entities connected 
 - concepts whose `key_papers` includes this paper
 - claims whose `source_papers` or `evidence[].source` includes this paper
 - people pages linked from the paper or already listing it under `## Key papers`
-- graph neighbors from `tools/research_wiki.py neighbors @configured papers/<slug>`
+- graph neighbors from `tools/research_wiki.py neighbors '@configured' papers/<slug>`
 
 For each connected entity:
 
@@ -130,12 +126,12 @@ Do not remove old graph edges automatically. If the regenerated page or migrated
 
 Run:
 
-```bash
-uv run python tools/research_wiki.py rebuild-index @configured
-uv run python tools/research_wiki.py rebuild-context-brief @configured
-uv run python tools/research_wiki.py rebuild-open-questions @configured
-uv run python tools/lint.py --wiki-dir @configured
-uv run python tools/research_wiki.py log @configured "reingest | refreshed papers/<slug> | updated: <list>"
+```shell
+uv run python tools/research_wiki.py rebuild-index '@configured'
+uv run python tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+uv run python tools/lint.py --wiki-dir '@configured'
+uv run python tools/research_wiki.py log '@configured' "reingest | refreshed papers/<slug> | updated: <list>"
 ```
 
 If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content.

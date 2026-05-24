@@ -65,6 +65,7 @@ from pathlib import Path
 import frontmatter
 import yaml
 
+from _cli_io import configure_utf8_stdio
 from _paths import load_paths
 
 # ---------------------------------------------------------------------------
@@ -88,6 +89,12 @@ from _schemas import (  # noqa: E402
 )
 
 DERIVED_DIR = "graph"
+
+
+def _json_dumps(obj, **kwargs) -> str:
+    """JSON dump helper that tolerates YAML date objects from frontmatter."""
+    kwargs.setdefault("default", str)
+    return json.dumps(obj, **kwargs)
 
 STOP_WORDS = frozenset({
     "a", "an", "the", "of", "for", "in", "on", "with", "via",
@@ -835,7 +842,7 @@ def _match_filter(actual, pattern_str: str) -> bool:
 
 def find_entities(wiki_root: str, entity_type: str,
                   filters: list[tuple[str, str]]) -> None:
-    """Search entities of a given type by frontmatter field filters."""
+    """Search entities of a given type by slug or frontmatter field filters."""
     root = Path(wiki_root)
     entity_dir = root / entity_type
 
@@ -848,10 +855,11 @@ def find_entities(wiki_root: str, entity_type: str,
         fm = _parse_frontmatter(f)
         if not fm:
             continue
+        record = {"slug": f.stem, **fm}
 
         match = True
         for field, pattern in filters:
-            val = fm.get(field)
+            val = record.get(field)
             if val is None:
                 match = False
                 break
@@ -865,9 +873,9 @@ def find_entities(wiki_root: str, entity_type: str,
                 break
 
         if match:
-            results.append({"slug": f.stem, **fm})
+            results.append(record)
 
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    print(_json_dumps(results, ensure_ascii=False, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -1067,7 +1075,7 @@ def find_similar_concept(wiki_root: str, candidate_title: str,
         is_found = 0 if m["entity_type"] == "foundation" else 1
         return (is_found, -m["score"])
     matches.sort(key=sort_key)
-    print(json.dumps(matches, ensure_ascii=False, indent=2))
+    print(_json_dumps(matches, ensure_ascii=False, indent=2))
 
 
 def find_similar_claim(wiki_root: str, candidate_title: str,
@@ -1150,7 +1158,7 @@ def find_similar_claim(wiki_root: str, candidate_title: str,
         })
 
     matches.sort(key=lambda m: -m["score"])
-    print(json.dumps(matches, ensure_ascii=False, indent=2))
+    print(_json_dumps(matches, ensure_ascii=False, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -1191,7 +1199,7 @@ def query_weak_claims(wiki_root: str, threshold: float = 0.5) -> None:
 
     # Sort by confidence ascending (weakest first)
     results.sort(key=lambda x: x["confidence"])
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    print(_json_dumps(results, ensure_ascii=False, indent=2))
 
 
 def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
@@ -1281,7 +1289,7 @@ def query_ready_to_test(wiki_root: str) -> None:
 
     # Sort by priority descending
     results.sort(key=lambda x: x.get("priority", 0), reverse=True)
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    print(_json_dumps(results, ensure_ascii=False, indent=2))
 
 
 def query_orphans(wiki_root: str) -> None:
@@ -1365,7 +1373,7 @@ def neighbors(wiki_root: str, node_id: str, depth: int = 1,
         if not current_level:
             break
 
-    print(json.dumps({"center": node_id, "depth": depth, "nodes": all_nodes},
+    print(_json_dumps({"center": node_id, "depth": depth, "nodes": all_nodes},
                       ensure_ascii=False, indent=2))
 
 
@@ -2554,14 +2562,14 @@ def read_meta(path: str, field: str | None = None) -> None:
         sys.exit(1)
 
     if field is None:
-        print(json.dumps(fm, ensure_ascii=False, indent=2))
+        print(_json_dumps(fm, ensure_ascii=False, indent=2))
     else:
         if field not in fm:
             print(json.dumps({"status": "error",
                               "message": f"Field '{field}' not in frontmatter"}))
             sys.exit(1)
         val = fm[field]
-        print(json.dumps(val, ensure_ascii=False))
+        print(_json_dumps(val, ensure_ascii=False))
 
 
 def set_meta(path: str, field: str, value: str, append: bool = False) -> None:
@@ -2699,7 +2707,7 @@ def checkpoint_get_meta(wiki_root: str, task_id: str, key: str = "") -> None:
         # Print a raw value (no JSON wrapping) so shell capture is clean.
         print(value)
     else:
-        print(json.dumps(meta, ensure_ascii=False))
+        print(_json_dumps(meta, ensure_ascii=False))
 
 
 def checkpoint_load(wiki_root: str, task_id: str) -> None:
@@ -2726,7 +2734,7 @@ def checkpoint_load(wiki_root: str, task_id: str) -> None:
         return
 
     data["exists"] = True
-    print(json.dumps(data))
+    print(_json_dumps(data))
 
 
 def checkpoint_clear(wiki_root: str, task_id: str) -> None:
@@ -2928,7 +2936,9 @@ def main():
     p.add_argument("key", nargs="?", default="",
                    help="If given, print the raw value; otherwise print the whole metadata dict as JSON")
 
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
+    if unknown_args and args.command != "find":
+        parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
 
     if hasattr(args, "wiki_root") and args.wiki_root in {"@wiki", "@configured"}:
         args.wiki_root = str(load_paths().wiki_root)
@@ -2970,7 +2980,7 @@ def main():
     elif args.command == "find":
         # Parse remaining args as --field value pairs
         filters: list[tuple[str, str]] = []
-        remaining = sys.argv[sys.argv.index("find") + 3:]  # skip find, wiki_root, entity_type
+        remaining = unknown_args
         it = iter(remaining)
         for arg in it:
             if arg.startswith("--"):
@@ -3039,4 +3049,5 @@ def main():
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

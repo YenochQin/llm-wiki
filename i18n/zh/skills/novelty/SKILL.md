@@ -73,11 +73,11 @@ Execute the following searches in parallel (use Agent tool for concurrency):
 5. Recent query: `<method-keywords> + 2025 2026`
 
 **Source B — no-key literature search:**
-```bash
+```shell
 uv run python tools/fetch_literature.py search "<method-keywords>" --limit 20
 ```
 - Fetch details for top 5 results:
-```bash
+```shell
 uv run python tools/fetch_literature.py paper <doi-or-title>
 ```
 
@@ -179,7 +179,7 @@ Synthesize Step 2 search results and Step 3 Review LLM assessment into a structu
 
 ## Dependencies
 
-### Tools（via Bash）
+### Tools
 - `uv run python tools/fetch_literature.py search "<query>" --limit 20` — no-key literature search
 - `uv run python tools/fetch_literature.py paper <doi-or-title>` — fetch paper details
 

@@ -44,37 +44,28 @@ description: Scan the full wiki to detect health issues and produce a tiered fix
 
 **Pre-conditions**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Run the Automated Lint Tool
 
 **Default mode (report only)**:
-```bash
-uv run python tools/lint.py --wiki-dir @configured --json
+```shell
+uv run python tools/lint.py --wiki-dir '@configured' --json
 ```
 
 **Auto-fix mode** (when user specifies `--fix`):
-```bash
-uv run python tools/lint.py --wiki-dir @configured --fix --json
+```shell
+uv run python tools/lint.py --wiki-dir '@configured' --fix --json
 ```
 Auto-fixes deterministic issues (xref reverse-link completion, missing fields filled with default values) and outputs a fix report.
 
 **Preview mode** (when user specifies `--fix --dry-run`):
-```bash
-uv run python tools/lint.py --wiki-dir @configured --fix --dry-run --json
+```shell
+uv run python tools/lint.py --wiki-dir '@configured' --fix --dry-run --json
 ```
 Previews what would be fixed without applying any changes.
 
@@ -172,8 +163,8 @@ Classification:
 - **🔵 Optional Improvements**: orphan pages, quality suggestions, empty sections
 
 Append log:
-```bash
-uv run python tools/research_wiki.py log @configured "check | report: N 🔴, M 🟡, K 🔵"
+```shell
+uv run python tools/research_wiki.py log '@configured' "check | report: N 🔴, M 🟡, K 🔵"
 ```
 
 ## Constraints
@@ -193,7 +184,7 @@ uv run python tools/research_wiki.py log @configured "check | report: N 🔴, M 
 
 ## Dependencies
 
-### Tools（via Bash）
-- `uv run python tools/lint.py --wiki-dir @configured [--json] [--fix] [--dry-run] [--suggest]` — automated structural check + fix (core dependency)
-- `uv run python tools/research_wiki.py log @configured "<message>"` — append log
-- `uv run python tools/research_wiki.py stats @configured` — get statistics (optional, for the report)
+### Tools
+- `uv run python tools/lint.py --wiki-dir '@configured' [--json] [--fix] [--dry-run] [--suggest]` — automated structural check + fix (core dependency)
+- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python tools/research_wiki.py stats '@configured'` — get statistics (optional, for the report)

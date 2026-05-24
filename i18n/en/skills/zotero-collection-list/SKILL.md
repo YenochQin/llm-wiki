@@ -28,13 +28,13 @@ Do not use Zotero item keys as user-facing selectors for this skill. This skill 
 
 Run from the repository root.
 
-```bash
+```shell
 uv run python tools/list_zotero_collection.py "2026/202605/0507"
 ```
 
 Optional variants:
 
-```bash
+```shell
 uv run python tools/list_zotero_collection.py "2026/202605/0507" --no-recursive
 uv run python tools/list_zotero_collection.py "2026/202605/0507" --output-md .checkpoints/zotero-0507.md
 uv run python tools/list_zotero_collection.py "2026/202605/0507" --zotero-root "$HOME/Zotero"

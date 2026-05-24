@@ -86,7 +86,7 @@ After Step 8 (report), run this self-check before considering the ingest complet
 5. `@configured/log.md` has a new `## [today]` entry.
 6. `@configured/index.md` includes the new paper and all new entities.
 7. LaTeX in all written pages uses `$`/`$$` notation exclusively — no code-fence equations, no `\(` `\)`.
-8. Every `[prepared markdown](../sources/papers/<source-slug>.md)` link written by this ingest resolves to an existing `@configured-sources-papers/<source-slug>.md` file with size > 0 bytes. A zero-byte or missing target means the prepared MinerU markdown was wiped after preparation — surface the missing source slugs in the report and stop instead of shipping dead links. Concept pages without source backing must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.
+8. Every `[prepared markdown](../sources/papers/<source-slug>.md)` link written by this ingest resolves to an existing `'@configured-sources-papers/<source-slug>.md'` file with size > 0 bytes. A zero-byte or missing target means the prepared MinerU markdown was wiped after preparation — surface the missing source slugs in the report and stop instead of shipping dead links. Concept pages without source backing must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.
 9. For every concept page created or materially updated, `## My understanding` either contains the research-direction connection sentence required above, or contains a one-line scoped reason for omission, or notes that `@configured/Summary/research-direction.md` was not found.
 10. No page written by this ingest contains directory-prefixed wikilinks such as `[[wiki/...]]`, `[[wiki_glm/...]]`, `[[wiki_back.../...]]`, or `[[topics/slug]]`.
 11. Topic placement reported: the final report names the number of `@configured/topics/*.md` pages matched. If `N=0`, the report includes a one-line suggestion to run `/edit` and create a topic page for the paper's domain.
@@ -94,4 +94,4 @@ After Step 8 (report), run this self-check before considering the ingest complet
 
 If any check fails, fix it before emitting the final report.
 
-This checklist is scoped to pages and graph rows created or materially edited by the current `/ingest`. Do not run or report a full-wiki `tools/lint.py` audit here. If a lint-backed check is useful, restrict it to touched files with `tools/lint.py --wiki-dir @configured --only "<wiki-relative-file>"`; unrelated pre-existing 🔴/🟡/🔵 counts belong in `/check`, not in the ingest success report.
+This checklist is scoped to pages and graph rows created or materially edited by the current `/ingest`. Do not run or report a full-wiki `tools/lint.py` audit here. If a lint-backed check is useful, restrict it to touched files with `tools/lint.py --wiki-dir '@configured' --only "<wiki-relative-file>"`; unrelated pre-existing 🔴/🟡/🔵 counts belong in `/check`, not in the ingest success report.
