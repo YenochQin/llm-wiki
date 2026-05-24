@@ -61,7 +61,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 ### Graph edges created
 
-- `paper → concept`: `introduces_concept` / `uses_concept` / `extends_concept` / `critiques_concept` with `confidence`
+- `paper → concept`: `introduces_concept` / `uses_concept` / `extends_concept` / `critiques_concept` with `confidence` and source-grounded `evidence`
 - `paper → foundation`: `derived_from` (foundation is terminal; no reverse link)
 - `paper → claim`: `supports` / `contradicts`
 - `paper → paper`: `same_problem_as` / `similar_method_to` / `complementary_to` / `builds_on` / `compares_against` / `improves_on` / `challenges` / `surveys` with `confidence`
@@ -70,6 +70,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 `tools/research_wiki.py add-edge` rejects missing confidence/evidence for
 paper-paper and paper-concept semantic edges, and rejects legacy
 paper-to-concept or paper-to-paper types on new writes.
+Always call it with named flags: `--from`, `--to`, `--type`, and `--evidence`.
 
 ## Workflow
 
@@ -261,7 +262,10 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `uv run python tools/research_wiki.py find-similar-concept '@configured' "<title>" --aliases "<a,b,c>"`
 - `uv run python tools/research_wiki.py find-similar-claim '@configured' "<title>" --tags "<a,b,c>"`
 - `uv run python tools/research_wiki.py add-edge '@configured' --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`
+  - Use named flags only; do not use positional edge arguments like `<paper> <type> <concept>`.
+  - `--evidence "<text>"` is required for paper-concept and paper-paper semantic edges. Use a short source-grounded phrase, not an empty placeholder.
   - `--confidence high|medium|low` is required for paper-paper and paper-concept semantic edges.
+  - Paper-concept example: `uv run python tools/research_wiki.py add-edge '@configured' --from papers/<paper-slug> --to concepts/<concept-slug> --type uses_concept --evidence "<source-grounded reason>" --confidence high`
 - `uv run python tools/research_wiki.py add-citation '@configured' --from papers/<citing> --to papers/<cited> --source literature_api`
 - `uv run python tools/research_wiki.py log '@configured' "<message>"`
 - `uv run python tools/research_wiki.py rebuild-context-brief '@configured'`

@@ -18,7 +18,7 @@ Commands:
     set-meta <path> <field> <value> [--append]
 
     # Graph operations
-    add-edge <wiki_root> --from <id> --to <id> --type <type> [--evidence "..."] [--confidence high|medium|low]
+    add-edge <wiki_root> --from <id> --to <id> --type <type> --evidence "..." [--confidence high|medium|low]
     add-citation <wiki_root> --from papers/a --to papers/b [--source literature_api]
     batch-edges <wiki_root>                          # reads JSON array from stdin
     dedup-edges <wiki_root>
@@ -530,6 +530,37 @@ def add_edge(wiki_root: str, from_id: str, to_id: str,
     if warnings:
         result2["warnings"] = warnings
     print(json.dumps(result2))
+
+
+def apply_legacy_add_edge_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
+                               unknown_args: list[str]) -> list[str]:
+    """Accept the old positional add-edge form while preferring named flags."""
+    if args.command != "add-edge" or not unknown_args:
+        return unknown_args
+    if any(part.startswith("-") for part in unknown_args):
+        return unknown_args
+    if len(unknown_args) != 3:
+        return unknown_args
+
+    first, second, third = unknown_args
+    if second in VALID_EDGE_TYPES:
+        legacy_from, legacy_type, legacy_to = first, second, third
+    elif third in VALID_EDGE_TYPES:
+        legacy_from, legacy_to, legacy_type = first, second, third
+    else:
+        return unknown_args
+
+    if args.from_id and args.from_id != legacy_from:
+        parser.error("add-edge received both --from and a conflicting positional from_id")
+    if args.to_id and args.to_id != legacy_to:
+        parser.error("add-edge received both --to and a conflicting positional to_id")
+    if args.edge_type and args.edge_type != legacy_type:
+        parser.error("add-edge received both --type and a conflicting positional edge_type")
+
+    args.from_id = args.from_id or legacy_from
+    args.to_id = args.to_id or legacy_to
+    args.edge_type = args.edge_type or legacy_type
+    return []
 
 
 def load_citations(wiki_root: str) -> list[dict]:
@@ -2772,9 +2803,9 @@ def main():
     # add-edge
     p = sub.add_parser("add-edge", help="Add typed edge to graph")
     p.add_argument("wiki_root")
-    p.add_argument("--from", dest="from_id", required=True)
-    p.add_argument("--to", dest="to_id", required=True)
-    p.add_argument("--type", dest="edge_type", required=True)
+    p.add_argument("--from", dest="from_id", default="")
+    p.add_argument("--to", dest="to_id", default="")
+    p.add_argument("--type", dest="edge_type", default="")
     p.add_argument("--evidence", default="")
     p.add_argument("--confidence", default="",
                    choices=["", *sorted(EDGE_CONFIDENCE_VALUES)])
@@ -2937,6 +2968,7 @@ def main():
                    help="If given, print the raw value; otherwise print the whole metadata dict as JSON")
 
     args, unknown_args = parser.parse_known_args()
+    unknown_args = apply_legacy_add_edge_args(parser, args, unknown_args)
     if unknown_args and args.command != "find":
         parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
 
@@ -2958,6 +2990,15 @@ def main():
             bibtex=args.bibtex,
         ))
     elif args.command == "add-edge":
+        missing = []
+        if not args.from_id:
+            missing.append("--from")
+        if not args.to_id:
+            missing.append("--to")
+        if not args.edge_type:
+            missing.append("--type")
+        if missing:
+            parser.error(f"add-edge requires {', '.join(missing)}")
         add_edge(args.wiki_root, args.from_id, args.to_id,
                  args.edge_type, args.evidence, args.confidence,
                  args.symmetric)

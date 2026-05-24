@@ -117,7 +117,7 @@ For each connected entity:
    - **People**: update affiliation, research areas, recent work, collaborators, and key papers when the regenerated metadata/source gives clearer information.
 3. If a new concept/claim is needed, run `find-similar-concept` or `find-similar-claim` before creating it. Prefer merging/migrating over creating duplicates.
 4. For every paper → concept / claim / person link written in the regenerated page, ensure the reverse link/evidence exists.
-5. Add new semantic edges with `tools/research_wiki.py add-edge`; it deduplicates existing edges.
+5. Add new semantic edges with `tools/research_wiki.py add-edge`; it deduplicates existing edges. Always use named flags: `--from`, `--to`, `--type`, and `--evidence`. For paper-concept and paper-paper semantic edges, also include `--confidence high|medium|low`.
 6. Add bibliographic citations only when a reference resolves to an existing wiki paper and is truly cited by the source.
 
 Do not remove old graph edges automatically. If the regenerated page or migrated entities no longer support an old edge, report it as “possibly stale” for `/check` or user review.

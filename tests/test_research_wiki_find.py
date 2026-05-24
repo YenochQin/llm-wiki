@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -76,6 +77,61 @@ key_papers:
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["slug"], "mcdhf")
         self.assertEqual(payload[0]["score"], 1.0)
+
+    def test_add_edge_accepts_legacy_positional_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            stdout = io.StringIO()
+            argv = [
+                "research_wiki.py",
+                "add-edge",
+                str(root),
+                "papers/sahoo_2020_Analytic",
+                "uses_concept",
+                "concepts/isotope-shift",
+                "--confidence",
+                "high",
+                "--evidence",
+                "Uses isotope-shift analysis.",
+            ]
+            with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(stdout):
+                research_wiki.main()
+
+            payload = json.loads(stdout.getvalue())
+
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(
+            payload["edge"],
+            "papers/sahoo_2020_Analytic --uses_concept--> concepts/isotope-shift",
+        )
+
+    def test_add_edge_legacy_positional_still_requires_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            stdout = io.StringIO()
+            argv = [
+                "research_wiki.py",
+                "add-edge",
+                str(root),
+                "papers/sahoo_2020_Analytic",
+                "uses_concept",
+                "concepts/isotope-shift",
+                "--confidence",
+                "high",
+            ]
+            with (
+                mock.patch.object(sys, "argv", argv),
+                contextlib.redirect_stdout(stdout),
+                self.assertRaises(SystemExit) as raised,
+            ):
+                research_wiki.main()
+
+            payload = json.loads(stdout.getvalue())
+
+        self.assertEqual(raised.exception.code, 1)
+        self.assertIn("uses_concept requires --evidence text", payload["errors"])
 
 
 if __name__ == "__main__":
