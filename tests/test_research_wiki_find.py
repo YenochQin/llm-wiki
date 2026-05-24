@@ -133,6 +133,33 @@ key_papers:
         self.assertEqual(raised.exception.code, 1)
         self.assertIn("uses_concept requires --evidence text", payload["errors"])
 
+    def test_add_edge_missing_wiki_root_reports_configured_alias(self) -> None:
+        argv = [
+            "research_wiki.py",
+            "add-edge",
+            "--from",
+            "papers/huet_2015_Isotope",
+            "--to",
+            "concepts/isotope-shift",
+            "--type",
+            "uses_concept",
+            "--evidence",
+            "Uses isotope-shift analysis.",
+            "--confidence",
+            "high",
+        ]
+
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(sys, "argv", argv),
+            contextlib.redirect_stderr(stderr),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            research_wiki.main()
+
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("add-edge '@configured' --from <id>", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

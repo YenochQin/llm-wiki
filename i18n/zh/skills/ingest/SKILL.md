@@ -75,6 +75,8 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 paper-paper and paper-concept semantic edges, and rejects legacy
 paper-to-concept or paper-to-paper types on new writes.
 Always call it with named flags: `--from`, `--to`, `--type`, and `--evidence`.
+The `wiki_root` argument is mandatory: the first argument after `add-edge`
+must be `'@configured'`. Never start an edge command with `add-edge --from`.
 
 ## Workflow
 
@@ -307,7 +309,9 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `uv run python tools/research_wiki.py find-similar-concept '@configured' "<title>" --aliases "<a,b,c>"`
 - `uv run python tools/research_wiki.py find-similar-claim '@configured' "<title>" --tags "<a,b,c>"`
 - `uv run python tools/research_wiki.py add-edge '@configured' --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`
+  - The first argument after `add-edge` must be `'@configured'`; do not omit it.
   - Use named flags only; do not use positional edge arguments like `<paper> <type> <concept>`.
+  - Forbidden form: `uv run python tools/research_wiki.py add-edge --from <id> ...`
   - `--evidence "<text>"` is required for paper-concept and paper-paper semantic edges. Use a short source-grounded phrase, not an empty placeholder.
   - `--confidence high|medium|low` is required for paper-paper and paper-concept semantic edges.
   - Paper-concept example: `uv run python tools/research_wiki.py add-edge '@configured' --from papers/<paper-slug> --to concepts/<concept-slug> --type uses_concept --evidence "<source-grounded reason>" --confidence high`

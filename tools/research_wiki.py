@@ -2802,7 +2802,7 @@ def main():
 
     # add-edge
     p = sub.add_parser("add-edge", help="Add typed edge to graph")
-    p.add_argument("wiki_root")
+    p.add_argument("wiki_root", nargs="?", default="")
     p.add_argument("--from", dest="from_id", default="")
     p.add_argument("--to", dest="to_id", default="")
     p.add_argument("--type", dest="edge_type", default="")
@@ -2974,7 +2974,7 @@ def main():
 
     if hasattr(args, "wiki_root") and args.wiki_root in {"@wiki", "@configured"}:
         args.wiki_root = str(load_paths().wiki_root)
-    if hasattr(args, "wiki_root"):
+    if hasattr(args, "wiki_root") and args.wiki_root:
         args.wiki_root = _validate_cli_wiki_root(args.wiki_root)
 
     if args.command == "init":
@@ -2991,6 +2991,8 @@ def main():
         ))
     elif args.command == "add-edge":
         missing = []
+        if not args.wiki_root:
+            missing.append("wiki_root")
         if not args.from_id:
             missing.append("--from")
         if not args.to_id:
@@ -2998,7 +3000,11 @@ def main():
         if not args.edge_type:
             missing.append("--type")
         if missing:
-            parser.error(f"add-edge requires {', '.join(missing)}")
+            parser.error(
+                "add-edge requires "
+                f"{', '.join(missing)}. Use: add-edge '@configured' "
+                "--from <id> --to <id> --type <type> --evidence \"<text>\""
+            )
         add_edge(args.wiki_root, args.from_id, args.to_id,
                  args.edge_type, args.evidence, args.confidence,
                  args.symmetric)
