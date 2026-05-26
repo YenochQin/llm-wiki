@@ -28,6 +28,7 @@
 ### 格式守卫
 
 - 起草或修复 wiki 页面结构、YAML、正文区段前，先打开 `docs/runtime-page-templates.en.md`
+- **公式格式强制要求**：无论是在生成 wiki 内容的过程中，还是在使用 llm-wiki 对话的过程中，输出的行内 LaTeX 公式一律使用 `$...$` 包围，行间 LaTeX 公式一律使用 `$$...$$` 包围。
 - 需要可复制的页面起始模板时，使用 `docs/templates/`；根目录不放模板库
 - 需要 graph 派生文件、`index.md` 或 `log.md` 细节时，打开 `docs/runtime-support-files.en.md`
 - `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
