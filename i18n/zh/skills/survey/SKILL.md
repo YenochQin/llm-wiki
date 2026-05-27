@@ -57,19 +57,10 @@ argument-hint: <research-question-or-claim-slugs> [--format latex|markdown] [--m
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Locate Relevant Knowledge
@@ -155,7 +146,7 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 ### Step 6: Archive
 
 1. **Generate slug**:
-   ```bash
+   ```shell
    uv run python tools/research_wiki.py slug "<query-keywords>"
    ```
 
@@ -174,17 +165,14 @@ If output format is LaTeX, following `shared-references/citation-verification.md
    If latex format: append BibTeX entries as an appendix.
 
 3. **Add graph edges**:
-   ```bash
+   ```shell
    # output → each cited paper
-   uv run python tools/research_wiki.py add-edge @configured \
-     --from "outputs/related-work-{slug}-{date}" --to "papers/{paper-slug}" \
-     --type derived_from --evidence "Cited in related work section"
+   uv run python tools/research_wiki.py add-edge '@configured' --from "outputs/related-work-{slug}-{date}" --to "papers/{paper-slug}" --type derived_from --evidence "Cited in related work section"
    ```
 
 4. **Append log**:
-   ```bash
-   uv run python tools/research_wiki.py log @configured \
-     "survey | {topic} | {N} papers, {G} groups, format: {format}"
+   ```shell
+   uv run python tools/research_wiki.py log '@configured' "survey | {topic} | {N} papers, {G} groups, format: {format}"
    ```
 
 5. **Terminal output**: complete Related Work body text + citation coverage statistics
@@ -210,10 +198,10 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 
 ## Dependencies
 
-### Tools（via Bash）
+### Tools
 - `uv run python tools/research_wiki.py slug "<title>"` — generate slug
-- `uv run python tools/research_wiki.py add-edge @configured ...` — add graph edge
-- `uv run python tools/research_wiki.py log @configured "<message>"` — append log
+- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge
+- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
 - `uv run python tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
 
 ### MCP Servers

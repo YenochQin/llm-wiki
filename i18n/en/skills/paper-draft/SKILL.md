@@ -60,19 +60,10 @@ argument-hint: <paper-plan-path> [--review] [--sections <section-numbers>]
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Initialize Paper Directory
@@ -139,7 +130,7 @@ For each entry in the Figure Plan from PAPER_PLAN:
      - Error bars / confidence bands
      - Clear legend
    - Execute script to generate PDF:
-     ```bash
+     ```shell
      python3 paper/figures/plot_{name}.py
      ```
    - Save to `paper/figures/{figure-name}.pdf`
@@ -267,9 +258,8 @@ Make final adjustments based on Review LLM feedback.
    - all `\cite{key}` keys have a corresponding entry in references.bib
    - all `\ref{label}` have a corresponding `\label{label}`
 3. Append log:
-   ```bash
-   uv run python tools/research_wiki.py log @configured \
-     "paper-draft | drafted {venue} paper '{title}' | {N} sections, {M} figures, {K} citations ({V} verified)"
+   ```shell
+   uv run python tools/research_wiki.py log '@configured' "paper-draft | drafted {venue} paper '{title}' | {N} sections, {M} figures, {K} citations ({V} verified)"
    ```
 4. Print to terminal:
    ```markdown
@@ -320,8 +310,8 @@ Make final adjustments based on Review LLM feedback.
 
 ## Dependencies
 
-### Tools（via Bash）
-- `uv run python tools/research_wiki.py log @configured "<message>"` — append log
+### Tools
+- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
 - `uv run python tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
 - `python3` — execute matplotlib figure scripts
 
@@ -332,7 +322,7 @@ Make final adjustments based on Review LLM feedback.
 - `Read` — read wiki pages and PAPER_PLAN
 - `Glob` — find wiki pages
 - `Write` — write files to paper/ directory
-- `Bash` — execute figure scripts, create directories
+- `shell` — execute figure scripts and create directories
 - `WebFetch` — DBLP / CrossRef BibTeX fetch
 
 ### Shared References

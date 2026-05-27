@@ -61,12 +61,12 @@ No default writes to:
 
 **Pre-condition**: run from the repository root and use runtime path aliases. Do not hard-code `wiki/`, `raw/`, or external vault paths.
 
-```bash
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
-uv run python tools/resolve_path_alias.py @configured @configured-sources-papers
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
+uv run python tools/resolve_path_alias.py '@configured' '@configured-sources-papers'
 ```
 
-If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured`, `@configured-sources`, and `@configured-sources-papers`.
 Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or plain shell commands such as `cat`, `cp`, `mkdir`, or redirection. They do not resolve aliases and will create literal directories in the code repository.
@@ -79,23 +79,14 @@ Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or 
    - select only an unambiguous candidate with exactly one existing PDF attachment;
    - set `<selected-pdf-path>` to the candidate's `best_attachment.path` when present, otherwise its single `pdf_paths[0]`;
    - fetch Zotero metadata with internal `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` when available;
-   - run `tools/prepare_paper_source.py` with explicit `--source <selected-pdf-path>`, `--output-dir @configured-sources-papers`, and `--cache-root @mineru-cache`.
+   - run `tools/prepare_paper_source.py` with explicit `--source <selected-pdf-path>`, `--output-dir '@configured-sources-papers'`, and `--cache-root '@mineru-cache'`.
 3. Preserve Zotero `metadata.paper_slug` or prepared frontmatter `paperSlug` as the paper slug. Use `tools/research_wiki.py paper-slug` only when no citation key is available.
 4. Stop if preparation reports `usable: false`. Do not read `full.md`, MinerU cache files, or other intermediate cache artifacts as a substitute canonical source. A non-empty MinerU cache with `usable: false` means the adapter/filtering layer needs to be fixed or the failure must be reported to the user.
 
 Correct preparation command shape:
 
-```bash
-uv run python tools/prepare_paper_source.py \
-  --raw-root @raw-root \
-  --output-dir @configured-sources-papers \
-  --cache-root @mineru-cache \
-  --source '<selected-pdf-path>' \
-  [--title '<zotero-title>'] \
-  [--citation-key '<zotero-citation-key>'] \
-  [--authors '<author-list>'] \
-  [--year "<year>"] \
-  [--bibtex "$BIBTEX"]
+```shell
+uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<selected-pdf-path>' [--title '<zotero-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year "<year>"] [--bibtex "$BIBTEX"]
 ```
 
 Use single quotes around Zotero-derived PDF paths and metadata values in shell commands. Some Zotero filenames contain `$` or TeX math such as `$$^{143-147}$$`; double quotes allow Bash to expand `$$` into the process id and corrupt the path.
@@ -130,17 +121,17 @@ Add the paper under a role-based subsection in `<resolved-wiki-root>/Summary/{ta
 
 Run:
 
-```bash
-uv run python tools/research_wiki.py rebuild-index @configured
-uv run python tools/research_wiki.py log @configured "ingest-light | added papers/<slug> | role=<role> | target=Summary/<target-summary>"
+```shell
+uv run python tools/research_wiki.py rebuild-index '@configured'
+uv run python tools/research_wiki.py log '@configured' "ingest-light | added papers/<slug> | role=<role> | target=Summary/<target-summary>"
 ```
 
 ### Step 5: Scoped verification
 
 Run scoped lint only on touched files:
 
-```bash
-uv run python tools/lint.py --wiki-dir @configured --only "papers/{slug}.md" --only "Summary/{target-summary}.md"
+```shell
+uv run python tools/lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "Summary/{target-summary}.md"
 ```
 
 Do not report unrelated full-wiki lint debt.

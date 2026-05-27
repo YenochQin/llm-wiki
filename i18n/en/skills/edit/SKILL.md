@@ -28,19 +28,10 @@ Updated wiki files, `index.md`, `log.md`
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`. For direct file edits, expand those aliases to the configured absolute paths before invoking `Edit`/`Write`:
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 ### STEP 1: Parse User Intent
@@ -64,8 +55,8 @@ uv run python tools/research_wiki.py stats @configured --json >/dev/null
 1. `EDIT @configured/index.md`: update relevant entries
 2. Append a log entry via the tool (not by manually editing `log.md`):
 
-   ```bash
-   uv run python tools/research_wiki.py log @configured "edit | {description}"
+   ```shell
+   uv run python tools/research_wiki.py log '@configured' "edit | {description}"
    ```
 
 ### STEP 4: Report

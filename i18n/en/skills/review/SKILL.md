@@ -263,7 +263,7 @@ Synthesize Step 2 + Step 3 results into a structured Review Report:
 
 ## Dependencies
 
-### Tools（via Bash）
+### Tools
 - No direct tool calls (review does not require deterministic tools)
 
 ### MCP Servers

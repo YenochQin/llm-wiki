@@ -35,6 +35,7 @@ from typing import Any
 import _env  # noqa: F401 — load .env files
 
 import fetch_literature
+from _cli_io import configure_utf8_stdio
 from _paths import load_paths, resolve_runtime_path
 
 
@@ -591,4 +592,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

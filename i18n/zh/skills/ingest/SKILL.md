@@ -65,7 +65,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 
 ### Graph edges created
 
-- `paper → concept`: `introduces_concept` / `uses_concept` / `extends_concept` / `critiques_concept` with `confidence`
+- `paper → concept`: `introduces_concept` / `uses_concept` / `extends_concept` / `critiques_concept` with `confidence` and source-grounded `evidence`
 - `paper → foundation`: `derived_from` (foundation is terminal; no reverse link)
 - `paper → claim`: `supports` / `contradicts`
 - `paper → paper`: `same_problem_as` / `similar_method_to` / `complementary_to` / `builds_on` / `compares_against` / `improves_on` / `challenges` / `surveys` with `confidence`
@@ -74,28 +74,22 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 `tools/research_wiki.py add-edge` rejects missing confidence/evidence for
 paper-paper and paper-concept semantic edges, and rejects legacy
 paper-to-concept or paper-to-paper types on new writes.
+Always call it with named flags: `--from`, `--to`, `--type`, and `--evidence`.
+The `wiki_root` argument is mandatory: the first argument after `add-edge`
+must be `'@configured'`. Never start an edge command with `add-edge --from`.
 
 ## Workflow
 
 **Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.json`. Run Python tools through `uv run python`, matching `README.md`. Do not hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources-papers`, and `@mineru-cache`. By default, `tools/_paths.py` loads `config/paths.json` and the documented `LLM_WIKI_*` overrides; only override these roots when the user explicitly requests it.
 
-```bash
-# Run all commands from the repository root; runtime paths are resolved by tool aliases.
-GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
-PROJECT_ROOT=""
-if [ -n "$GIT_COMMON_DIR" ]; then
-  PROJECT_ROOT=$(cd "$(dirname "$GIT_COMMON_DIR")" 2>/dev/null && pwd)
-fi
-if [ -z "$PROJECT_ROOT" ]; then
-  PROJECT_ROOT=$(pwd)
-fi
-cd "$PROJECT_ROOT"
+Run commands from the repository root.
 
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
 `@configured` must resolve to the actual wiki vault root, not the code repository root. `tools/research_wiki.py` rejects the code repository root to prevent accidental creation of root-level `graph/`, `index.md`, or `log.md`.
-If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @configured @raw-root @configured-sources-papers @mineru-cache`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 ### Step 1: Resolve the source
 
@@ -103,16 +97,14 @@ If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py @con
 2. If the source is a prepared `@configured-sources-papers/*.md`, use it directly.
 3. If the user supplied Zotero lookup arguments, run:
 
-   ```bash
-   uv run python tools/find_zotero_pdf.py \
-     [--zotero-root <dir>] \
-     [--title "<title>"] [--doi <doi>]
+   ```shell
+   uv run python tools/find_zotero_pdf.py [--zotero-root <dir>] [--title "<title>"] [--doi <doi>]
    ```
 
    If `--zotero-root` is omitted, the helper scans `config/paths.json`; use `--zotero-config <path>` only when the user explicitly names an alternate config. Pick the top candidate only when it has exactly one existing PDF attachment and the match reason is `doi`, `exact-title`, a clearly unambiguous title match, or a filename-like attachment match. Otherwise report the candidates and ask the user to choose. For chapter-split books, prefer the attachment whose path or filename matches the chapter PDF name. Keep the selected candidate's internal `item_key`, `citation_key`, `creators`, `year`, and PDF path for preprocessing. Do not copy it into `@raw-root/papers/`.
 4. If the selected Zotero candidate has an internal `item_key`, try:
 
-   ```bash
+   ```shell
    uv run python tools/fetch_zotero_metadata.py --item-key <key>
    ```
 
@@ -125,12 +117,8 @@ Raw persistence rule: never copy or duplicate a file already under `@configured-
 
 1. Determine the paper slug from the Zotero metadata already fetched in Step 1. If `tools/fetch_zotero_metadata.py` returned a non-empty `metadata.paper_slug`, or the prepared source frontmatter contains non-empty `paperSlug`, use that value directly for `@configured/papers/{slug}.md`; do not rederive it from the title. If Zotero metadata is unavailable or has no citation key, fall back to the same paper identity metadata used for preprocessing:
 
-   ```bash
-   uv run python tools/research_wiki.py paper-slug "<paper-title>" \
-     --citation-key "<zotero-citation-key-or-empty>" \
-     --authors "<author-list>" \
-     --year "<year>" \
-     --bibtex "<zotero-derived-bibtex-or-empty>"
+   ```shell
+   uv run python tools/research_wiki.py paper-slug "<paper-title>" --citation-key "<zotero-citation-key-or-empty>" --authors "<author-list>" --year "<year>" --bibtex "<zotero-derived-bibtex-or-empty>"
    ```
 
    This paper-page slug should normally match the prepared source `sourceSlug`, unless a deliberate source-level disambiguation suffix was needed for split chapters.
@@ -138,7 +126,7 @@ Raw persistence rule: never copy or duplicate a file already under `@configured-
 3. When Zotero Local API metadata is available, prefer it for identity fields (`title`, `doi`, `year`, `venue`, authors/creators, abstract, tags, URL, `citationKey`/`citekey`, and `external_ids`) and use the derived `bibtex` string only for the body `## BibTeX` block.
 4. When a DOI or confident title is available, query the no-key literature lookup:
 
-   ```bash
+   ```shell
    uv run python tools/fetch_literature.py paper <doi-or-title>
    ```
 
@@ -204,7 +192,7 @@ Follow `references/dedup-policy.md`. In short:
 
 Skip this whole step in INIT MODE — the parent `/init` handles it at fan-in.
 
-```bash
+```shell
 uv run python tools/fetch_literature.py references <doi-or-title>
 uv run python tools/fetch_literature.py citations <doi-or-title>
 ```
@@ -225,24 +213,24 @@ uv run python tools/fetch_literature.py citations <doi-or-title>
 3. Match the paper against existing `@configured/Summary/*.md`. If a Summary page's `scope`, `key_topics`, or overview clearly covers the paper, append the paper under `## Key References` or `## Related` and record the matched Summary count `S`. Do not create Summary pages from `/ingest`; if `S=0`, surface it in the report with the topic-placement note.
 4. Rebuild or append new/edited page entries to `@configured/index.md` using the repository-supported format. The index must remain useful to both humans and tools: keep `# Wiki Index`, entity category headings, slugs, titles when available, and key metadata such as importance/status/confidence/tags/research modes. A pure opaque dump or a malformed half-YAML index is not acceptable. See `docs/runtime-support-files.en.md` and prefer:
 
-   ```bash
-   uv run python tools/research_wiki.py rebuild-index @configured
+   ```shell
+   uv run python tools/research_wiki.py rebuild-index '@configured'
    ```
 
 ### Step 7: Log and rebuild
 
 Verify `@configured/graph/` exists before writing to it; create the directory if missing.
 
-```bash
-uv run python tools/research_wiki.py log @configured "ingest | added papers/<slug> | updated: <list>"
+```shell
+uv run python tools/research_wiki.py log '@configured' "ingest | added papers/<slug> | updated: <list>"
 ```
 
 Unless in INIT MODE:
 
-```bash
-uv run python tools/research_wiki.py rebuild-index @configured
-uv run python tools/research_wiki.py rebuild-context-brief @configured
-uv run python tools/research_wiki.py rebuild-open-questions @configured
+```shell
+uv run python tools/research_wiki.py rebuild-index '@configured'
+uv run python tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python tools/research_wiki.py rebuild-open-questions '@configured'
 ```
 
 ### Step 8: Report
@@ -271,8 +259,8 @@ If any check fails, fix it before emitting the report.
 
 Do not run or report an unrestricted full-wiki `tools/lint.py` audit during `/ingest`. Historical lint debt belongs to `/check` and should not be mixed into the success report for a newly ingested paper. If you need a lint-backed verification, restrict it to the files created or materially edited in this ingest, for example:
 
-```bash
-uv run python tools/lint.py --wiki-dir @configured --only "papers/{slug}.md" --only "concepts/{new-or-edited}.md"
+```shell
+uv run python tools/lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "concepts/{new-or-edited}.md"
 ```
 
 Report only the scoped results. Do not summarize unrelated pre-existing 🔴/🟡/🔵 counts in the `/ingest` final answer.
@@ -283,13 +271,8 @@ Skip this step unless the user explicitly passed `--discover`. Also skip it in I
 
 When active, invoke `/discover` with the just-ingested paper as the single anchor:
 
-```bash
-uv run python tools/discover.py from-anchors \
-  --id <doi-or-title-of-this-paper> \
-  --wiki-root @configured \
-  --limit 10 \
-  --output-checkpoint .checkpoints/ \
-  --markdown
+```shell
+uv run python tools/discover.py from-anchors --id <doi-or-title-of-this-paper> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
 Append the markdown output to the report under a heading like "Related papers you may want to ingest next". Do not auto-ingest anything from the shortlist — the user picks. If discovery fails (provider outage, all channels empty), note the failure in one line and continue — a failed `/discover` must not fail an otherwise successful `/ingest`.
@@ -319,23 +302,28 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 
 ## Dependencies
 
-### Tools (via Bash)
+### Tools
 
 - `uv run python tools/research_wiki.py paper-slug "<paper-title>" --citation-key "<key>" --authors "<authors>" --year "<year>" --bibtex "<bibtex>"` — fallback paper page slug generation when Zotero metadata did not return `metadata.paper_slug`
 - `uv run python tools/research_wiki.py slug "<title>"` — non-paper slug generation
-- `uv run python tools/research_wiki.py find-similar-concept @configured "<title>" --aliases "<a,b,c>"`
-- `uv run python tools/research_wiki.py find-similar-claim @configured "<title>" --tags "<a,b,c>"`
-- `uv run python tools/research_wiki.py add-edge @configured --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`
+- `uv run python tools/research_wiki.py find-similar-concept '@configured' "<title>" --aliases "<a,b,c>"`
+- `uv run python tools/research_wiki.py find-similar-claim '@configured' "<title>" --tags "<a,b,c>"`
+- `uv run python tools/research_wiki.py add-edge '@configured' --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`
+  - The first argument after `add-edge` must be `'@configured'`; do not omit it.
+  - Use named flags only; do not use positional edge arguments like `<paper> <type> <concept>`.
+  - Forbidden form: `uv run python tools/research_wiki.py add-edge --from <id> ...`
+  - `--evidence "<text>"` is required for paper-concept and paper-paper semantic edges. Use a short source-grounded phrase, not an empty placeholder.
   - `--confidence high|medium|low` is required for paper-paper and paper-concept semantic edges.
-- `uv run python tools/research_wiki.py add-citation @configured --from papers/<citing> --to papers/<cited> --source literature_api`
-- `uv run python tools/research_wiki.py log @configured "<message>"`
-- `uv run python tools/research_wiki.py rebuild-index @configured`
-- `uv run python tools/research_wiki.py rebuild-context-brief @configured`
-- `uv run python tools/research_wiki.py rebuild-open-questions @configured`
-- `uv run python tools/prepare_paper_source.py --raw-root @raw-root --output-dir @configured-sources-papers --cache-root @mineru-cache --source '<zotero-pdf-path>' [--title '<zotero-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]` — use single quotes for Zotero-derived paths/metadata because filenames may contain `$` or TeX math such as `$$^{143-147}$$`
+  - Paper-concept example: `uv run python tools/research_wiki.py add-edge '@configured' --from papers/<paper-slug> --to concepts/<concept-slug> --type uses_concept --evidence "<source-grounded reason>" --confidence high`
+- `uv run python tools/research_wiki.py add-citation '@configured' --from papers/<citing> --to papers/<cited> --source literature_api`
+- `uv run python tools/research_wiki.py log '@configured' "<message>"`
+- `uv run python tools/research_wiki.py rebuild-index '@configured'`
+- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'`
+- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'`
+- `uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<zotero-pdf-path>' [--title '<zotero-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]` — use single quotes for Zotero-derived paths/metadata because filenames may contain `$` or TeX math such as `$$^{143-147}$$`
 - `uv run python tools/fetch_zotero_metadata.py --item-key <key>` — internal metadata enrichment only after DOI/title Zotero PDF lookup selects an unambiguous candidate; returns Zotero metadata, `metadata.paper_slug`, and a derived `bibtex` entry
 - `uv run python tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
-- `uv run python tools/discover.py from-anchors --id <doi-or-title> --wiki-root @configured --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
+- `uv run python tools/discover.py from-anchors --id <doi-or-title> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
 
 ### Shared References
 

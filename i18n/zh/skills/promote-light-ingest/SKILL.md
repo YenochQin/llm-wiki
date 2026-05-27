@@ -39,32 +39,29 @@ Do not prioritize pure `background` or broad `review-context` pages unless they 
 
 **Pre-condition**: run from the repository root. Use runtime path aliases; do not hard-code `wiki/` or external vault paths.
 
-```bash
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
-uv run python tools/resolve_path_alias.py @configured @configured-sources-papers
+```shell
+uv run python tools/research_wiki.py stats '@configured' --json
+uv run python tools/resolve_path_alias.py '@configured' '@configured-sources-papers'
 ```
 
 ### Step 1: Scan Light Pages
 
 Run:
 
-```bash
-uv run python tools/promote_light_ingest.py --wiki-dir @configured --limit 20
+```shell
+uv run python tools/promote_light_ingest.py --wiki-dir '@configured' --limit 20
 ```
 
 For machine-readable output:
 
-```bash
-uv run python tools/promote_light_ingest.py --wiki-dir @configured --limit 20 --json
+```shell
+uv run python tools/promote_light_ingest.py --wiki-dir '@configured' --limit 20 --json
 ```
 
 For a persistent report:
 
-```bash
-uv run python tools/promote_light_ingest.py \
-  --wiki-dir @configured \
-  --limit 30 \
-  --output .checkpoints/promote-light-ingest.md
+```shell
+uv run python tools/promote_light_ingest.py --wiki-dir '@configured' --limit 30 --output .checkpoints/promote-light-ingest.md
 ```
 
 ### Step 2: Explain the Ranking
@@ -94,14 +91,14 @@ Never auto-apply the whole shortlist.
 
 ### Step 4: Log
 
-```bash
-uv run python tools/research_wiki.py log @configured "promote-light-ingest | scanned light papers | candidates=<N>"
+```shell
+uv run python tools/research_wiki.py log '@configured' "promote-light-ingest | scanned light papers | candidates=<N>"
 ```
 
 If `--apply` was used, log:
 
-```bash
-uv run python tools/research_wiki.py log @configured "promote-light-ingest | promoted papers/<slug>"
+```shell
+uv run python tools/research_wiki.py log '@configured' "promote-light-ingest | promoted papers/<slug>"
 ```
 
 ## Constraints
@@ -115,9 +112,9 @@ uv run python tools/research_wiki.py log @configured "promote-light-ingest | pro
 
 ### Tools
 
-- `uv run python tools/promote_light_ingest.py --wiki-dir @configured [--limit N] [--min-score N] [--json] [--output <path>]`
-- `uv run python tools/research_wiki.py log @configured "<message>"`
-- `uv run python tools/resolve_path_alias.py @configured @configured-sources-papers`
+- `uv run python tools/promote_light_ingest.py --wiki-dir '@configured' [--limit N] [--min-score N] [--json] [--output <path>]`
+- `uv run python tools/research_wiki.py log '@configured' "<message>"`
+- `uv run python tools/resolve_path_alias.py '@configured' '@configured-sources-papers'`
 
 ### Skills
 

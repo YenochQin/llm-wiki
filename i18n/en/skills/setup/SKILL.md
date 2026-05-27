@@ -39,7 +39,7 @@ including what each does, which skills use it, how to get it, and fallback behav
 
 Run the following to check what is already configured (uv-based, no manual venv activation):
 
-```bash
+```shell
 uv run --python .venv/bin/python python -c "
 import sys, os
 from pathlib import Path
@@ -61,8 +61,8 @@ for k, label in keys.items():
 ```
 
 Also detect the Python environment and `.venv` status:
-```bash
-ls .venv/ 2>/dev/null && echo "venv:present" || echo "venv:absent"
+```shell
+uv run python -c "from pathlib import Path; print('venv:present' if Path('.venv').exists() else 'venv:absent')"
 uv --version
 ```
 
@@ -149,7 +149,7 @@ launches and reads the user config file at that time — changes take effect aft
 
 After the user finishes configuring, run the verification check from `config/setup-guide.md`:
 
-```bash
+```shell
 uv run --python .venv/bin/python python -c "
 import sys, os
 from pathlib import Path
@@ -196,7 +196,7 @@ Configuration updated. Restart Claude Code for Review LLM changes to take effect
 ## Error Handling
 
 - **User config `.env` not found**: Inform the user that `setup.sh` was not run yet. Offer to create it from `config/.env.example`:
-  ```bash
+  ```shell
   mkdir -p ~/.config/llm-wiki
   cp config/.env.example ~/.config/llm-wiki/.env
   chmod 600 ~/.config/llm-wiki/.env
@@ -214,7 +214,7 @@ Configuration updated. Restart Claude Code for Review LLM changes to take effect
 
 ## Dependencies
 
-### Tools (via Bash)
+### Tools
 - `uv run --python .venv/bin/python python -c "import _env; ..."` — read current user config state
 
 ### Files Read

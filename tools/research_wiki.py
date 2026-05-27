@@ -18,7 +18,7 @@ Commands:
     set-meta <path> <field> <value> [--append]
 
     # Graph operations
-    add-edge <wiki_root> --from <id> --to <id> --type <type> [--evidence "..."] [--confidence high|medium|low]
+    add-edge <wiki_root> --from <id> --to <id> --type <type> --evidence "..." [--confidence high|medium|low]
     add-citation <wiki_root> --from papers/a --to papers/b [--source literature_api]
     batch-edges <wiki_root>                          # reads JSON array from stdin
     dedup-edges <wiki_root>
@@ -65,6 +65,7 @@ from pathlib import Path
 import frontmatter
 import yaml
 
+from _cli_io import configure_utf8_stdio
 from _paths import load_paths
 
 # ---------------------------------------------------------------------------
@@ -88,6 +89,12 @@ from _schemas import (  # noqa: E402
 )
 
 DERIVED_DIR = "graph"
+
+
+def _json_dumps(obj, **kwargs) -> str:
+    """JSON dump helper that tolerates YAML date objects from frontmatter."""
+    kwargs.setdefault("default", str)
+    return json.dumps(obj, **kwargs)
 
 STOP_WORDS = frozenset({
     "a", "an", "the", "of", "for", "in", "on", "with", "via",
@@ -525,6 +532,37 @@ def add_edge(wiki_root: str, from_id: str, to_id: str,
     print(json.dumps(result2))
 
 
+def apply_legacy_add_edge_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
+                               unknown_args: list[str]) -> list[str]:
+    """Accept the old positional add-edge form while preferring named flags."""
+    if args.command != "add-edge" or not unknown_args:
+        return unknown_args
+    if any(part.startswith("-") for part in unknown_args):
+        return unknown_args
+    if len(unknown_args) != 3:
+        return unknown_args
+
+    first, second, third = unknown_args
+    if second in VALID_EDGE_TYPES:
+        legacy_from, legacy_type, legacy_to = first, second, third
+    elif third in VALID_EDGE_TYPES:
+        legacy_from, legacy_to, legacy_type = first, second, third
+    else:
+        return unknown_args
+
+    if args.from_id and args.from_id != legacy_from:
+        parser.error("add-edge received both --from and a conflicting positional from_id")
+    if args.to_id and args.to_id != legacy_to:
+        parser.error("add-edge received both --to and a conflicting positional to_id")
+    if args.edge_type and args.edge_type != legacy_type:
+        parser.error("add-edge received both --type and a conflicting positional edge_type")
+
+    args.from_id = args.from_id or legacy_from
+    args.to_id = args.to_id or legacy_to
+    args.edge_type = args.edge_type or legacy_type
+    return []
+
+
 def load_citations(wiki_root: str) -> list[dict]:
     """Load all bibliographic citation rows from citations.jsonl."""
     citations_path = Path(wiki_root) / DERIVED_DIR / "citations.jsonl"
@@ -835,7 +873,7 @@ def _match_filter(actual, pattern_str: str) -> bool:
 
 def find_entities(wiki_root: str, entity_type: str,
                   filters: list[tuple[str, str]]) -> None:
-    """Search entities of a given type by frontmatter field filters."""
+    """Search entities of a given type by slug or frontmatter field filters."""
     root = Path(wiki_root)
     entity_dir = root / entity_type
 
@@ -848,10 +886,11 @@ def find_entities(wiki_root: str, entity_type: str,
         fm = _parse_frontmatter(f)
         if not fm:
             continue
+        record = {"slug": f.stem, **fm}
 
         match = True
         for field, pattern in filters:
-            val = fm.get(field)
+            val = record.get(field)
             if val is None:
                 match = False
                 break
@@ -865,9 +904,9 @@ def find_entities(wiki_root: str, entity_type: str,
                 break
 
         if match:
-            results.append({"slug": f.stem, **fm})
+            results.append(record)
 
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    print(_json_dumps(results, ensure_ascii=False, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -1067,7 +1106,7 @@ def find_similar_concept(wiki_root: str, candidate_title: str,
         is_found = 0 if m["entity_type"] == "foundation" else 1
         return (is_found, -m["score"])
     matches.sort(key=sort_key)
-    print(json.dumps(matches, ensure_ascii=False, indent=2))
+    print(_json_dumps(matches, ensure_ascii=False, indent=2))
 
 
 def find_similar_claim(wiki_root: str, candidate_title: str,
@@ -1150,7 +1189,7 @@ def find_similar_claim(wiki_root: str, candidate_title: str,
         })
 
     matches.sort(key=lambda m: -m["score"])
-    print(json.dumps(matches, ensure_ascii=False, indent=2))
+    print(_json_dumps(matches, ensure_ascii=False, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -1191,7 +1230,7 @@ def query_weak_claims(wiki_root: str, threshold: float = 0.5) -> None:
 
     # Sort by confidence ascending (weakest first)
     results.sort(key=lambda x: x["confidence"])
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    print(_json_dumps(results, ensure_ascii=False, indent=2))
 
 
 def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
@@ -1281,7 +1320,7 @@ def query_ready_to_test(wiki_root: str) -> None:
 
     # Sort by priority descending
     results.sort(key=lambda x: x.get("priority", 0), reverse=True)
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    print(_json_dumps(results, ensure_ascii=False, indent=2))
 
 
 def query_orphans(wiki_root: str) -> None:
@@ -1365,7 +1404,7 @@ def neighbors(wiki_root: str, node_id: str, depth: int = 1,
         if not current_level:
             break
 
-    print(json.dumps({"center": node_id, "depth": depth, "nodes": all_nodes},
+    print(_json_dumps({"center": node_id, "depth": depth, "nodes": all_nodes},
                       ensure_ascii=False, indent=2))
 
 
@@ -2554,14 +2593,14 @@ def read_meta(path: str, field: str | None = None) -> None:
         sys.exit(1)
 
     if field is None:
-        print(json.dumps(fm, ensure_ascii=False, indent=2))
+        print(_json_dumps(fm, ensure_ascii=False, indent=2))
     else:
         if field not in fm:
             print(json.dumps({"status": "error",
                               "message": f"Field '{field}' not in frontmatter"}))
             sys.exit(1)
         val = fm[field]
-        print(json.dumps(val, ensure_ascii=False))
+        print(_json_dumps(val, ensure_ascii=False))
 
 
 def set_meta(path: str, field: str, value: str, append: bool = False) -> None:
@@ -2699,7 +2738,7 @@ def checkpoint_get_meta(wiki_root: str, task_id: str, key: str = "") -> None:
         # Print a raw value (no JSON wrapping) so shell capture is clean.
         print(value)
     else:
-        print(json.dumps(meta, ensure_ascii=False))
+        print(_json_dumps(meta, ensure_ascii=False))
 
 
 def checkpoint_load(wiki_root: str, task_id: str) -> None:
@@ -2726,7 +2765,7 @@ def checkpoint_load(wiki_root: str, task_id: str) -> None:
         return
 
     data["exists"] = True
-    print(json.dumps(data))
+    print(_json_dumps(data))
 
 
 def checkpoint_clear(wiki_root: str, task_id: str) -> None:
@@ -2763,10 +2802,10 @@ def main():
 
     # add-edge
     p = sub.add_parser("add-edge", help="Add typed edge to graph")
-    p.add_argument("wiki_root")
-    p.add_argument("--from", dest="from_id", required=True)
-    p.add_argument("--to", dest="to_id", required=True)
-    p.add_argument("--type", dest="edge_type", required=True)
+    p.add_argument("wiki_root", nargs="?", default="")
+    p.add_argument("--from", dest="from_id", default="")
+    p.add_argument("--to", dest="to_id", default="")
+    p.add_argument("--type", dest="edge_type", default="")
     p.add_argument("--evidence", default="")
     p.add_argument("--confidence", default="",
                    choices=["", *sorted(EDGE_CONFIDENCE_VALUES)])
@@ -2928,11 +2967,14 @@ def main():
     p.add_argument("key", nargs="?", default="",
                    help="If given, print the raw value; otherwise print the whole metadata dict as JSON")
 
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
+    unknown_args = apply_legacy_add_edge_args(parser, args, unknown_args)
+    if unknown_args and args.command != "find":
+        parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
 
     if hasattr(args, "wiki_root") and args.wiki_root in {"@wiki", "@configured"}:
         args.wiki_root = str(load_paths().wiki_root)
-    if hasattr(args, "wiki_root"):
+    if hasattr(args, "wiki_root") and args.wiki_root:
         args.wiki_root = _validate_cli_wiki_root(args.wiki_root)
 
     if args.command == "init":
@@ -2948,6 +2990,21 @@ def main():
             bibtex=args.bibtex,
         ))
     elif args.command == "add-edge":
+        missing = []
+        if not args.wiki_root:
+            missing.append("wiki_root")
+        if not args.from_id:
+            missing.append("--from")
+        if not args.to_id:
+            missing.append("--to")
+        if not args.edge_type:
+            missing.append("--type")
+        if missing:
+            parser.error(
+                "add-edge requires "
+                f"{', '.join(missing)}. Use: add-edge '@configured' "
+                "--from <id> --to <id> --type <type> --evidence \"<text>\""
+            )
         add_edge(args.wiki_root, args.from_id, args.to_id,
                  args.edge_type, args.evidence, args.confidence,
                  args.symmetric)
@@ -2970,7 +3027,7 @@ def main():
     elif args.command == "find":
         # Parse remaining args as --field value pairs
         filters: list[tuple[str, str]] = []
-        remaining = sys.argv[sys.argv.index("find") + 3:]  # skip find, wiki_root, entity_type
+        remaining = unknown_args
         it = iter(remaining)
         for arg in it:
             if arg.startswith("--"):
@@ -3039,4 +3096,5 @@ def main():
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()
