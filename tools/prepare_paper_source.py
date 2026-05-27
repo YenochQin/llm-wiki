@@ -913,7 +913,7 @@ def prepare(
 
     front: dict = {
         "title": title,
-        "source": str(pdf),
+        "source": _portable_pdf_source(pdf),
         "sourceSlug": slug,
         "ingestedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "sourceType": "pdf",
@@ -1015,6 +1015,15 @@ def _project_relative(path: Path, raw_root: Path, project_root: Path | None = No
         return str(path.resolve().relative_to(raw_root.resolve().parent))
     except ValueError:
         return str(path)
+
+
+def _portable_pdf_source(path: Path) -> str:
+    normalized = str(path).replace("\\", "/")
+    marker = "/storage/"
+    if marker in normalized:
+        rest = normalized.split(marker, 1)[1]
+        return f"${{Zotero data directory}}/storage/{rest}"
+    return str(path)
 
 
 def _resolve_source_path(source: Path, raw_root: Path, project_root: Path) -> Path:

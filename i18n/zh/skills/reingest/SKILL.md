@@ -16,6 +16,7 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 
 - raw files under `raw/papers/`, `raw/notes/`, `raw/web/` remain read-only.
 - `wiki/sources/papers/<source-slug>.md` may be overwritten via `tools/prepare_paper_source.py --overwrite`; `<source-slug>` uses the sanitized Zotero citation key when available, otherwise `author_year_veryshorttitle`, but the output directory and MinerU cache root must be passed explicitly.
+- When refreshing or overwriting prepared source markdown, preserve portable Zotero provenance: if the PDF is under a Zotero data directory `storage/`, the prepared frontmatter `source` must be `${Zotero data directory}/storage/<attachment-key>/<file>.pdf`, not the generating machine's absolute path.
 - entity migration is enabled by default; `--update-entities` does not need to be provided.
 - `--paper-only` disables entity migration for this run.
 - existing concept/claim/people pages must be reviewed and migrated when the regenerated source makes an old definition, claim status, confidence, evidence detail, alias, author metadata, or research-area summary stale or incomplete.

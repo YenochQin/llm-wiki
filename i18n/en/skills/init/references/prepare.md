@@ -27,3 +27,4 @@ Use this reference when `/init` is preparing local inputs and writing `.checkpoi
 - Step 5 must consume the handed-off `canonical_ingest_path` exactly as written.
 
 - Zotero metadata enrichment is attempted for local PDFs when possible. If it finds a citation key, that key is used as the prepared source filename stem; if not, the prep tool falls back to `author_year_veryshorttitle`. Enrichment failures do not block `/init`.
+- Prepared source frontmatter must keep Zotero attachment paths portable: when a PDF lives under a Zotero data directory `storage/`, `source` must be `${Zotero data directory}/storage/<attachment-key>/<file>.pdf`, never the absolute path from the machine that generated the markdown.

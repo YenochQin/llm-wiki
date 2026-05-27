@@ -40,6 +40,7 @@ uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir 
 - Pass `--citation-key` when Zotero/Better BibTeX provides one; it is the preferred prepared-source filename stem. If no citation key is available, pass `--authors`, `--year`, and `--title` so the helper names the source as `author_year_veryshorttitle`.
 - Omit the flag when no title is confident. The helper falls back cleanly.
 - The helper automatically runs `tools/repair_latex_math.py` on the prepared body before writing. This conservative pass only edits math spans/blocks, skips code fences and inline code, converts `\(...\)` / `\[...\]` to Obsidian-compatible `$...$` / `$$...$$`, and removes common OCR-inserted spaces such as `\ alpha`, `_ {i}`, `^ {2}`, and `\left (`. It also repairs atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` into `1s^{2} \ ^{1}S_{0}` so the second superscript is rendered as the left superscript of the term symbol. If repairs were applied, the JSON `warnings` array includes a `latex math repaired: ...` summary and the prepared frontmatter records the repair counts.
+- The prepared markdown frontmatter `source` must be portable. For Zotero attachments, it must be written as `${Zotero data directory}/storage/<attachment-key>/<file>.pdf`, never as a machine-specific absolute path such as `E:\...`, `/Users/...`, or `/home/...`.
 
 The helper writes the prepared entry under the explicit `--output-dir` (normally `@configured-sources/papers`) and prints a JSON record with:
 
@@ -66,7 +67,7 @@ The prepared `.md` looks like:
 ```markdown
 ---
 title: "..."
-source: "<zotero-storage-path>/<file>.pdf"
+source: "${Zotero data directory}/storage/<attachment-key>/<file>.pdf"
 ingestedAt: "2026-05-06T..."
 totalPages: 24
 totalChars: 87412
