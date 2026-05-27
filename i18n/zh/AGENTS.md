@@ -203,6 +203,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |
 | `/ask` | `skills/ask/SKILL.md` | 手动 |
 | `/edit` | `skills/edit/SKILL.md` | 手动 |
+| `/code-analyze` | `skills/code-analyze/SKILL.md` | 手动（代码仓库架构/流程/风险/测试分析，可归档到 outputs） |
 | `/check` | `skills/check/SKILL.md` | 双周 / 手动 |
 | `/novelty` | `skills/novelty/SKILL.md` | 手动 |
 | `/review` | `skills/review/SKILL.md` | 手动 |
