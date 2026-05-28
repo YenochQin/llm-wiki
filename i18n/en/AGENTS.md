@@ -202,6 +202,7 @@ Standard log line:
 | `/ask` | `skills/ask/SKILL.md` | manual |
 | `/edit` | `skills/edit/SKILL.md` | manual |
 | `/check` | `skills/check/SKILL.md` | biweekly/manual |
+| `/source-audit` | `skills/source-audit/SKILL.md` | manual (audit wiki interpretations against original source text) |
 | `/novelty` | `skills/novelty/SKILL.md` | manual |
 | `/review` | `skills/review/SKILL.md` | manual |
 | `/ideate` | `skills/ideate/SKILL.md` | manual |

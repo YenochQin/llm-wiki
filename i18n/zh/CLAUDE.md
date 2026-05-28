@@ -190,6 +190,7 @@
 | `/edit` | `skills/edit/SKILL.md` | 手动 |
 | `/code-analyze` | `skills/code-analyze/SKILL.md` | 手动（代码仓库架构/流程/风险/测试分析，可归档到 outputs） |
 | `/check` | `skills/check/SKILL.md` | 双周 / 手动 |
+| `/source-audit` | `skills/source-audit/SKILL.md` | 手动（对照 source 原文审查 wiki 解读是否忠实） |
 | `/novelty` | `skills/novelty/SKILL.md` | 手动 |
 | `/review` | `skills/review/SKILL.md` | 手动 |
 | `/ideate` | `skills/ideate/SKILL.md` | 手动 |
