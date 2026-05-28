@@ -1,11 +1,11 @@
 ---
-description: Source-grounded audit of wiki pages against prepared source markdown. Use when checking whether wiki interpretations are faithful to original sources, including misreadings, unsupported claims, omissions, wrong numbers/units/signs, overgeneralization, source-excerpt mismatches, and classification/tag errors.
+description: Source-grounded audit of wiki pages against prepared source markdown. Use when checking whether wiki interpretations are faithful to original sources by listing exact source-to-wiki mismatches, including misreadings, unsupported claims, omissions, wrong numbers/units/signs, overgeneralization, source-excerpt mismatches, and classification/tag errors.
 argument-hint: [slug|path|--all] [--type papers|concepts|claims|all] [--batch-size N] [--start-after slug] [--fix] [--dry-run] [--write-report] [--adversarial]
 ---
 
 # /source-audit
 
-> Audit whether wiki pages are faithful to their canonical source documents. This is a source-grounded content audit, not a general wiki lint. It checks interpretation accuracy, missing source-backed facts, citation/excerpt fidelity, and whether tags/classifications reflect the source.
+> Audit whether wiki pages are faithful to their canonical source documents. This is a source-grounded content audit, not a general wiki lint. It lists exact source-to-wiki mismatches: what the source says, what the wiki says or omits, why they do not correspond, and the required correction.
 
 ## Inputs
 
@@ -85,13 +85,14 @@ order=sorted filename ascending
 mode=report-only
 ```
 
-### Step 2: Pair wiki content with source evidence
+### Step 2: Build source-to-wiki alignment evidence
 
 For each target page:
 
 1. Read the wiki page.
 2. Read the canonical source markdown or the linked prepared source excerpts.
-3. Identify audit-relevant statements:
+3. Extract audit-relevant source anchors before judging the wiki. Use exact source passages, headings, tables, figure captions, or line-like locations when available. Do not replace this with a model-generated summary of the source.
+4. Prioritize these source anchors:
    - title, authors, venue/year, DOI, BibTeX fields.
    - research classification: `paper_type`, `research_modes`, theory/computation/experiment tags, research objects.
    - methods, datasets/samples, instruments, experimental setup, equations/models.
@@ -99,7 +100,12 @@ For each target page:
    - results/conclusions, limitations, scope conditions, negative findings.
    - claims of novelty, first/best/SOTA, causality, generality, or mechanism.
    - concept definitions and quoted `## Source excerpts`.
-4. Extract exact source fragments supporting or contradicting each material statement. Keep quotes short.
+5. For each source anchor, find the corresponding wiki field, sentence, paragraph, table row, or section:
+   - If the wiki says something materially different, record a mismatch.
+   - If the wiki omits a source-backed fact needed for faithful interpretation, record `OMISSION`.
+   - If the wiki adds a material statement, search the source for its key terms, numbers, entities, and synonyms. If no corresponding source passage is found, record `UNSUPPORTED` and state the targeted searches performed.
+6. Every finding must be anchored in one or more exact source excerpts. Keep quotes short, but include enough original wording to let the user see the mismatch directly.
+7. Use a source-level summary only as navigation. Do not report a finding from a summary alone unless the source OCR is too poor; label that as `SOURCE_QUALITY_BLOCKER`.
 
 ### Step 3: Classify findings
 
@@ -108,7 +114,7 @@ Use these issue classes:
 - `MISREADING`: wiki states the opposite or a materially different meaning from the source.
 - `UNSUPPORTED`: wiki adds a claim not grounded in the source.
 - `OVERGENERALIZATION`: source claim is narrower than wiki wording.
-- `OMISSION`: wiki misses a key source-backed result, limitation, method detail, or caveat needed for faithful interpretation.
+- `OMISSION`: source contains a key result, limitation, method detail, scope condition, caveat, or negative finding that the wiki does not represent, and the absence makes the wiki interpretation incomplete or misleading.
 - `NUMBER_UNIT_ERROR`: wrong number, range, sign, unit, uncertainty, date, sample count, isotope/mass, or percentage.
 - `SOURCE_EXCERPT_MISMATCH`: quoted source excerpt is missing, paraphrased as if quoted, linked to the wrong source, or does not support the surrounding definition.
 - `CLASSIFICATION_ERROR`: `paper_type`, `research_modes`, tags, or research object classification contradicts the source.
@@ -146,10 +152,13 @@ Use this structure for every batch:
 ### [[slug]]
 
 1. **[Major][CLASSIFICATION_ERROR] Short title**
-   - **Wiki statement**: `...`
-   - **Source evidence**: `{source file}` section/heading if available - short exact fragment or precise paraphrase.
-   - **Why this is a problem**: ...
-   - **Suggested correction**: ...
+   - **Source location**: `{source file}` heading/table/figure/line if available.
+   - **Source text**: short exact quote from the prepared source.
+   - **Wiki location**: `wiki/papers/{slug}.md` field/section/paragraph/table row, or `missing`.
+   - **Wiki text / missing coverage**: exact wiki text, or the source-backed point absent from the wiki.
+   - **Mismatch type**: contradiction | unsupported addition | omitted source fact | overgeneralization | wrong number/unit | excerpt mismatch | classification mismatch | metadata mismatch.
+   - **Why this is a problem**: explain the non-correspondence between the quoted source and the wiki.
+   - **Required correction**: precise replacement, deletion, or addition.
 
 ## Proposed Edits
 - `wiki/papers/{slug}.md`: exact field/section edits, or `none`.
@@ -162,7 +171,7 @@ If no issues are found for a page, include:
 
 ```markdown
 ### [[slug]]
-- No source-grounding issues found in the audited scope.
+- No source-grounding issues found after source-to-wiki alignment in the audited scope.
 ```
 
 ### Step 5: Apply fixes only when requested
@@ -193,6 +202,10 @@ Skip logging only if the user asks for a no-write audit.
 ## Constraints
 
 - **Source-first**: every finding must cite the source file and a specific fragment, heading, table, figure caption, or clearly identified location when available.
+- **Mismatch-first output**: list concrete source-to-wiki non-correspondences. Do not substitute a paper/source summary for the mismatch list.
+- **Exact excerpts required**: every error or omission finding must include one or more short exact source excerpts. For omissions, quote the source passage and name where the wiki should cover it.
+- **Unsupported requires search evidence**: when marking a wiki statement as unsupported, quote the nearest relevant source passage or state `no corresponding source passage found` after targeted searches for the claim's key terms, numbers, entities, and synonyms.
+- **No summary-only findings**: do not report a finding from a source-level summary alone. Source summaries may guide navigation but cannot replace exact source evidence.
 - **No memory-only judgments**: if the source does not contain enough evidence, report uncertainty instead of relying on model knowledge.
 - **Prepared markdown is canonical**: for paper audits, use `wiki/sources/papers/*.md`; raw PDFs are fallback only when the user explicitly asks.
 - **Read-only by default**: no wiki edits unless `--fix` is explicit.
