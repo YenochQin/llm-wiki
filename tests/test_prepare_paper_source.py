@@ -25,5 +25,47 @@ class PreparePaperSourcePathTests(unittest.TestCase):
         self.assertEqual(prepare_paper_source._portable_pdf_source(path), str(path))
 
 
+class PreparePaperSourceTitleTests(unittest.TestCase):
+    def test_cover_title_match_allows_cover_noise_prefix(self) -> None:
+        title = (
+            "PAPER Large-scale multiconfiguration Dirac-Hartree-Fock "
+            "calculations of atomic data"
+        )
+        heading = (
+            "Large-scale multiconfiguration Dirac-Hartree-Fock "
+            "calculations of atomic data"
+        )
+
+        self.assertTrue(
+            prepare_paper_source._cover_title_heading_matches(heading, title)
+        )
+
+    def test_title_match_does_not_drop_similar_numbered_section(self) -> None:
+        title = (
+            "The Gaia-ESO Survey: Homogenisation of stellar parameters "
+            "and elemental abundances"
+        )
+        full_md = f"""# {title}
+
+Opening text.
+
+## 3.2. The homogenisation flow: From stellar parameters to elemental abundances
+
+Section content that must remain.
+"""
+
+        body, _, _, _ = prepare_paper_source._transform_markdown(
+            full_md,
+            "gaia-eso",
+            title,
+        )
+
+        self.assertIn(
+            "3.2. The homogenisation flow: From stellar parameters to elemental abundances",
+            body,
+        )
+        self.assertIn("Section content that must remain.", body)
+
+
 if __name__ == "__main__":
     unittest.main()
