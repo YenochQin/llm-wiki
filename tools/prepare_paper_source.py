@@ -41,6 +41,7 @@ build it is always a `.md` produced by MinerU + adapter (`ingest_format = "miner
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import json
 import re
@@ -270,6 +271,31 @@ def _same_title_heading(heading: str, title: str) -> bool:
     return heading_key == title_key
 
 
+def _cover_title_heading_matches(heading: str, title: str) -> bool:
+    if _same_title_heading(heading, title):
+        return True
+    if not heading or not title or _is_numbered(heading):
+        return False
+    heading_key = _plain_title_key(heading)
+    title_key = _plain_title_key(title)
+    if not heading_key or not title_key:
+        return False
+    # Fuzzy fallback only while still parsing cover/title material. MinerU can
+    # prepend labels like "PAPER" or "OPEN ACCESS", or truncate a long title.
+    if len(heading_key) >= 20 and len(title_key) >= 20:
+        ratio = difflib.SequenceMatcher(None, heading_key, title_key).ratio()
+        if ratio >= 0.88:
+            return True
+    prefix_len = 0
+    for a, b in zip(heading_key, title_key):
+        if a != b:
+            break
+        prefix_len += 1
+    if prefix_len >= 60:
+        return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Manifest synthesis (from MinerU content_list block list)
 # ---------------------------------------------------------------------------
@@ -452,7 +478,7 @@ def _transform_markdown(
                 continue
 
             # Title heading in papers without explicit section headings (e.g. PRL)
-            if in_cover and title_norm and _same_title_heading(heading_text, detected_title):
+            if in_cover and title_norm and _cover_title_heading_matches(heading_text, detected_title):
                 in_cover = False
                 if not title_emitted:
                     out.append(f"# {heading_text}")
