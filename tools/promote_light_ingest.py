@@ -194,6 +194,12 @@ def _score_page(path: Path, wiki_root: Path) -> dict[str, Any] | None:
     elif score >= 11:
         priority = "medium"
 
+    suggested_command = (
+        f"/reingest @configured-sources-papers/{source_slug}.md --update-entities"
+        if source_path.exists()
+        else f"/ingest --doi {doi}" if doi else f"/ingest --title \"{str(meta.get('title') or path.stem)}\""
+    )
+
     return {
         "slug": slug,
         "title": str(meta.get("title") or path.stem),
@@ -206,8 +212,9 @@ def _score_page(path: Path, wiki_root: Path) -> dict[str, Any] | None:
         "research_modes": research_modes,
         "source_slug": source_slug,
         "source_exists": source_path.exists(),
+        "source_path": f"@configured-sources-papers/{source_slug}.md",
         "reasons": reasons,
-        "suggested_command": f"/reingest papers/{slug} --update-entities",
+        "suggested_command": suggested_command,
     }
 
 

@@ -13,13 +13,13 @@ This skill audits paper pages created by `/ingest-light` and proposes which ones
 
 - `--limit N` optional, default 20: maximum candidates to show.
 - `--min-score N` optional, default 0: hide low-scoring candidates.
-- `--apply <paper-slug>` optional: after showing the rationale, run `/reingest papers/<slug> --update-entities` for one explicitly selected light-ingest paper.
+- `--apply <paper-slug>` optional: after showing the rationale, run `/reingest @configured-sources-papers/<source-slug>.md --update-entities` for one explicitly selected light-ingest paper whose prepared source exists.
 
 ## Outputs
 
 - Promotion shortlist grouped as `high` / `medium` / `low` priority.
 - Suggested command per paper, usually:
-  - `/reingest papers/<slug> --update-entities`
+  - `/reingest @configured-sources-papers/<source-slug>.md --update-entities`
 - Optional report file under `.checkpoints/` if useful for a long shortlist.
 - `<resolved-wiki-root>/log.md` append line via `tools/research_wiki.py log`.
 
@@ -83,9 +83,10 @@ Only when the user explicitly supplies `--apply <paper-slug>` or separately says
 1. Confirm the candidate is tagged `light-ingest`.
 2. Prefer:
    ```text
-   /reingest papers/<slug> --update-entities
+   /reingest @configured-sources-papers/<source-slug>.md --update-entities
    ```
-3. Preserve `thesis-introduction`, role tags, and `[[thesis-introduction-literature]]` links during the full reingest. Promotion adds graph/deep-analysis structure; it should not erase the writing-purpose context.
+3. Use the candidate's `source_slug` from the scanner output, not the paper page slug if they differ. `/reingest` accepts a prepared source path or PDF; `papers/<slug>` is only the existing page identity checked during matching.
+4. Preserve `thesis-introduction`, role tags, and `[[thesis-introduction-literature]]` links during the full reingest. Promotion adds graph/deep-analysis structure; it should not erase the writing-purpose context.
 
 Never auto-apply the whole shortlist.
 

@@ -113,6 +113,8 @@ Body sections to regenerate:
 
 Use the retained bibliography in the prepared markdown to resolve inline references where useful. Do not cite references not present in either the bibliography or metadata lookup.
 
+Paper wikilink rule: only write `[[paper-slug]]` for papers that already exist under `@configured/papers/` or are created in the same run. Bibliography entries or source-mentioned related work that are not yet ingested must stay as plain text citations with title/DOI/year and `not yet ingested` wording, or be reported as follow-up `/ingest` candidates. Do not create dangling `[[paper-slug]]` placeholders.
+
 ### Step 4: Audit and migrate entities
 
 Unless `--paper-only` is explicitly set, review all existing entities connected to the old or regenerated paper page:
