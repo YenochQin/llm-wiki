@@ -37,6 +37,8 @@ Open `docs/runtime-page-templates.en.md` before writing the paper page frontmatt
 
 Do not accept `--item-key` as a user-facing selector. Internal Zotero metadata enrichment may call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` only after DOI/title lookup selected an unambiguous candidate.
 
+Never pass DOI or title directly to `tools/fetch_zotero_metadata.py`; that helper only accepts `--item-key` (or `--ping`). For DOI/title-based Zotero lookup, first run `tools/find_zotero_pdf.py --doi <doi>` or `--title "<title>"`, select an unambiguous candidate, then call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>`.
+
 If the user omits `--role`, read `references/role-selection.md`, infer one primary role from the paper metadata/source, and state the role choice and one-sentence rationale in the final report. If the role cannot be inferred from available information, ask the user instead of guessing.
 
 ## Outputs
@@ -78,7 +80,7 @@ Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or 
    - call `tools/find_zotero_pdf.py` with `--doi` or `--title`;
    - select only an unambiguous candidate with exactly one existing PDF attachment;
    - set `<selected-pdf-path>` to the candidate's `best_attachment.path` when present, otherwise its single `pdf_paths[0]`;
-   - fetch Zotero metadata with internal `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` when available;
+   - fetch Zotero metadata with internal `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` when available; do not call `tools/fetch_zotero_metadata.py --doi` or `--title`, which are not supported CLI options;
    - run `tools/prepare_paper_source.py` with explicit `--source <selected-pdf-path>`, `--output-dir '@configured-sources-papers'`, and `--cache-root '@mineru-cache'`.
 3. Preserve Zotero `metadata.paper_slug` or prepared frontmatter `paperSlug` as the paper slug. Use `tools/research_wiki.py paper-slug` only when no citation key is available.
 4. Stop if preparation reports `usable: false`. Do not read `full.md`, MinerU cache files, or other intermediate cache artifacts as a substitute canonical source. A non-empty MinerU cache with `usable: false` means the adapter/filtering layer needs to be fixed or the failure must be reported to the user.

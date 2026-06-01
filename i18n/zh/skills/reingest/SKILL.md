@@ -25,6 +25,7 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 - `wiki/graph/*` is updated only through `tools/research_wiki.py`.
 - user-created custom sections in the old paper page should be preserved unless the user explicitly asks for a full rewrite.
 - `/reingest` does not accept Zotero `--item-key` as a user-facing paper selector. Match the existing paper from the prepared source's `paperSlug`/`sourceSlug`, DOI, title, or existing page path; if Zotero metadata is refreshed, use candidate `item_key` only as an internal call to `tools/fetch_zotero_metadata.py`.
+- Never pass DOI or title directly to `tools/fetch_zotero_metadata.py`; that helper only accepts `--item-key` (or `--ping`). For DOI/title-based Zotero lookup, first run `tools/find_zotero_pdf.py --doi <doi>` or `--title "<title>"`, select an unambiguous candidate, then call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>`.
 
 ## Workflow
 
@@ -48,7 +49,20 @@ uv run python tools/research_wiki.py stats '@configured' --json
 
    Pass `--title` only when confidently recovered from the PDF itself or an existing trusted paper page. Pass `--citation-key` when Zotero/Better BibTeX provides one; otherwise pass authors/year/title so the source filename falls back to `author_year_veryshorttitle`.
 2. If input is a prepared `wiki/sources/papers/*.md`, use it directly.
-3. Stop if the prep manifest has `usable: false`; report warnings verbatim.
+3. If the user gives only a DOI or title and a Zotero-backed refresh is needed, run:
+
+   ```shell
+   uv run python tools/find_zotero_pdf.py [--zotero-root <dir>] [--doi <doi>] [--title "<title>"]
+   ```
+
+   Use the selected candidate's real PDF path for `tools/prepare_paper_source.py`. Only after that candidate is selected may Zotero Local API metadata be refreshed with:
+
+   ```shell
+   uv run python tools/fetch_zotero_metadata.py --item-key <candidate.item_key>
+   ```
+
+   Do not call `tools/fetch_zotero_metadata.py --doi`; it is not a supported CLI.
+4. Stop if the prep manifest has `usable: false`; report warnings verbatim.
 
 ### Step 2: Match existing paper
 
