@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""No-key literature lookup via Crossref.
+"""No-key literature lookup via Crossref and OpenAlex.
 
 Usage:
     python3 tools/fetch_literature.py search "low rank adaptation"
@@ -8,7 +8,7 @@ Usage:
 
 The wrapper intentionally avoids API-key-gated literature services. Crossref is
 used for DOI metadata, title search, and reference lists when publishers have
-deposited them.
+deposited them. OpenAlex is used for broader works search.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ import os
 import requests
 
 CROSSREF_API_URL = "https://api.crossref.org/works"
+OPENALEX_API_URL = "https://api.openalex.org/works"
 USER_AGENT = "llm-wiki/0.1 (mailto:llm-wiki-local@example.invalid)"
 REQUEST_TIMEOUT = 30
 
@@ -55,6 +56,12 @@ def _get_json(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     query = dict(params or {})
     if mailto and "api.crossref.org" in url:
         query.setdefault("mailto", mailto)
+    openalex_mailto = os.environ.get("OPENALEX_MAILTO", "").strip()
+    if openalex_mailto and "api.openalex.org" in url:
+        query.setdefault("mailto", openalex_mailto)
+    openalex_api_key = os.environ.get("OPENALEX_API_KEY", "").strip()
+    if openalex_api_key and "api.openalex.org" in url:
+        query.setdefault("api_key", openalex_api_key)
     resp = requests.get(url, params=query, headers=headers, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
@@ -113,6 +120,59 @@ def _normalize_crossref_item(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _normalize_doi_url(value: str) -> str:
+    return re.sub(r"^https?://(?:dx\.)?doi\.org/", "", str(value or ""), flags=re.IGNORECASE)
+
+
+def _abstract_from_openalex_index(index: dict[str, list[int]] | None) -> str:
+    """Reconstruct OpenAlex's inverted-index abstract into plain text."""
+    if not isinstance(index, dict):
+        return ""
+    positioned: list[tuple[int, str]] = []
+    for word, positions in index.items():
+        if not isinstance(positions, list):
+            continue
+        for pos in positions:
+            if isinstance(pos, int):
+                positioned.append((pos, word))
+    positioned.sort(key=lambda item: item[0])
+    return _clean_text(" ".join(word for _pos, word in positioned))
+
+
+def _normalize_openalex_item(item: dict[str, Any]) -> dict[str, Any]:
+    title = _clean_text(item.get("display_name") or "")
+    doi = _normalize_doi_url(item.get("doi") or "")
+    authors: list[dict[str, str]] = []
+    for authorship in item.get("authorships") or []:
+        if not isinstance(authorship, dict):
+            continue
+        author = authorship.get("author") or {}
+        name = _clean_text(author.get("display_name") or authorship.get("raw_author_name") or "")
+        if name:
+            authors.append({"name": name})
+    source = ((item.get("primary_location") or {}).get("source") or {})
+    venue = _clean_text(source.get("display_name") or "")
+    openalex_id = item.get("id") or ""
+    external_ids = {"OpenAlex": openalex_id} if openalex_id else {}
+    if doi:
+        external_ids["DOI"] = doi
+    return {
+        "paperId": openalex_id or doi or title,
+        "title": title,
+        "abstract": _abstract_from_openalex_index(item.get("abstract_inverted_index")),
+        "authors": authors,
+        "year": item.get("publication_year"),
+        "citationCount": item.get("cited_by_count") or 0,
+        "influentialCitationCount": 0,
+        "venue": venue,
+        "publicationTypes": [item.get("type")] if item.get("type") else [],
+        "fieldsOfStudy": [],
+        "externalIds": external_ids,
+        "url": f"https://doi.org/{doi}" if doi else openalex_id,
+        "_provider": "openalex",
+    }
+
+
 def _crossref_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
     data = _get_json(CROSSREF_API_URL, {
         "query.bibliographic": query,
@@ -121,6 +181,18 @@ def _crossref_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
     })
     items = (data.get("message") or {}).get("items") or []
     return [_normalize_crossref_item(item) for item in items]
+
+
+def _openalex_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
+    data = _get_json(OPENALEX_API_URL, {
+        "search": query,
+        "per-page": max(1, limit),
+        "select": (
+            "id,doi,display_name,abstract_inverted_index,authorships,"
+            "publication_year,cited_by_count,primary_location,type"
+        ),
+    })
+    return [_normalize_openalex_item(item) for item in data.get("results") or []]
 
 
 def _crossref_paper(doi: str) -> dict[str, Any]:
@@ -153,8 +225,19 @@ def _dedupe(items: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
 
 
 def search(query: str, limit: int = 10) -> list[dict[str, Any]]:
-    """Search Crossref without API keys."""
-    return _dedupe(_crossref_search(query, limit=limit), limit)
+    """Search no-key literature providers."""
+    items: list[dict[str, Any]] = []
+    try:
+        items.extend(_crossref_search(query, limit=limit))
+    except Exception as exc:
+        print(f"warn: Crossref search failed for {query!r}: {exc}", file=sys.stderr)
+    try:
+        items.extend(_openalex_search(query, limit=limit))
+    except Exception as exc:
+        print(f"warn: OpenAlex search failed for {query!r}: {exc}", file=sys.stderr)
+    if not items:
+        raise RuntimeError(f"all literature providers failed for query: {query}")
+    return _dedupe(items, limit)
 
 
 def paper(identifier: str) -> dict[str, Any]:
