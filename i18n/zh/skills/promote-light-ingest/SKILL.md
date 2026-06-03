@@ -21,7 +21,7 @@ This skill audits paper pages created by `/ingest-light` and proposes which ones
 - Suggested command per paper, usually:
   - `/reingest @configured-sources-papers/<source-slug>.md --update-entities`
 - Optional report file under `.checkpoints/` if useful for a long shortlist.
-- `<resolved-wiki-root>/log.md` append line via `tools/research_wiki.py log`.
+- `<resolved-wiki-root>/log/` append line via `tools/research_wiki.py log`.
 
 ## Selection Signals
 

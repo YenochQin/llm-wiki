@@ -34,7 +34,7 @@ argument-hint: <research-direction-or-brief> [--auto] [--start-from stage1|stage
 - **wiki/outputs/pipeline-progress.md** — pipeline progress snapshot (for recovery)
 - **wiki/outputs/PIPELINE_REPORT.md** — full pipeline report
 - **paper/ directory** (if not `--skip-paper`) — paper plan + draft (`.tex` / `.md`); the user runs the LaTeX compile pipeline themselves
-- **wiki/log.md** — log appended after each stage
+- **wiki/log/** — log appended after each stage
 
 ## Wiki Interaction
 
@@ -50,7 +50,7 @@ argument-hint: <research-direction-or-brief> [--auto] [--start-from stage1|stage
 ### Writes
 - `wiki/outputs/pipeline-progress.md` — save progress at each Gate
 - `wiki/outputs/PIPELINE_REPORT.md` — final report
-- `wiki/log.md` — append log entries
+- `wiki/log/` — append log entries
 - All other wiki entity writes are delegated to sub-skills
 
 ### Graph edges created
@@ -389,7 +389,7 @@ Update pipeline-progress: status: completed.
 - **`--auto` does not skip computation**: it skips human confirmation, not analytical steps.
 - **`--skip-paper` still runs Stage 3 `/exp-eval`**: claim updates must be completed even when not writing a paper.
 - **Pass sub-skill parameters through**: correctly forward `domain`, `--venue`, etc. to sub-skills.
-- **Log every Stage** in `log.md`.
+- **Log every Stage** in `log/`.
 - **Do not re-run completed stages**: `--start-from` skips already-completed stages.
 - **Auto-recovery first**: if no `--start-from` is given and an unfinished pipeline exists, prompt the user to resume.
 - **Hand-off after Stage 2 is mandatory**: do not invent results, do not auto-skip the user. Always end the session there and require an explicit `--start-from stage3-eval` to resume.

@@ -26,7 +26,7 @@ argument-hint: <question>
   - or `wiki/concepts/{slug}.md` — if the answer reveals a new cross-paper concept
   - or `wiki/claims/{slug}.md` — if the answer surfaces a new verifiable assertion
   - updated `wiki/graph/edges.jsonl` (relationships produced by crystallize)
-  - updated `wiki/index.md` and `wiki/log.md`
+  - updated `wiki/index.md` and `wiki/log/`
 
 ## Wiki Interaction
 
@@ -51,7 +51,7 @@ argument-hint: <question>
 - `wiki/graph/context_brief.md` — REBUILD (if crystallize created new pages)
 - `wiki/graph/open_questions.md` — REBUILD (if crystallize created new pages)
 - `wiki/index.md` — EDIT (if crystallize created new pages)
-- `wiki/log.md` — APPEND
+- `wiki/log/` — APPEND
 
 ### Graph edges created (crystallize only)
 - `output → paper`: `derived_from` (papers cited in the answer)
@@ -159,7 +159,7 @@ Choose the crystallize target based on answer content:
 ### Step 6: Update Navigation and Graph (crystallize only)
 
 1. **index.md**: append new page entries under the appropriate category
-2. **log.md**:
+2. **log/**:
    ```shell
    uv run python tools/research_wiki.py log '@configured' "ask | <question-summary> | crystallized: <target-path>"
    ```

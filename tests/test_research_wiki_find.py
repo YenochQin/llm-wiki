@@ -160,6 +160,67 @@ key_papers:
         self.assertEqual(raised.exception.code, 2)
         self.assertIn("add-edge '@configured' --from <id>", stderr.getvalue())
 
+    def test_append_log_writes_weekly_skill_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            with mock.patch.object(
+                research_wiki,
+                "datetime",
+                wraps=research_wiki.datetime,
+            ) as mocked_datetime:
+                mocked_datetime.now.return_value = research_wiki.datetime(
+                    2026,
+                    6,
+                    10,
+                    12,
+                    0,
+                    tzinfo=research_wiki.timezone.utc,
+                )
+                research_wiki.append_log(str(root), "ingest-light | added papers/example")
+                research_wiki.append_log(str(root), "ingest | added papers/full")
+
+            log_file = root / "log" / "2026-06-w2.md"
+            content = log_file.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            content,
+            "# log\n\n"
+            "## ingest-light\n"
+            "[2026-06-10] added papers/example\n\n"
+            "## ingest\n"
+            "[2026-06-10] added papers/full\n",
+        )
+
+    def test_append_log_normalizes_skill_args_into_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            with mock.patch.object(
+                research_wiki,
+                "datetime",
+                wraps=research_wiki.datetime,
+            ) as mocked_datetime:
+                mocked_datetime.now.return_value = research_wiki.datetime(
+                    2026,
+                    6,
+                    3,
+                    12,
+                    0,
+                    tzinfo=research_wiki.timezone.utc,
+                )
+                research_wiki.append_log(str(root), "check --fix | repaired lint issues")
+
+            log_file = root / "log" / "2026-06-w1.md"
+            content = log_file.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            content,
+            "# log\n\n"
+            "## check\n"
+            "[2026-06-03] --fix | repaired lint issues\n",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

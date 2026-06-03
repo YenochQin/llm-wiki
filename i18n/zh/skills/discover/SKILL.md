@@ -29,7 +29,7 @@ Exactly one of `--anchor`, `--topic`, `--from-wiki` must be given.
 
 - `.checkpoints/discover-{seed-slug}-{YYYY-MM-DD}.json` — full shortlist payload, machine-readable; the seed slug is derived from the first anchor or the topic
 - a human-readable markdown summary printed to the user with rationale per candidate
-- `wiki/log.md` — one append line via `tools/research_wiki.py log`
+- `wiki/log/` — one append line via `tools/research_wiki.py log`
 
 `/discover` does not write anywhere else in `wiki/` and does not touch `raw/`. Whether to actually pull a candidate into the wiki is the caller's decision (a follow-up `/ingest`).
 
@@ -42,7 +42,7 @@ Exactly one of `--anchor`, `--topic`, `--from-wiki` must be given.
 
 ### Writes
 
-- `wiki/log.md` — APPEND via `tools/research_wiki.py log`
+- `wiki/log/` — APPEND via `tools/research_wiki.py log`
 
 ### Graph edges created
 
@@ -124,7 +124,7 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 ## Constraints
 
 - **Never auto-ingest**: `/discover` returns a shortlist and stops. Even when called by `/ingest --discover`, the caller surfaces results and the user decides what to ingest.
-- **No writes to `wiki/` other than `log.md`**: paper pages, concepts, claims, graph edges all belong to `/ingest`.
+- **No writes to `wiki/` other than `log/`**: paper pages, concepts, claims, graph edges all belong to `/ingest`.
 - **No writes to `raw/`**: `/discover` does not download papers. For Zotero-managed PDFs, the user can run `/ingest --title "<candidate title>"` or `/ingest --doi <doi>` and let `/ingest` scan the selected profile's `zotero_roots` in `config/paths.json`; for non-Zotero PDFs, they can pass the local PDF path directly to `/ingest`.
 - **Always dedupe against the wiki**: pass `--wiki-root '@configured'` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.

@@ -89,6 +89,8 @@ from _schemas import (  # noqa: E402
 )
 
 DERIVED_DIR = "graph"
+LOG_DIR = "log"
+LOG_HEADER = "# log\n\n"
 
 
 def _json_dumps(obj, **kwargs) -> str:
@@ -304,8 +306,9 @@ def init_wiki(wiki_root: str) -> None:
     Creates:
       - 9 entity directories (papers, concepts, topics, people, ideas, experiments, claims, Summary, foundations)
       - graph/ with empty edges.jsonl, citations.jsonl, context_brief.md, open_questions.md
+      - log/ for weekly audit log files
       - outputs/
-      - index.md, log.md (if they don't exist)
+      - index.md (if it doesn't exist)
     """
     root = Path(wiki_root)
 
@@ -317,12 +320,12 @@ def init_wiki(wiki_root: str) -> None:
     graph = root / DERIVED_DIR
     graph.mkdir(parents=True, exist_ok=True)
 
-    # Outputs directory
+    # Outputs and audit log directories
     (root / "outputs").mkdir(parents=True, exist_ok=True)
+    (root / LOG_DIR).mkdir(parents=True, exist_ok=True)
 
     # Seed files (only if they don't already exist)
     _write_if_missing(root / "index.md", _initial_index())
-    _write_if_missing(root / "log.md", _initial_log())
     _write_if_missing(graph / "edges.jsonl", "")
     _write_if_missing(graph / "citations.jsonl", "")
     _write_if_missing(graph / "context_brief.md",
@@ -344,10 +347,6 @@ def _initial_index() -> str:
     for entity in ENTITY_DIRS:
         sections.append(f"{entity}:")
     return "# Wiki Index\n\n" + "\n".join(sections) + "\n"
-
-
-def _initial_log() -> str:
-    return "# OmegaWiki Log\n\n"
 
 
 # ---------------------------------------------------------------------------
@@ -2273,21 +2272,79 @@ def _append_lines_to_section(fpath: Path, heading: str,
 # Audit log
 # ---------------------------------------------------------------------------
 
-def append_log(wiki_root: str, message: str) -> None:
-    """Append a timestamped entry to log.md.
 
-    Format matches product CLAUDE.md spec:
-      ## [YYYY-MM-DD] skill | action | details
+def _log_period_filename(now: datetime) -> str:
+    """Return the weekly log filename as yyyy-mm-wN.md.
+
+    `wN` is the week-of-month bucket: days 1-7 are w1, 8-14 are w2,
+    and so on.
     """
-    log_path = Path(wiki_root) / "log.md"
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    entry = f"## [{date_str}] {message}\n"
+    week_of_month = ((now.day - 1) // 7) + 1
+    return f"{now:%Y-%m}-w{week_of_month}.md"
 
-    if log_path.exists():
-        with open(log_path, "a", encoding="utf-8") as f:
-            f.write(entry)
+
+def _parse_log_message(message: str) -> tuple[str, str]:
+    """Split `skill | details` log messages into a section name and entry text."""
+    if "|" in message:
+        skill_part, details = message.split("|", 1)
     else:
-        log_path.write_text(f"# OmegaWiki Log\n\n{entry}", encoding="utf-8")
+        skill_part, details = "general", message
+
+    skill_tokens = skill_part.strip().lstrip("/").split()
+    skill = (skill_tokens or ["general"])[0]
+    skill_args = " ".join(skill_tokens[1:])
+    details = re.sub(r"\s+", " ", details.strip()) or "(no details)"
+    if skill_args:
+        details = f"{skill_args} | {details}"
+    return skill, details
+
+
+def _append_log_section_line(log_path: Path, skill: str, line: str) -> None:
+    """Append a log line under a skill heading in a weekly log file."""
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    heading = f"## {skill}"
+    if log_path.exists():
+        content = log_path.read_text(encoding="utf-8")
+        if not content.strip():
+            content = LOG_HEADER
+    else:
+        content = LOG_HEADER
+
+    if not content.startswith("# "):
+        content = LOG_HEADER + content.lstrip()
+
+    heading_re = re.compile(rf"(?m)^##\s+{re.escape(skill)}\s*$")
+    match = heading_re.search(content)
+    if not match:
+        new_content = content.rstrip() + f"\n\n{heading}\n{line}\n"
+        log_path.write_text(new_content, encoding="utf-8")
+        return
+
+    body_start = match.end()
+    next_heading = re.search(r"(?m)^##\s+", content[body_start:])
+    section_end = body_start + (next_heading.start() if next_heading else len(content[body_start:]))
+    before = content[:section_end].rstrip()
+    after = content[section_end:].lstrip("\n")
+    if after:
+        new_content = f"{before}\n{line}\n\n{after}"
+    else:
+        new_content = f"{before}\n{line}\n"
+    log_path.write_text(new_content, encoding="utf-8")
+
+
+def append_log(wiki_root: str, message: str) -> None:
+    """Append a timestamped entry to the current weekly log file.
+
+    Format:
+      log/yyyy-mm-wN.md
+      ## skill
+      [YYYY-MM-DD] action | details
+    """
+    now = datetime.now().astimezone()
+    date_str = now.strftime("%Y-%m-%d")
+    skill, details = _parse_log_message(message)
+    log_path = Path(wiki_root) / LOG_DIR / _log_period_filename(now)
+    _append_log_section_line(log_path, skill, f"[{date_str}] {details}")
 
 
 # ---------------------------------------------------------------------------

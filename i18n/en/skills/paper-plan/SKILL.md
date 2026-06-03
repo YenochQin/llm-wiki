@@ -28,7 +28,7 @@ argument-hint: <claim-slugs...> --venue <ICLR|NeurIPS|ICML|ACL|CVPR|IEEE> [--tit
 - `wiki/outputs/paper-plan-{slug}-{date}.md` — complete paper plan (PAPER_PLAN.md)
 - `wiki/graph/edges.jsonl` — new derived_from edges (plan → source claims/papers)
 - `wiki/graph/context_brief.md` — rebuilt
-- `wiki/log.md` — appended log entry
+- `wiki/log/` — appended log entry
 - **PAPER_PLAN_REPORT** (printed to terminal) — plan summary
 
 ## Wiki Interaction
@@ -50,7 +50,7 @@ argument-hint: <claim-slugs...> --venue <ICLR|NeurIPS|ICML|ACL|CVPR|IEEE> [--tit
 - `wiki/outputs/paper-plan-{slug}-{date}.md` — paper plan file
 - `wiki/graph/edges.jsonl` — derived_from edges
 - `wiki/graph/context_brief.md` — rebuilt
-- `wiki/log.md` — appended operation log
+- `wiki/log/` — appended operation log
 
 ### Graph edges created
 - `derived_from`: paper-plan → claims (which claims the plan is derived from)

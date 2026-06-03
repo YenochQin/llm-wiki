@@ -18,7 +18,7 @@ Use these local references on demand:
 - `references/error-handling.md` — source parse, API, and slug-collision fallbacks
 - `references/content-quality-gate.md` — report-derived quality floor for paper/concept/claim pages; open before drafting Step 3/4 outputs
 
-Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatter or body sections, and `docs/runtime-support-files.en.md` for `index.md`, `log.md`, and `graph/` formats.
+Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatter or body sections, and `docs/runtime-support-files.en.md` for `index.md`, `log/`, and `graph/` formats.
 
 ## Inputs
 
@@ -36,7 +36,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 - One fully-wired paper page plus linked entities (concepts, claims, people)
 - Graph edges and citations appended via `tools/research_wiki.py`
 - Terminal summary with page counts and suggested follow-up ingests
-- A minimum viable ingest normally touches the paper page, at least one concept or existing concept update, at least one claim or existing claim update, author/person handling, `index.md`, `log.md`, and graph/context files. If the source genuinely cannot support a claim or concept, say why in the log and final report.
+- A minimum viable ingest normally touches the paper page, at least one concept or existing concept update, at least one claim or existing claim update, author/person handling, `index.md`, `log/`, and graph/context files. If the source genuinely cannot support a claim or concept, say why in the log and final report.
 
 ## Wiki Interaction
 
@@ -62,7 +62,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 - `@configured/graph/context_brief.md` — REBUILD (skipped in INIT MODE)
 - `@configured/graph/open_questions.md` — REBUILD (skipped in INIT MODE)
 - `@configured/index.md` — APPEND
-- `@configured/log.md` — APPEND via tool
+- `@configured/log/` — APPEND via tool
 
 ### Graph edges created
 
@@ -89,7 +89,7 @@ Run commands from the repository root.
 uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
-`@configured` must resolve to the actual wiki vault root, not the code repository root. `tools/research_wiki.py` rejects the code repository root to prevent accidental creation of root-level `graph/`, `index.md`, or `log.md`.
+`@configured` must resolve to the actual wiki vault root, not the code repository root. `tools/research_wiki.py` rejects the code repository root to prevent accidental creation of root-level `graph/`, `index.md`, or `log/`.
 If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 ### Step 1: Resolve the source
@@ -250,7 +250,7 @@ If the ingest falls below the normal minimum viable output (paper + concept/upda
 2. At least one concept page created or materially updated with all mandatory body sections.
 3. At least one claim exists for importance ≥ 4 papers, or the report names the exception.
 4. `@configured/graph/edges.jsonl` has at least one edge involving the new paper.
-5. `@configured/log.md` has a new `## [today]` entry.
+5. The current weekly file under `@configured/log/` has a new `[today]` entry under `## ingest`.
 6. `@configured/index.md` includes the new paper and all new entities.
 7. LaTeX in all written pages uses `$`/`$$` exclusively — no code-fence equations, no `\(` `\)`.
 8. Every `[prepared markdown](../sources/papers/<source-slug>.md)` link written by this ingest resolves to an existing file with size > 0 bytes. If any target is missing or empty, the prepared MinerU markdown got wiped after preparation — surface the missing source slugs in the report and stop instead of shipping dead links. (If the user truly intends to keep concept pages without a source backing, the concept page must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.)
@@ -296,7 +296,7 @@ Append the markdown output to the report under a heading like "Related papers yo
 - LaTeX notation: use `$...$` for inline math and `$$...$$` for display math in all wiki pages. Code fences for equations and `\(` `\)` notation are not Obsidian-compatible and must not appear. PDF-derived formulas pass through `tools/repair_latex_math.py` during preprocessing; if you manually copy formulas, keep the same repaired style.
 - `/ingest` runs a shape check on its own output (required keys, enum ranges, YAML parses) and stops there. Backlink symmetry, dangling nodes, and full semantic audits belong to `/check`. Do not re-implement them here.
 - `/ingest` must not surface full-wiki lint counts from pre-existing pages. Use `tools/lint.py --only <touched-file>` only for scoped verification when needed, and leave whole-wiki lint reporting to `/check`.
-- Assume another `/ingest` may run concurrently in a sibling worktree. All shared-file writes (`graph/edges.jsonl`, `graph/citations.jsonl`, `index.md`, `log.md`) must go through `tools/research_wiki.py` or use append-only semantics. See `references/init-mode.md`.
+- Assume another `/ingest` may run concurrently in a sibling worktree. All shared-file writes (`graph/edges.jsonl`, `graph/citations.jsonl`, `index.md`, `log/*.log`) must go through `tools/research_wiki.py` or use append-only semantics. See `references/init-mode.md`.
 - In INIT MODE, skip `fetch_literature.py citations`, `fetch_literature.py references`, and the `rebuild-*` commands — the parent `/init` runs them once after fan-in.
 
 ## Error Handling

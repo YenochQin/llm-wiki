@@ -24,7 +24,7 @@ Use these local references on demand:
 - `wiki/sources/` prepared sources
 - Final paper pages via parallel `/ingest-local-pdf` subagents
 - `.checkpoints/init-*.json` manifests for resume and replay
-- Updated `wiki/index.md`, `wiki/log.md`, `wiki/graph/*`
+- Updated `wiki/index.md`, `wiki/log/`, `wiki/graph/*`
 
 ## Wiki Interaction
 
@@ -38,7 +38,7 @@ Use these local references on demand:
 
 - `wiki/` scaffold and provisional pages
 - `wiki/sources/`
-- `wiki/index.md`, `wiki/log.md`, `wiki/graph/*`
+- `wiki/index.md`, `wiki/log/`, `wiki/graph/*`
 - `.checkpoints/init-prepare.json`, `.checkpoints/init-sources.json`, and `init-session` checkpoint metadata
 
 ### Graph edges created
@@ -64,7 +64,7 @@ If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py '@co
 uv run python tools/research_wiki.py init '@configured'
 ```
 
-Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log.md`. Do not add a second init log entry here.
+Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log/`. Do not add a second init log entry here.
 
 ### Step 2: Prepare local inputs into `wiki/sources/`
 
@@ -122,7 +122,7 @@ Parallel local ingest contract:
 
 - stash unrelated dirty files before fan-out, then record `stash_ref`, `base_branch`, and `base_commit` in checkpoint metadata
 - commit the freshly created scaffold and init manifests before fan-out so `BASE_COMMIT` actually contains the pages, manifests, and handoff metadata that subagents must branch from
-- verify `.gitattributes` contains `merge=union` for `wiki/log.md`, `wiki/graph/edges.jsonl`, `wiki/graph/citations.jsonl`, and `wiki/index.md` before creating worktrees
+- verify `.gitattributes` contains `merge=union` for `wiki/log/*.md`, `wiki/graph/edges.jsonl`, `wiki/graph/citations.jsonl`, and `wiki/index.md` before creating worktrees
 - `/init` worktree mode must run from a named branch, not detached HEAD
 - create each worktree from `BASE_COMMIT`, not from the already checked-out `BASE_BRANCH`
 - subagent prompts must use **relative paths only**, and the subagent's shell working directory must be the worktree path (`$WT_PATH`), not the main repository root

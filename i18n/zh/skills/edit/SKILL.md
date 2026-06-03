@@ -24,7 +24,7 @@ User request, for example:
 
 ## Outputs
 
-Updated wiki files, `index.md`, `log.md`
+Updated wiki files, `index.md`, `log/`
 
 ## Steps
 
@@ -55,7 +55,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 ### STEP 3: Update Navigation
 
 1. `EDIT @configured/index.md`: update relevant entries
-2. Append a log entry via the tool (not by manually editing `log.md`):
+2. Append a log entry via the tool (not by manually editing `log/`):
 
    ```shell
    uv run python tools/research_wiki.py log '@configured' "edit | {description}"

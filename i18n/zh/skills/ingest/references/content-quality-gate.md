@@ -4,7 +4,7 @@ Open this reference before drafting or revising Step 3/4 outputs. It turns the c
 
 ## Failure modes to prevent
 
-- Good content but no runtime trail: missing `log.md`, missing graph rebuilds, or `index.md` not updated.
+- Good content but no runtime trail: missing `log/`, missing graph rebuilds, or `index.md` not updated.
 - Good scaffolding but thin pages: empty `claims/`, concept pages with only definitions, or paper pages that summarize without reusable claims/concepts.
 - Source drift: losing the paper's original section structure, equations, tables, figures, or precise terminology.
 - Broken source provenance: writing `[prepared markdown](../sources/papers/<source-slug>.md)` links whose targets under `@configured-sources-papers/` are missing or empty.
@@ -65,7 +65,7 @@ Normal ingest output should include:
 - at least one claim created or existing claim materially updated (mandatory for importance ≥ 4)
 - people handling: created only if importance ≥ 4, otherwise update existing pages if present
 - `index.md` updated or rebuilt
-- `log.md` appended in `## [YYYY-MM-DD] ingest | ...` form
+- the current weekly file under `log/` has a `[YYYY-MM-DD] ...` entry under `## ingest`
 - `@configured/graph/edges.jsonl` with at least one edge
 - `@configured/graph/citations.jsonl` created (may be empty)
 - `@configured/graph/context_brief.md` rebuilt outside INIT MODE
@@ -83,7 +83,7 @@ After Step 8 (report), run this self-check before considering the ingest complet
 2. At least one concept page was created or materially updated with all mandatory sections.
 3. Claims: at least one claim page exists (importance ≥ 4) or the report names the exception.
 4. `@configured/graph/edges.jsonl` contains at least one edge involving the new paper.
-5. `@configured/log.md` has a new `## [today]` entry.
+5. The current weekly file under `@configured/log/` has a new `[today]` entry under `## ingest`.
 6. `@configured/index.md` includes the new paper and all new entities.
 7. LaTeX in all written pages uses `$`/`$$` notation exclusively — no code-fence equations, no `\(` `\)`.
 8. Every `[prepared markdown](../sources/papers/<source-slug>.md)` link written by this ingest resolves to an existing `'@configured-sources-papers/<source-slug>.md'` file with size > 0 bytes. A zero-byte or missing target means the prepared MinerU markdown was wiped after preparation — surface the missing source slugs in the report and stop instead of shipping dead links. Concept pages without source backing must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.

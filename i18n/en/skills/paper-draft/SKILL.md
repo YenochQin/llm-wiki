@@ -31,7 +31,7 @@ argument-hint: <paper-plan-path> [--review] [--sections <section-numbers>]
   - `paper/tables/` — standalone table files (optional)
   - `paper/math_commands.tex` — shared math symbol definitions
   - `paper/references.bib` — verified BibTeX entries
-- `wiki/log.md` — appended log entry
+- `wiki/log/` — appended log entry
 
 ## Wiki Interaction
 
@@ -51,7 +51,7 @@ argument-hint: <paper-plan-path> [--review] [--sections <section-numbers>]
 
 ### Writes
 - `paper/` directory (all files)
-- `wiki/log.md` — appended operation log
+- `wiki/log/` — appended operation log
 
 ### Graph edges created
 - None (paper-plan already created derived_from edges)

@@ -49,7 +49,7 @@ For Python tools, pass aliases such as `@configured` and `@configured-sources-pa
 - `<resolved-wiki-root>/sources/papers/{source-slug}.md` — created when a Zotero PDF must be prepared through `tools/prepare_paper_source.py`.
 - `<resolved-wiki-root>/Summary/{target-summary}.md` — UPDATE unless `--depth paper-only`.
 - `<resolved-wiki-root>/index.md` — rebuild or append through `tools/research_wiki.py rebuild-index`.
-- `<resolved-wiki-root>/log.md` — append via `tools/research_wiki.py log`.
+- `<resolved-wiki-root>/log/` — append via `tools/research_wiki.py log`.
 
 No default writes to:
 

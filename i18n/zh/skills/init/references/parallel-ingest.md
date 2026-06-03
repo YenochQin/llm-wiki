@@ -7,7 +7,7 @@ Use this reference when `/init` is handing sources to parallel `/ingest-local-pd
 - Run `git status --short`.
 - Treat files under `wiki/`, `raw/papers/`, `wiki/sources/`, and `.checkpoints/init-*.json` as scaffold files.
 - Stash unrelated dirty files outside those paths.
-- Verify `.gitattributes` contains `merge=union` for `wiki/log.md`, `wiki/graph/edges.jsonl`, `wiki/graph/citations.jsonl`, and `wiki/index.md`.
+- Verify `.gitattributes` contains `merge=union` for `wiki/log/*.md`, `wiki/graph/edges.jsonl`, `wiki/graph/citations.jsonl`, and `wiki/index.md`.
 - Commit the scaffold before fan-out so `BASE_COMMIT` contains the generated pages and manifests that every worktree must inherit:
 
 ```shell

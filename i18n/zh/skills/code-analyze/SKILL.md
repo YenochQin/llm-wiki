@@ -44,7 +44,7 @@ If the target path is omitted, analyze the current repository.
 - **If `--write`**:
   - `wiki/outputs/code-analysis-{slug}-{date}.md` — archived analysis report
   - `wiki/index.md` — updated if outputs are indexed in the current wiki
-  - `wiki/log.md` — append-only entry via `tools/research_wiki.py log`
+  - `wiki/log/` — append-only entry via `tools/research_wiki.py log`
   - `wiki/graph/edges.jsonl` — only if the report cites existing wiki pages and `derived_from` edges are useful
 - **If `--crystallize`**:
   - suggested or created `concepts/`, `claims/`, `ideas/`, or `experiments/` pages, with required reverse links

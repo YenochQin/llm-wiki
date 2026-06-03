@@ -15,7 +15,7 @@ Use these local references on demand:
 - `references/init-mode.md` — manifest-driven handoff from `/init` and parallel-safety conventions
 - `references/error-handling.md` — source parse, API, and slug-collision fallbacks
 
-Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatter or body sections, and `docs/runtime-support-files.en.md` for `index.md`, `log.md`, and `graph/` formats.
+Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatter or body sections, and `docs/runtime-support-files.en.md` for `index.md`, `log/`, and `graph/` formats.
 
 ## Inputs
 
@@ -57,7 +57,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 - `@configured/graph/context_brief.md` — REBUILD (skipped in INIT MODE)
 - `@configured/graph/open_questions.md` — REBUILD (skipped in INIT MODE)
 - `@configured/index.md` — APPEND
-- `@configured/log.md` — APPEND via tool
+- `@configured/log/` — APPEND via tool
 
 ### Graph edges created
 
@@ -84,7 +84,7 @@ Run commands from the repository root.
 uv run python tools/research_wiki.py stats '@configured' --json
 ```
 
-`@configured` must resolve to the actual wiki vault root, not the code repository root. `tools/research_wiki.py` rejects the code repository root to prevent accidental creation of root-level `graph/`, `index.md`, or `log.md`.
+`@configured` must resolve to the actual wiki vault root, not the code repository root. `tools/research_wiki.py` rejects the code repository root to prevent accidental creation of root-level `graph/`, `index.md`, or `log/`.
 
 ### Step 1: Resolve the source
 
@@ -214,7 +214,7 @@ Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges
 2. At least one concept page was created or materially updated; each new/edited concept page has `## Source excerpts` and `## My understanding`.
 3. At least one claim exists for importance ≥ 4 papers, or the report names the exception.
 4. `@configured/graph/edges.jsonl` has at least one edge involving the new paper.
-5. `@configured/log.md` has a new `## [today]` entry.
+5. The current weekly file under `@configured/log/` has a new `[today]` entry under `## ingest`.
 6. `@configured/index.md` includes the new paper and all new entities.
 7. LaTeX in all written pages uses `$`/`$$` exclusively — no code-fence equations, no `\(` `\)`.
 8. Every `[prepared markdown](../sources/papers/<source-slug>.md)` link written by this ingest resolves to an existing file with size > 0 bytes. If any target is missing or empty, the prepared MinerU markdown got wiped after preparation — surface the missing source slugs in the report and stop instead of shipping dead links. (If a concept page truly has no source backing, it must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.)
@@ -249,7 +249,7 @@ Append the markdown output to the report under a heading like "Related papers yo
   - importance ≥ 4: at most **3** new concepts and **2** new claims per paper
   - Any further candidates must be merged into their nearest `find-similar-*` result, or left out for `/check` to flag. Rationale and matching rules: `references/dedup-policy.md`.
 - `/ingest` runs a shape check on its own output (required keys, enum ranges, YAML parses) and stops there. Backlink symmetry, dangling nodes, and full semantic audits belong to `/check`. Do not re-implement them here.
-- Assume another `/ingest` may run concurrently in a sibling worktree. All shared-file writes (`graph/edges.jsonl`, `graph/citations.jsonl`, `index.md`, `log.md`) must go through `tools/research_wiki.py` or use append-only semantics. See `references/init-mode.md`.
+- Assume another `/ingest` may run concurrently in a sibling worktree. All shared-file writes (`graph/edges.jsonl`, `graph/citations.jsonl`, `index.md`, `log/*.log`) must go through `tools/research_wiki.py` or use append-only semantics. See `references/init-mode.md`.
 - In INIT MODE, skip `fetch_literature.py citations`, `fetch_literature.py references`, and the `rebuild-*` commands — the parent `/init` runs them once after fan-in.
 
 ## Error Handling

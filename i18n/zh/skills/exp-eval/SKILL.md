@@ -26,7 +26,7 @@ argument-hint: <experiment-slug> [--auto]
 - `wiki/graph/edges.jsonl` — new supports/invalidates edges added
 - `wiki/graph/context_brief.md` — rebuilt
 - `wiki/graph/open_questions.md` — rebuilt
-- `wiki/log.md` — appended log entry
+- `wiki/log/` — appended log entry
 - **VERDICT_REPORT** (printed to terminal) — verdict result, wiki change summary, next step suggestions
 
 ## Wiki Interaction
@@ -46,7 +46,7 @@ argument-hint: <experiment-slug> [--auto]
 - `wiki/graph/edges.jsonl` — add supports or invalidates edges
 - `wiki/graph/context_brief.md` — rebuild
 - `wiki/graph/open_questions.md` — rebuild
-- `wiki/log.md` — append operation log
+- `wiki/log/` — append operation log
 
 ### Graph edges created
 - `supports`: experiment → claim (experiment supports the claim) — verdict = supported or partially_supported

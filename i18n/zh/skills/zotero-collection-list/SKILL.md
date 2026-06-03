@@ -73,7 +73,7 @@ If the collection path is missing, say it was not found and suggest checking the
 ## Constraints
 
 - This skill is read-only for Zotero.
-- Do not write wiki pages, graph files, `index.md`, or `log.md`.
+- Do not write wiki pages, graph files, `index.md`, or `log/`.
 - Do not run MinerU or prepare PDFs.
 - Do not mutate `raw/` or Zotero storage.
 - Do not expose internal SQLite row IDs unless needed for debugging; prefer Zotero `zotero_key`.

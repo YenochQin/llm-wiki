@@ -5,7 +5,8 @@
 ```text
 wiki/
 ├── index.md           ← content catalog (YAML)
-├── log.md             ← chronological log (append-only)
+├── log/               ← weekly skill-grouped activity logs
+│   └── yyyy-mm-wN.md
 ├── papers/            ← structured paper summaries
 ├── concepts/          ← cross-paper technical concepts
 ├── topics/            ← research direction maps

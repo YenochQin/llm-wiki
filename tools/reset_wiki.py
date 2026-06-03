@@ -3,11 +3,11 @@
 
 Scopes:
     wiki         delete all .md content under wiki/<entity>/, wiki/outputs/,
-                 wiki/sources/, wiki/index.md, wiki/log.md, and wiki/graph/ files.
+                 wiki/sources/, wiki/index.md, wiki/log/, and wiki/graph/ files.
                  Preserves .gitkeep and wiki/CLAUDE.md.
     raw          delete all files under raw/<sub>/ except .gitkeep; does not
                  delete vault-visible copies under wiki/sources/.
-    log          reset wiki/log.md to empty header.
+    log          reset wiki/log/ to the current empty weekly log file.
     checkpoints  call `research_wiki.py checkpoint-clear` to drop batch state.
     all          all of the above.
 
@@ -24,6 +24,7 @@ import argparse
 import json
 import shutil
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
@@ -40,7 +41,7 @@ RAW_SUBDIRS = ["papers", "discovered", "prepared", "tmp", "notes", "web"]
 ALL_SCOPES = ["wiki", "raw", "log", "checkpoints"]
 
 INDEX_TEMPLATE = "# Wiki Index\n\n" + "\n".join(f"{e}:" for e in ENTITY_DIRS) + "\n"
-LOG_TEMPLATE = "# OmegaWiki Log\n\n"
+LOG_TEMPLATE = "# log\n\n"
 GRAPH_FILES = ["edges.jsonl", "citations.jsonl", "context_brief.md", "open_questions.md"]
 
 
@@ -60,6 +61,12 @@ def _list_source_entries(directory: Path) -> list[Path]:
     if not directory.exists():
         return []
     return [p for p in directory.iterdir() if p.name != ".gitkeep"]
+
+
+def _current_weekly_log_path(wiki_root: Path) -> Path:
+    now = datetime.now().astimezone()
+    week_of_month = ((now.day - 1) // 7) + 1
+    return wiki_root / "log" / f"{now:%Y-%m}-w{week_of_month}.md"
 
 
 def _show(path: Path, project_root: Path) -> str:
@@ -91,6 +98,8 @@ def plan(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[str])
             p["delete_files"].append(_show(wiki / "index.md", project_root))
         if (wiki / "log.md").exists():
             p["delete_files"].append(_show(wiki / "log.md", project_root))
+        for f in _list_source_entries(wiki / "log"):
+            p["delete_files"].append(_show(f, project_root))
         for gf in GRAPH_FILES:
             gf_path = wiki / "graph" / gf
             if gf_path.exists():
@@ -102,7 +111,11 @@ def plan(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[str])
                 p["delete_files"].append(_show(f, project_root))
 
     if "log" in scopes and "wiki" not in scopes:
-        p["reset_files"].append(_show(wiki / "log.md", project_root))
+        for f in _list_source_entries(wiki / "log"):
+            p["delete_files"].append(_show(f, project_root))
+        if (wiki / "log.md").exists():
+            p["delete_files"].append(_show(wiki / "log.md", project_root))
+        p["reset_files"].append(_show(_current_weekly_log_path(wiki), project_root))
 
     if "checkpoints" in scopes:
         p["actions"].append("research_wiki.py checkpoint-clear")
@@ -133,6 +146,14 @@ def execute(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[st
             if sp.exists():
                 sp.unlink()
                 deleted += 1
+        log_dir = wiki / "log"
+        for f in _list_source_entries(log_dir):
+            if f.is_dir():
+                shutil.rmtree(f)
+            else:
+                f.unlink()
+            deleted += 1
+        log_dir.mkdir(parents=True, exist_ok=True)
         graph = wiki / "graph"
         if graph.exists():
             for gf in GRAPH_FILES:
@@ -168,8 +189,20 @@ def execute(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[st
                 keep.touch()
 
     if "log" in scopes and "wiki" not in scopes:
-        # Standalone log scope: reset to empty header
-        (wiki / "log.md").write_text(LOG_TEMPLATE, encoding="utf-8")
+        log_dir = wiki / "log"
+        for f in _list_source_entries(log_dir):
+            if f.is_dir():
+                shutil.rmtree(f)
+            else:
+                f.unlink()
+            deleted += 1
+        old_log = wiki / "log.md"
+        if old_log.exists():
+            old_log.unlink()
+            deleted += 1
+        weekly_log = _current_weekly_log_path(wiki)
+        weekly_log.parent.mkdir(parents=True, exist_ok=True)
+        weekly_log.write_text(LOG_TEMPLATE, encoding="utf-8")
         reset += 1
 
     if "checkpoints" in scopes:

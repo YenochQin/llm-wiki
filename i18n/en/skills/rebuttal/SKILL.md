@@ -29,7 +29,7 @@ argument-hint: <review-file-or-path> [--paper-slug <slug>] [--venue <venue>] [--
 - **wiki/outputs/rebuttal-{slug}.md** — rich-text rebuttal (with [[wikilinks]], evidence tracing, analysis tables)
 - **wiki/outputs/rebuttal-{slug}.txt** — formal rebuttal (plain text, suitable for pasting into submission system)
 - **wiki/claims/*.md** — if a concern exposes an evidence gap, append a suggestion to `## Open questions`
-- **wiki/log.md** — append log entry
+- **wiki/log/** — append log entry
 
 ## Wiki Interaction
 
@@ -48,7 +48,7 @@ argument-hint: <review-file-or-path> [--paper-slug <slug>] [--venue <venue>] [--
 - `wiki/outputs/rebuttal-{slug}.md` — rich-text version
 - `wiki/outputs/rebuttal-{slug}.txt` — formal plain-text version
 - `wiki/claims/*.md` — append reviewer-identified gaps to `## Open questions` (do not directly modify confidence/status; add suggestions only)
-- `wiki/log.md` — append log entry
+- `wiki/log/` — append log entry
 
 ### Graph edges created
 - None (rebuttal is a query operation; does not modify the knowledge graph)

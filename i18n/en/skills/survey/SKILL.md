@@ -26,7 +26,7 @@ argument-hint: <research-question-or-claim-slugs> [--format latex|markdown] [--m
 
 - `wiki/outputs/related-work-{slug}-{date}.md` — Related Work text (archived)
 - `wiki/graph/edges.jsonl` — derived_from edges (if a new output is created)
-- `wiki/log.md` — appended log entry
+- `wiki/log/` — appended log entry
 - **Terminal output** — Related Work body text (for direct copy-paste)
 
 ## Wiki Interaction
@@ -46,7 +46,7 @@ argument-hint: <research-question-or-claim-slugs> [--format latex|markdown] [--m
 ### Writes
 - `wiki/outputs/related-work-{slug}-{date}.md` — archived file
 - `wiki/graph/edges.jsonl` — derived_from edges
-- `wiki/log.md` — appended operation log
+- `wiki/log/` — appended operation log
 
 ### Graph edges created
 - `derived_from`: related-work output → source papers

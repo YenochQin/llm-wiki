@@ -50,7 +50,7 @@ argument-hint: <artifact-slug-or-path> [--max-rounds N] [--target-score N] [--di
 - `wiki/graph/edges.jsonl` — if new relationships are discovered during fixes
 - `wiki/graph/context_brief.md` — rebuild after each round if wiki changes were made
 - `wiki/graph/open_questions.md` — rebuild after each round if wiki changes were made
-- `wiki/log.md` — append operation log
+- `wiki/log/` — append operation log
 
 ### Graph edges created
 - Depends on fix content; may add: `supports`, `addresses_gap`, `inspired_by`, etc.

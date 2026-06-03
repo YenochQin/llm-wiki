@@ -40,7 +40,7 @@ description: Scan the full wiki to detect health issues and produce a tiered fix
 
 ### Writes
 - Does not directly modify wiki content (reports only, no fixes)
-- `wiki/log.md` — records lint result summary via `tools/research_wiki.py log`
+- `wiki/log/` — records lint result summary via `tools/research_wiki.py log`
 
 ## Workflow
 

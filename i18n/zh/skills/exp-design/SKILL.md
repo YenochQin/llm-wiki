@@ -28,7 +28,7 @@ argument-hint: <idea-slug-or-hypothesis> [--review] [--budget <gpu-hours>]
 - `wiki/ideas/{slug}.md` — updated linked_experiments field
 - `wiki/graph/context_brief.md` — rebuilt
 - `wiki/graph/open_questions.md` — rebuilt
-- `wiki/log.md` — appended log entry
+- `wiki/log/` — appended log entry
 - **EXPERIMENT_PLAN_REPORT** (printed to terminal) — experiment block summary, run order, compute budget
 
 ## Wiki Interaction
@@ -48,7 +48,7 @@ argument-hint: <idea-slug-or-hypothesis> [--review] [--budget <gpu-hours>]
 - `wiki/graph/edges.jsonl` — add tested_by edges
 - `wiki/graph/context_brief.md` — rebuild
 - `wiki/graph/open_questions.md` — rebuild
-- `wiki/log.md` — append operation log
+- `wiki/log/` — append operation log
 
 ### Graph edges created
 - `tested_by`: claim → experiment (the claim is validated by this experiment)

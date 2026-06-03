@@ -14,9 +14,9 @@ Manual: `/reset --scope wiki` / `--scope raw` / `--scope log` / `--scope checkpo
 ## Inputs
 
 - `--scope` *(required)*: one of
-  - `wiki` — delete every `*.md` under `wiki/<entity>/` and `wiki/outputs/`, every entry under `wiki/sources/`, plus `wiki/index.md`, `wiki/log.md`, and `wiki/graph/` files. Preserves `.gitkeep` and `wiki/CLAUDE.md`.
+  - `wiki` — delete every `*.md` under `wiki/<entity>/` and `wiki/outputs/`, every entry under `wiki/sources/`, plus `wiki/index.md`, `wiki/log/`, and `wiki/graph/` files. Preserves `.gitkeep` and `wiki/CLAUDE.md`.
   - `raw` — delete every entry under `raw/papers/`, `raw/notes/`, `raw/web/`, and legacy `raw/prepared/` / `raw/tmp/` (except `.gitkeep`). It does not delete vault-visible copies under `wiki/sources/`.
-  - `log` — reset `wiki/log.md` to the empty header.
+  - `log` — reset `wiki/log/` to the empty header.
   - `checkpoints` — clear batch state via `research_wiki.py checkpoint-clear`.
   - `all` — every scope above.
 
@@ -33,7 +33,7 @@ Manual: `/reset --scope wiki` / `--scope raw` / `--scope log` / `--scope checkpo
 
 ### Writes
 - Deletes `wiki/<entity>/*.md` (preserves `.gitkeep`).
-- Rewrites `wiki/index.md`, `wiki/graph/*`, optionally `wiki/log.md`.
+- Rewrites `wiki/index.md`, `wiki/graph/*`, optionally `wiki/log/`.
 - Deletes `raw/<sub>/*` for raw scope, and `wiki/sources/*` for wiki scope (except `.gitkeep`).
 
 ## Workflow

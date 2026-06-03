@@ -17,7 +17,7 @@
 ### `wiki/` 是主要产品界面
 
 - `wiki/index.md` 是所有 wiki 页面的目录
-- `wiki/log.md` 是只追加的活动日志
+- `wiki/log/` 存放按周拆分、只追加的活动日志
 - `wiki/papers/` 存放论文总结
 - `wiki/concepts/`、`wiki/topics/`、`wiki/foundations/` 存放可复用知识结构
 - `wiki/people/`、`wiki/ideas/`、`wiki/experiments/`、`wiki/claims/` 存放研究者、假设、实验和断言
@@ -30,7 +30,7 @@
 - 起草或修复 wiki 页面结构、YAML、正文区段前，先打开 `docs/runtime-page-templates.en.md`
 - **公式格式强制要求**：无论是在生成 wiki 内容的过程中，还是在使用 llm-wiki 对话的过程中，输出的行内 LaTeX 公式一律使用 `$...$` 包围，行间 LaTeX 公式一律使用 `$$...$$` 包围。
 - 需要可复制的页面起始模板时，使用 `docs/templates/`；根目录不放模板库
-- 需要 graph 派生文件、`index.md` 或 `log.md` 细节时，打开 `docs/runtime-support-files.en.md`
+- 需要 graph 派生文件、`index.md` 或 `log/` 细节时，打开 `docs/runtime-support-files.en.md`
 - `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
 - `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
 
@@ -142,12 +142,26 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 - 文献引用存放在 `citations.jsonl`，类型为 `type: cites`
 - 使用 `tools/research_wiki.py add-edge`、`add-citation`、`rebuild-context-brief`、`rebuild-open-questions`
 
-## log.md 格式
+## log/ 格式
 
-标准日志行：
+日志写入 `wiki/log/{yyyy-mm-wN}.md`，其中 `wN` 是当月第几周：1–7 日为 `w1`，8–14 日为 `w2`，依此类推。
+
+每个周日志文件使用 `# log` 作为一级标题，使用 skill 名称作为二级标题。标准格式：
 
 ```markdown
-## [YYYY-MM-DD] skill | details
+# log
+
+## ingest-light
+[YYYY-MM-DD] added something
+
+## ingest
+[YYYY-MM-DD] added something
+```
+
+日志必须通过工具追加，不要手动编辑：
+
+```shell
+uv run python tools/research_wiki.py log '@configured' "ingest-light | added something"
 ```
 
 ---
@@ -173,7 +187,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 - **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。
 - **双向链接**：写正向链接时必须同时写反向链接。
 - **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest-local-pdf` 和 `/init` 产出/消费 `wiki/sources/papers/<slug>.md`；`/ingest` 只消费已准备好的 `wiki/sources/papers/<slug>.md`、INIT MODE 交接路径，或 Zotero 定位后的论文源，不要直接消费原始 PDF。
-- **每次 ingest 都更新 index.md**；`log.md` 只追加。
+- **每次 ingest 都更新 index.md**；`log/` 周日志只追加。
 - **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
 - **Slug 生成规则**：论文页 `papers/{slug}.md` 使用 Zotero/Better BibTeX `citationKey`；没有 citation key 时使用 `author_year_veryshorttitle`。非论文页面仍使用标题关键词 slug：全小写、连字符连接、无空格。
 - **重要性评分**：1 = 小众，2 = 有用，3 = 领域标准，4 = 有影响力，5 = 开创性。

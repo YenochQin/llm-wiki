@@ -17,7 +17,7 @@ Keep this mental map in immediate context:
 ### `wiki/` is the main product surface
 
 - `wiki/index.md` is the catalog of all wiki pages
-- `wiki/log.md` is the append-only activity log
+- `wiki/log/` stores weekly activity logs maintained by `tools/research_wiki.py log`
 - `wiki/papers/` holds paper summaries
 - `wiki/concepts/`, `wiki/topics/`, and `wiki/foundations/` hold reusable knowledge structure
 - `wiki/people/`, `wiki/ideas/`, `wiki/experiments/`, and `wiki/claims/` hold research actors, hypotheses, tests, and assertions
@@ -29,7 +29,7 @@ Keep this mental map in immediate context:
 
 - Open `docs/runtime-page-templates.en.md` before drafting or repairing wiki page structure, YAML, or body sections
 - For copyable page starter templates, use `docs/templates/`; do not keep a root-level template library
-- Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log.md` format
+- Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log/` format
 - `SKILL.md` is the immediate entrypoint for a skill; some larger skills may also provide local on-demand reference files under their skill directory
 - `/init` is the first concrete example of this pattern: read `skills/init/SKILL.md` first, then open `skills/init/references/*` only when needed
 - `skills/` is a symlink created by `setup.sh`, pointing to `i18n/{lang}/skills/`; edit skill content in `i18n/`, not the symlink target
@@ -124,12 +124,26 @@ When writing a forward link, **always write the reverse link simultaneously**:
 - bibliographic citations live in `citations.jsonl` as `type: cites`
 - use `tools/research_wiki.py add-edge`, `add-citation`, `rebuild-context-brief`, and `rebuild-open-questions`
 
-## log.md Format
+## log/ Format
 
-Standard log line:
+Logs are written to `wiki/log/{yyyy-mm-wN}.md`, where `wN` is the week-of-month bucket: days 1–7 are `w1`, days 8–14 are `w2`, and so on.
+
+Each weekly log file uses `# log` as the top-level heading and skill names as second-level headings. Standard format:
 
 ```markdown
-## [YYYY-MM-DD] skill | details
+# log
+
+## ingest-light
+[YYYY-MM-DD] added something
+
+## ingest
+[YYYY-MM-DD] added something
+```
+
+Append log entries only through the tool:
+
+```shell
+uv run python tools/research_wiki.py log '@configured' "ingest-light | added something"
 ```
 
 ---
@@ -155,7 +169,7 @@ Standard log line:
 - **graph/ is auto-generated**: never manually edit files in `graph/` — only via `tools/research_wiki.py`.
 - **Bidirectional links**: always write the reverse link when writing a forward link.
 - **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`). `/ingest-local-pdf` and `/init` produce/consume the prepared `wiki/sources/papers/<slug>.md`; `/ingest` only consumes already prepared `wiki/sources/papers/<slug>.md`, the INIT MODE handoff path, or Zotero-located paper sources — never the raw PDF directly.
-- **index.md updated on every ingest**; log.md is append-only.
+- **index.md updated on every ingest**; log entries go through the weekly `log/` files.
 - **lint default is report-only**: `--fix` auto-fixes deterministic issues (xref backlinks, missing field defaults); `--suggest` outputs suggestions for non-deterministic issues; `--fix --dry-run` previews fixes.
 - **Slug generation rule**: paper title keywords, hyphen-joined, all lowercase.
 - **Importance scoring**: 1 = niche, 2 = useful, 3 = field-standard, 4 = influential, 5 = seminal.

@@ -1,6 +1,6 @@
 # Runtime Support Files
 
-> On-demand reference for graph-derived files plus the non-page runtime files `index.md` and `log.md`.
+> On-demand reference for graph-derived files plus the non-page runtime files `index.md` and `log/`.
 
 ## Graph Files
 
@@ -34,10 +34,19 @@ claims:
   - slug: lora-preserves-quality-at-low-rank
 ```
 
-## log.md Format
+## log/ Format
 
 ```markdown
-## [2026-04-07] ingest | added papers/lora-low-rank-adaptation | updated: concepts/parameter-efficient-fine-tuning
-## [2026-04-07] lint | report: 0 🔴, 2 🟡, 1 🔵
-## [2026-04-08] check | report: 0 critical, 2 warnings, 1 suggestion
+# log
+
+## ingest
+[2026-04-07] added papers/lora-low-rank-adaptation | updated: concepts/parameter-efficient-fine-tuning
+
+## lint
+[2026-04-07] report: 0 red, 2 yellow, 1 blue
+
+## check
+[2026-04-08] report: 0 critical, 2 warnings, 1 suggestion
 ```
+
+Weekly log files live at `wiki/log/{yyyy-mm-wN}.md`; `wN` is the week-of-month bucket, so days 1-7 are `w1`, days 8-14 are `w2`, and so on. Append entries with `tools/research_wiki.py log`, not by editing the files directly.

@@ -1,6 +1,6 @@
 # Runtime Page Templates
 
-> On-demand reference for full wiki page templates only. See `docs/runtime-support-files.en.md` for graph-derived files plus `index.md` and `log.md`.
+> On-demand reference for full wiki page templates only. See `docs/runtime-support-files.en.md` for graph-derived files plus `index.md` and `log/`.
 
 ## 9 Page Types
 

@@ -44,7 +44,7 @@ argument-hint: "[research-direction-or-topic] [--max-ideas N] [--skip-validation
 - `wiki/graph/edges.jsonl` — add idea → claim/gap relationship edges (addresses_gap, inspired_by)
 - `wiki/graph/context_brief.md` — rebuild
 - `wiki/graph/open_questions.md` — rebuild
-- `wiki/log.md` — append operation log
+- `wiki/log/` — append operation log
 
 ### Graph edges created
 - `addresses_gap`: idea → claim/topic (knowledge gap the idea targets)

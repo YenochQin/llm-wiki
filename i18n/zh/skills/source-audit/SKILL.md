@@ -32,7 +32,7 @@ argument-hint: [slug|path|--all] [--type papers|concepts|claims|all] [--batch-si
 - Source-grounded audit report in the conversation.
 - Optional report file: `wiki/outputs/source-audit-{date}.md`.
 - Optional wiki edits only when the user explicitly passes `--fix`.
-- Optional log entry in `wiki/log.md` after a completed batch.
+- Optional log entry in `wiki/log/` after a completed batch.
 
 ## Wiki Interaction
 
@@ -50,7 +50,7 @@ argument-hint: [slug|path|--all] [--type papers|concepts|claims|all] [--batch-si
 - Default: no writes.
 - With `--fix`: edit only wiki interpretation pages (`papers/`, `concepts/`, `claims/`) and only for issues that are directly supported by the source.
 - With `--write-report`: write `wiki/outputs/source-audit-{date}.md`.
-- Append `wiki/log.md` via `tools/research_wiki.py log` after a completed audit batch.
+- Append `wiki/log/` via `tools/research_wiki.py log` after a completed audit batch.
 
 ### Never writes
 
