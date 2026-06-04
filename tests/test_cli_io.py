@@ -22,14 +22,24 @@ class FakeStream:
 
 class CliIoTests(unittest.TestCase):
     def test_configure_utf8_stdio_reconfigures_non_utf8_streams(self) -> None:
+        stdin = FakeStream("cp936")
         stdout = FakeStream("cp936")
         stderr = FakeStream("cp1252")
 
-        with mock.patch.object(sys, "stdout", stdout), mock.patch.object(sys, "stderr", stderr):
+        with (
+            mock.patch.dict("os.environ", {}, clear=True),
+            mock.patch.object(sys, "stdin", stdin),
+            mock.patch.object(sys, "stdout", stdout),
+            mock.patch.object(sys, "stderr", stderr),
+        ):
             _cli_io.configure_utf8_stdio()
+            self.assertEqual(__import__("os").environ["PYTHONUTF8"], "1")
+            self.assertEqual(__import__("os").environ["PYTHONIOENCODING"], "utf-8")
 
+        self.assertEqual(stdin.encoding, "utf-8")
         self.assertEqual(stdout.encoding, "utf-8")
         self.assertEqual(stderr.encoding, "utf-8")
+        self.assertEqual(stdin.reconfigure_calls, [{"encoding": "utf-8", "errors": "replace"}])
         self.assertEqual(stdout.reconfigure_calls, [{"encoding": "utf-8", "errors": "replace"}])
         self.assertEqual(stderr.reconfigure_calls, [{"encoding": "utf-8", "errors": "replace"}])
 

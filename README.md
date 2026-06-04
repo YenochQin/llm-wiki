@@ -84,7 +84,7 @@ docs/          pipeline docs, runtime references, page templates.
 `wiki/` and `raw/` can live outside this code repository. Put OS-specific absolute paths in `config/paths.json` (gitignored; see `config/paths.json.example`), then copy the vault out:
 
 ```bash
-uv run python tools/separate_wiki_repository.py \
+uv run python -X utf8 tools/separate_wiki_repository.py \
   --wiki-root /abs/path/to/wiki \
   --raw-root /abs/path/to/raw \
   --mode copy --yes
@@ -93,13 +93,13 @@ uv run python tools/separate_wiki_repository.py \
 After verifying the external copy, optionally clean the in-repo `wiki/` and `raw/` directories:
 
 ```bash
-uv run python tools/clean_wiki_repository.py --target all --yes
+uv run python -X utf8 tools/clean_wiki_repository.py --target all --yes
 ```
 
 `active_profile: "auto"` chooses `macos`, `windows`, or `linux` based on the current OS. Override with `LLM_WIKI_PATH_PROFILE`. Graph commands accept `@wiki` to resolve the configured vault:
 
 ```bash
-uv run python tools/research_wiki.py rebuild-index @wiki
+uv run python -X utf8 tools/research_wiki.py rebuild-index @wiki
 ```
 
 ## Skills (22)
@@ -147,9 +147,9 @@ If a Zotero citation key is unavailable, the tools fall back to an equivalent `a
 All Python operations run through `uv` — no manual venv activation:
 
 ```bash
-uv run python tools/research_wiki.py --help
-uv run python tools/lint.py
-uv run python tools/prepare_paper_source.py \
+uv run python -X utf8 tools/research_wiki.py --help
+uv run python -X utf8 tools/lint.py
+uv run python -X utf8 tools/prepare_paper_source.py \
   --raw-root @raw-root \
   --output-dir @configured-sources-papers \
   --cache-root @mineru-cache \

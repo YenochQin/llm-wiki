@@ -27,6 +27,8 @@ import _env  # noqa: F401 - load optional CROSSREF_MAILTO from user config
 import os
 import requests
 
+from _cli_io import configure_utf8_stdio
+
 CROSSREF_API_URL = "https://api.crossref.org/works"
 OPENALEX_API_URL = "https://api.openalex.org/works"
 USER_AGENT = "llm-wiki/0.1 (mailto:llm-wiki-local@example.invalid)"
@@ -373,4 +375,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

@@ -54,12 +54,12 @@ argument-hint: <experiment-slug> [--auto]
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 Also confirm experiment status == `completed` (incomplete experiments cannot be evaluated).
@@ -177,7 +177,7 @@ Record Review LLM's verdict.
 
 3. **Add graph edge**:
    ```shell
-   uv run python tools/research_wiki.py add-edge '@configured' --from "experiments/{slug}" --to "claims/{target-claim}" --type supports --evidence "{key_result}"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "experiments/{slug}" --to "claims/{target-claim}" --type supports --evidence "{key_result}"
    ```
 
 4. **Suggest next steps**: `/paper-plan` or continue ablation/robustness experiments
@@ -191,7 +191,7 @@ Record Review LLM's verdict.
 
 2. **Add graph edge**:
    ```shell
-   uv run python tools/research_wiki.py add-edge '@configured' --from "experiments/{slug}" --to "claims/{target-claim}" --type supports --evidence "Partially supported: {limitation}"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "experiments/{slug}" --to "claims/{target-claim}" --type supports --evidence "Partially supported: {limitation}"
    ```
 
 3. **Suggest supplementary experiments**:
@@ -217,7 +217,7 @@ Record Review LLM's verdict.
 
 3. **Add graph edge**:
    ```shell
-   uv run python tools/research_wiki.py add-edge '@configured' --from "experiments/{slug}" --to "claims/{target-claim}" --type invalidates --evidence "{failure_reason}"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "experiments/{slug}" --to "claims/{target-claim}" --type invalidates --evidence "{failure_reason}"
    ```
 
 4. **Suggest next steps**:
@@ -253,13 +253,13 @@ Record Review LLM's verdict.
 
 3. **Rebuild derived data**:
    ```shell
-   uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-   uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
    ```
 
 4. **Append log**:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "exp-eval | {slug} → {target-claim} | verdict: {verdict} | confidence: {old}→{new}"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "exp-eval | {slug} → {target-claim} | verdict: {verdict} | confidence: {old}→{new}"
    ```
 
 5. **Print VERDICT_REPORT to terminal**:
@@ -300,7 +300,7 @@ Record Review LLM's verdict.
    | Claims updated | — | — | {N} |
    | Edges | {before} | {after} | +{delta} |
    | Maturity | {level} | {level} | {unchanged/upgraded} |
-   (Data from comparing `uv run python tools/research_wiki.py maturity '@configured' --json` calls at the start of Step 1 and end of Step 4.)
+   (Data from comparing `uv run python -X utf8 tools/research_wiki.py maturity '@configured' --json` calls at the start of Step 1 and end of Step 4.)
    ```
 
 ## Constraints
@@ -328,10 +328,10 @@ Record Review LLM's verdict.
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge
-- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
-- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python -X utf8 tools/research_wiki.py add-edge '@configured' ...` — add graph edge
+- `uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
+- `uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 2 Review LLM independent verdict

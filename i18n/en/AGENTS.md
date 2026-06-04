@@ -160,7 +160,7 @@ Each weekly log file uses `# log` as the top-level heading and skill names as se
 Append log entries only through the tool:
 
 ```shell
-uv run python tools/research_wiki.py log '@configured' "ingest-light | added something"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | added something"
 ```
 
 ---
@@ -170,7 +170,7 @@ uv run python tools/research_wiki.py log '@configured' "ingest-light | added som
 - this project is **uv-managed**: `setup.sh` creates `.venv` via `uv venv` and installs from `pyproject.toml` via `uv pip install -e .`
 - prefer `.venv/bin/python` (Unix/macOS) or `.venv/Scripts/python.exe` (Windows) when `.venv/` exists
 - otherwise fall back to `python3` (Unix/macOS) or `python` (Windows)
-- skills run tools as `uv run python tools/<name>.py …` (uv automatically resolves `.venv` from `pyproject.toml`); the equivalent direct invocation is `.venv/bin/python tools/<name>.py …` when `.venv/` exists
+- skills run tools as `uv run python -X utf8 tools/<name>.py …` (uv automatically resolves `.venv` from `pyproject.toml`); the equivalent direct invocation is `.venv/bin/python tools/<name>.py …` when `.venv/` exists
 - Python tools load API keys through `tools/_env.py`: first process environment, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`); project-root `.env` and `~/.env` are legacy fallbacks only
 - Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`) to set external `wiki_root` / `raw_root`; `active_profile: auto` chooses `macos`, `windows`, or `linux` from the current OS, and `LLM_WIKI_PATH_PROFILE` can override it temporarily; without config, tools fall back to in-repo `wiki/` and `raw/`
 - the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)

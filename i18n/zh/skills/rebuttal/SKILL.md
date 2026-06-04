@@ -57,17 +57,17 @@ argument-hint: <review-file-or-path> [--paper-slug <slug>] [--venue <venue>] [--
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 Additional steps:
 1. Read `cross-model-review.md` to confirm stress-test independence principle
-2. Generate slug: `uv run python tools/research_wiki.py slug "{paper-slug}-rebuttal"`
+2. Generate slug: `uv run python -X utf8 tools/research_wiki.py slug "{paper-slug}-rebuttal"`
 
 ### Step 1: Parse Review Comments
 
@@ -303,7 +303,7 @@ Additional Experiments (if applicable):
 - For claims with evidence gaps: append reviewer-identified gaps to `## Open questions` in `wiki/claims/{slug}.md`
 - Append log:
   ```shell
-  uv run python tools/research_wiki.py log '@configured' "rebuttal | {N} concerns addressed | {M} evidence gaps | stress-test avg: {score}/5"
+  uv run python -X utf8 tools/research_wiki.py log '@configured' "rebuttal | {N} concerns addressed | {M} evidence gaps | stress-test avg: {score}/5"
   ```
 
 ## Constraints
@@ -331,8 +331,8 @@ Additional Experiments (if applicable):
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py slug "{title}"` — generate rebuttal slug
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log entry
+- `uv run python -X utf8 tools/research_wiki.py slug "{title}"` — generate rebuttal slug
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log entry
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 5 stress-test first round

@@ -37,12 +37,12 @@ Manual: `/prefill [domain]` or `/prefill --add "concept name"`.
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Resolve domain
@@ -54,7 +54,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 ### Step 2: Load seeds
 
 - **Catalog mode**: read `.claude/skills/prefill/foundations-catalog.yaml`. Pick all entries under `domains.{domain}` plus everything under `domains.general` (general foundations apply to every research field).
-- **`--add` mode**: synthesize a single seed entry `{slug: <slugified concept>, title: <concept>, summary: ""}`. Use `uv run python tools/research_wiki.py slug "<concept>"` to derive the slug.
+- **`--add` mode**: synthesize a single seed entry `{slug: <slugified concept>, title: <concept>, summary: ""}`. Use `uv run python -X utf8 tools/research_wiki.py slug "<concept>"` to derive the slug.
 
 For each seed, check `wiki/foundations/{slug}.md`. If it already exists, **skip** (do not overwrite, do not warn).
 
@@ -63,9 +63,9 @@ For each seed, check `wiki/foundations/{slug}.md`. If it already exists, **skip*
 For each remaining seed, call `tools/fetch_wikipedia.py`:
 
 ```shell
-uv run python tools/fetch_wikipedia.py summary "<title>"
-uv run python tools/fetch_wikipedia.py sections "<title>"
-uv run python tools/fetch_wikipedia.py section "<title>" --index <N>   # for relevant sections
+uv run python -X utf8 tools/fetch_wikipedia.py summary "<title>"
+uv run python -X utf8 tools/fetch_wikipedia.py sections "<title>"
+uv run python -X utf8 tools/fetch_wikipedia.py section "<title>" --index <N>   # for relevant sections
 ```
 
 - The summary call returns `{title, extract, url}`.
@@ -115,8 +115,8 @@ Write each file to `wiki/foundations/{slug}.md`.
 ### Step 5: Refresh navigation and log
 
 ```shell
-uv run python tools/research_wiki.py rebuild-index '@configured'
-uv run python tools/research_wiki.py log '@configured' "prefill | {N} foundations created for {domain}"
+uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
+uv run python -X utf8 tools/research_wiki.py log '@configured' "prefill | {N} foundations created for {domain}"
 ```
 
 ### Step 6: Report
@@ -149,7 +149,7 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 
 ## Error Handling
 
-- **`wiki/foundations/` does not exist**: run `uv run python tools/research_wiki.py init '@configured'` first.
+- **`wiki/foundations/` does not exist**: run `uv run python -X utf8 tools/research_wiki.py init '@configured'` first.
 - **Wikipedia 404**: log the missing page, fall back to LLM knowledge for that seed (`source_url: ""`).
 - **Network failure**: print which seeds failed and continue with the remainder; do not abort the whole batch.
 - **Catalog file missing**: print error pointing to `.claude/skills/prefill/foundations-catalog.yaml`.
@@ -157,10 +157,10 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 ## Dependencies
 
 ### Tools
-- `uv run python tools/fetch_wikipedia.py summary|sections|section|wikitext "<title>" [--index N]`
-- `uv run python tools/research_wiki.py slug "<title>"`
-- `uv run python tools/research_wiki.py rebuild-index '@configured'`
-- `uv run python tools/research_wiki.py log '@configured' "<message>"`
+- `uv run python -X utf8 tools/fetch_wikipedia.py summary|sections|section|wikitext "<title>" [--index N]`
+- `uv run python -X utf8 tools/research_wiki.py slug "<title>"`
+- `uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'`
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"`
 
 ### Catalog
 - `.claude/skills/prefill/foundations-catalog.yaml`

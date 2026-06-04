@@ -40,18 +40,18 @@ Manual: `/reset --scope wiki` / `--scope raw` / `--scope log` / `--scope checkpo
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Build the deletion plan (dry-run)
 
 ```shell
-uv run python tools/reset_wiki.py --scope <scope>
+uv run python -X utf8 tools/reset_wiki.py --scope <scope>
 ```
 
 This prints a JSON plan listing every file that would be deleted or reset, **without modifying anything**. Display the plan to the user grouped by scope (wiki entity dirs, raw subdirs, log, checkpoints).
@@ -69,7 +69,7 @@ If the user says no, exit. **Never proceed without explicit approval** — `/res
 ### Step 3: Execute
 
 ```shell
-uv run python tools/reset_wiki.py --scope <scope> --yes
+uv run python -X utf8 tools/reset_wiki.py --scope <scope> --yes
 ```
 
 The tool prints a JSON status report (`{deleted_files, reset_files}`).
@@ -79,7 +79,7 @@ The tool prints a JSON status report (`{deleted_files, reset_files}`).
 If the executed scope did not include `log`, append a log entry so future sessions can see the reset happened:
 
 ```shell
-uv run python tools/research_wiki.py log '@configured' "reset | scope: <scope>"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "reset | scope: <scope>"
 ```
 
 ### Step 5: Report
@@ -115,6 +115,6 @@ Next steps:
 ## Dependencies
 
 ### Tools
-- `uv run python tools/reset_wiki.py --scope <scope> [--yes] [--project-root .]` — deterministic destructive helper
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python -X utf8 tools/reset_wiki.py --scope <scope> [--yes] [--project-root .]` — deterministic destructive helper
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
 - `reset_wiki.py` clears `wiki/.checkpoints/*.json` directly for `checkpoints` scope (no CLI dispatch — the `checkpoint-clear` subcommand requires a specific `task_id`, while `/reset --scope checkpoints` semantics is "clear everything")

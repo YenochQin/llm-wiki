@@ -40,7 +40,7 @@ raw/papers/<file>.pdf
 ## Single-PDF usage (CLI)
 
 ```bash
-uv run python tools/prepare_paper_source.py \
+uv run python -X utf8 tools/prepare_paper_source.py \
   --raw-root raw \
   --output-dir @configured-sources-papers \
   --cache-root @mineru-cache \
@@ -97,8 +97,8 @@ MinerU's raw markdown is flat and noisy. The adapter applies nine passes (mirror
 To inspect or repair existing prepared markdown, use:
 
 ```bash
-uv run python tools/repair_latex_math.py --dry-run @configured-sources-papers/<source-slug>.md
-uv run python tools/repair_latex_math.py @configured-sources-papers/<source-slug>.md
+uv run python -X utf8 tools/repair_latex_math.py --dry-run @configured-sources-papers/<source-slug>.md
+uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers/<source-slug>.md
 ```
 
 ## Troubleshooting

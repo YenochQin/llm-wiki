@@ -19,8 +19,8 @@ The default action is **merge**. The exception is **create**, and it needs a cle
 Before creating a new concept or claim, call the matching dedup tool:
 
 ```shell
-uv run python tools/research_wiki.py find-similar-concept '@configured' "<candidate title>" --aliases "<a,b,c>"
-uv run python tools/research_wiki.py find-similar-claim   '@configured' "<candidate title>" --tags    "<a,b,c>"
+uv run python -X utf8 tools/research_wiki.py find-similar-concept '@configured' "<candidate title>" --aliases "<a,b,c>"
+uv run python -X utf8 tools/research_wiki.py find-similar-claim   '@configured' "<candidate title>" --tags    "<a,b,c>"
 ```
 
 Both tools return a JSON list sorted by similarity. `find-similar-concept` scans `wiki/concepts/` and `wiki/foundations/` together and tags each hit with `entity_type`. The tool is the source of truth for the similarity score; do not re-estimate it by eye.

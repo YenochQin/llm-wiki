@@ -18,7 +18,7 @@ Use this local reference on demand:
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 1. Resolve the input path.
@@ -26,7 +26,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
    - If the input is a directory, enumerate readable PDFs in deterministic order and process each file separately.
 2. Before preprocessing each PDF, try Zotero metadata enrichment:
    ```shell
-   uv run python tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<agent-recovered-title>"]
+   uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<agent-recovered-title>"]
    ```
    If it returns `status: ok`, capture `.bibtex` exactly and pass it to `prepare_paper_source.py` with `--bibtex`; also pass `.citation_key`, `.authors`, and `.year` when present so the prepared source filename can use the Zotero citation key or fall back to `author_year_veryshorttitle`. If it returns `not_found` or `metadata_error`, continue without BibTeX and mention the reason in the report; do not block PDF ingest.
 3. Preprocess each PDF with `tools/prepare_paper_source.py` into `wiki/sources/papers/<source-slug>.md`. This step includes the conservative LaTeX math repair pass documented in `references/pdf-preprocessing.md`; report any `latex math repaired: ...` warning in the final summary.
@@ -45,9 +45,9 @@ uv run python tools/research_wiki.py stats '@configured' --json
 
 ### Tools
 
-- `uv run python tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<recovered-title>"]` -- optional metadata-only Zotero enrichment; returns `.bibtex` when confident
-- `uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <local-path> [--title "<recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]`
-- `uv run python tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'` -- optional inspection command for existing prepared markdown; `prepare_paper_source.py` already runs this repair during new PDF preprocessing
+- `uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<recovered-title>"]` -- optional metadata-only Zotero enrichment; returns `.bibtex` when confident
+- `uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <local-path> [--title "<recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]`
+- `uv run python -X utf8 tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'` -- optional inspection command for existing prepared markdown; `prepare_paper_source.py` already runs this repair during new PDF preprocessing
 
 ### Skills
 

@@ -29,14 +29,14 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 When running these commands in PowerShell, quote aliases that start with `@`, for example `'@configured'`, because bare `@configured` is parsed as PowerShell splatting syntax.
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Resolve and refresh source
@@ -44,7 +44,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 1. If input is a PDF, run:
 
    ```shell
-   uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<pdf-path>' [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] --overwrite
+   uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<pdf-path>' [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] --overwrite
    ```
 
    Pass `--title` only when confidently recovered from the PDF itself or an existing trusted paper page. Pass `--citation-key` when Zotero/Better BibTeX provides one; otherwise pass authors/year/title so the source filename falls back to `author_year_veryshorttitle`.
@@ -52,13 +52,13 @@ uv run python tools/research_wiki.py stats '@configured' --json
 3. If the user gives only a DOI or title and a Zotero-backed refresh is needed, run:
 
    ```shell
-   uv run python tools/find_zotero_pdf.py [--zotero-root <dir>] [--doi <doi>] [--title "<title>"]
+   uv run python -X utf8 tools/find_zotero_pdf.py [--zotero-root <dir>] [--doi <doi>] [--title "<title>"]
    ```
 
    Use the selected candidate's real PDF path for `tools/prepare_paper_source.py`. Only after that candidate is selected may Zotero Local API metadata be refreshed with:
 
    ```shell
-   uv run python tools/fetch_zotero_metadata.py --item-key <candidate.item_key>
+   uv run python -X utf8 tools/fetch_zotero_metadata.py --item-key <candidate.item_key>
    ```
 
    Do not call `tools/fetch_zotero_metadata.py --doi`; it is not a supported CLI.
@@ -69,13 +69,13 @@ uv run python tools/research_wiki.py stats '@configured' --json
 1. Read the prepared markdown frontmatter title and identity metadata. If the prepared frontmatter contains a non-empty `paperSlug`, or refreshed Zotero metadata contains a non-empty `paper_slug`, use it directly as the existing paper-page slug. Otherwise generate the fallback paper slug with the paper-page rule:
 
    ```shell
-   uv run python tools/research_wiki.py paper-slug "<title>" --citation-key "<citationKey-or-empty>" --authors "<authors>" --year "<year>" --bibtex "<bibtex-or-empty>"
+   uv run python -X utf8 tools/research_wiki.py paper-slug "<title>" --citation-key "<citationKey-or-empty>" --authors "<authors>" --year "<year>" --bibtex "<bibtex-or-empty>"
    ```
 
 2. Resolve the configured wiki root with the supported alias resolver when you need a concrete filesystem path:
 
    ```shell
-   uv run python tools/resolve_path_alias.py '@configured'
+   uv run python -X utf8 tools/resolve_path_alias.py '@configured'
    ```
 
    Do not call `tools/research_wiki.py resolve-path`; that subcommand does not exist.
@@ -83,7 +83,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 3. Check for the existing paper page as `@configured/papers/{slug}.md`. For a CLI lookup, use:
 
    ```shell
-   uv run python tools/research_wiki.py find '@configured' papers --slug "<slug>"
+   uv run python -X utf8 tools/research_wiki.py find '@configured' papers --slug "<slug>"
    ```
 
    Do not pass `papers/<slug>` as the `find` entity type. The second positional argument to `find` is always one of the entity directories such as `papers`, `concepts`, or `claims`.
@@ -144,11 +144,11 @@ Do not remove old graph edges automatically. If the regenerated page or migrated
 Run:
 
 ```shell
-uv run python tools/research_wiki.py rebuild-index '@configured'
-uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-uv run python tools/research_wiki.py rebuild-open-questions '@configured'
-uv run python tools/lint.py --wiki-dir '@configured'
-uv run python tools/research_wiki.py log '@configured' "reingest | refreshed papers/<slug> | updated: <list>"
+uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
+uv run python -X utf8 tools/lint.py --wiki-dir '@configured'
+uv run python -X utf8 tools/research_wiki.py log '@configured' "reingest | refreshed papers/<slug> | updated: <list>"
 ```
 
 If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content.

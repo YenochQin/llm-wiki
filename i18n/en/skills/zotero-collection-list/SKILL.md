@@ -29,15 +29,15 @@ Do not use Zotero item keys as user-facing selectors for this skill. This skill 
 Run from the repository root.
 
 ```shell
-uv run python tools/list_zotero_collection.py "2026/202605/0507"
+uv run python -X utf8 tools/list_zotero_collection.py "2026/202605/0507"
 ```
 
 Optional variants:
 
 ```shell
-uv run python tools/list_zotero_collection.py "2026/202605/0507" --no-recursive
-uv run python tools/list_zotero_collection.py "2026/202605/0507" --output-md .checkpoints/zotero-0507.md
-uv run python tools/list_zotero_collection.py "2026/202605/0507" --zotero-root "$HOME/Zotero"
+uv run python -X utf8 tools/list_zotero_collection.py "2026/202605/0507" --no-recursive
+uv run python -X utf8 tools/list_zotero_collection.py "2026/202605/0507" --output-md .checkpoints/zotero-0507.md
+uv run python -X utf8 tools/list_zotero_collection.py "2026/202605/0507" --zotero-root "$HOME/Zotero"
 ```
 
 The tool:

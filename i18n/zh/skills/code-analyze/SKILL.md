@@ -67,10 +67,10 @@ If the target path is omitted, analyze the current repository.
 
 ## Workflow
 
-**Pre-condition**: run from the llm-wiki repository root when writing to the wiki. Use `uv run python` for llm-wiki tools. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, and resolve aliases before direct file editing.
+**Pre-condition**: run from the llm-wiki repository root when writing to the wiki. Use `uv run python -X utf8` for llm-wiki tools. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, and resolve aliases before direct file editing.
 
 ```bash
-uv run python tools/research_wiki.py stats @configured --json >/dev/null
+uv run python -X utf8 tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
 ### Step 1: Establish Scope
@@ -181,13 +181,13 @@ Rules:
 1. Generate a slug:
 
    ```bash
-   uv run python tools/research_wiki.py slug "code analysis {target-name} {mode}"
+   uv run python -X utf8 tools/research_wiki.py slug "code analysis {target-name} {mode}"
    ```
 
 2. Resolve the configured wiki root before direct file writes:
 
    ```bash
-   uv run python tools/resolve_path_alias.py @configured
+   uv run python -X utf8 tools/resolve_path_alias.py @configured
    ```
 
 3. Create `outputs/code-analysis-{slug}-{date}.md` with frontmatter:
@@ -214,7 +214,7 @@ Rules:
 6. Append the log entry through the tool:
 
    ```bash
-   uv run python tools/research_wiki.py log @configured "code-analyze | {target} | mode: {mode} | output: outputs/{slug}.md"
+   uv run python -X utf8 tools/research_wiki.py log @configured "code-analyze | {target} | mode: {mode} | output: outputs/{slug}.md"
    ```
 
 7. If wiki pages were cited, add `derived_from` edges through `tools/research_wiki.py add-edge`. Do not hand-edit `wiki/graph/`.
@@ -260,8 +260,8 @@ When creating or editing pages:
 ### Tools
 - `rg` / `rg --files` — primary code discovery
 - `git` — repository snapshot when available
-- `uv run python tools/research_wiki.py` — slug, log, graph operations
-- `uv run python tools/resolve_path_alias.py` — resolve `@configured` before direct file writes
+- `uv run python -X utf8 tools/research_wiki.py` — slug, log, graph operations
+- `uv run python -X utf8 tools/resolve_path_alias.py` — resolve `@configured` before direct file writes
 
 ### Optional Follow-ups
 - `/review` — independently review a generated code-analysis report

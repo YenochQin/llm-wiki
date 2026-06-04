@@ -55,12 +55,12 @@ argument-hint: <idea-slug-or-hypothesis> [--review] [--budget <gpu-hours>]
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Load Context
@@ -196,7 +196,7 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 1. **Create experiment pages**:
    For each experiment block:
    ```shell
-   uv run python tools/research_wiki.py slug "<experiment-title>"
+   uv run python -X utf8 tools/research_wiki.py slug "<experiment-title>"
    ```
    Create `wiki/experiments/{slug}.md`:
    Create `wiki/experiments/{slug}.md` following the **CLAUDE.md experiments template exactly**. Every field below must be present even if empty, because `tools/research_wiki.py set-meta` (used later by `/exp-eval` and by the user when reporting results) only updates existing keys — it refuses to create fields that don't already exist in the frontmatter:
@@ -247,14 +247,14 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 
 2. **Create new claims (if missing claims were identified in Step 2)**:
    ```shell
-   uv run python tools/research_wiki.py slug "<claim-title>"
+   uv run python -X utf8 tools/research_wiki.py slug "<claim-title>"
    ```
    Create `wiki/claims/{slug}.md` (status: proposed, confidence: 0.3)
 
 3. **Add graph edges**:
    ```shell
    # For each experiment → target claim
-   uv run python tools/research_wiki.py add-edge '@configured' --from "claims/{target-claim}" --to "experiments/{slug}" --type tested_by --evidence "Designed by /exp-design"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "claims/{target-claim}" --to "experiments/{slug}" --type tested_by --evidence "Designed by /exp-design"
    ```
 
 4. **Update idea page** (if idea came from wiki):
@@ -265,13 +265,13 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 
 6. **Rebuild derived data**:
    ```shell
-   uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-   uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
    ```
 
 7. **Append log**:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "exp-design | {N} experiments designed for idea {slug} | claims: {claim-list}"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "exp-design | {N} experiments designed for idea {slug} | claims: {claim-list}"
    ```
 
 8. **Print EXPERIMENT_PLAN_REPORT to terminal**:
@@ -334,11 +334,11 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py slug "<title>"` — generate slug
-- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge
-- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
-- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python -X utf8 tools/research_wiki.py slug "<title>"` — generate slug
+- `uv run python -X utf8 tools/research_wiki.py add-edge '@configured' ...` — add graph edge
+- `uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
+- `uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 5 experiment plan review (optional)

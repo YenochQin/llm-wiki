@@ -50,12 +50,12 @@ Exactly one of `--anchor`, `--topic`, `--from-wiki` must be given.
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Pick the seed mode
@@ -71,14 +71,14 @@ If the user supplied negatives ("not these"), include them via `--negative` in a
 ### Step 2: Run the discovery tool
 
 ```shell
-uv run python tools/discover.py from-anchors --id <doi-or-title> [--id <doi-or-title>...] [--negative <id-or-title>...] --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
+uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title> [--id <doi-or-title>...] [--negative <id-or-title>...] --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
 Or for topic / wiki modes:
 
 ```shell
-uv run python tools/discover.py from-topic "<query>" --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
-uv run python tools/discover.py from-wiki --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
+uv run python -X utf8 tools/discover.py from-topic "<query>" --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
+uv run python -X utf8 tools/discover.py from-wiki --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
 Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key provider used here does not expose a full citing-works graph.
@@ -106,7 +106,7 @@ Do not ingest anything yourself. The user picks.
 ### Step 4: Log
 
 ```shell
-uv run python tools/research_wiki.py log '@configured' "discover | mode=<anchors|topic|wiki> | seed=<short-desc> | shortlist=<N>"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "discover | mode=<anchors|topic|wiki> | seed=<short-desc> | shortlist=<N>"
 ```
 
 ## Internal Callers
@@ -141,10 +141,10 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 
 ### Tools
 
-- `uv run python tools/discover.py from-anchors --id <id> [--id <id>...] [--negative <id>...] --wiki-root '@configured' --limit <N> --output-checkpoint .checkpoints/ --markdown`
-- `uv run python tools/discover.py from-topic "<query>" --wiki-root '@configured' --limit <N> --output-checkpoint .checkpoints/ --markdown`
-- `uv run python tools/discover.py from-wiki --wiki-root '@configured' --limit <N> --output-checkpoint .checkpoints/ --markdown`
-- `uv run python tools/research_wiki.py log '@configured' "<message>"`
+- `uv run python -X utf8 tools/discover.py from-anchors --id <id> [--id <id>...] [--negative <id>...] --wiki-root '@configured' --limit <N> --output-checkpoint .checkpoints/ --markdown`
+- `uv run python -X utf8 tools/discover.py from-topic "<query>" --wiki-root '@configured' --limit <N> --output-checkpoint .checkpoints/ --markdown`
+- `uv run python -X utf8 tools/discover.py from-wiki --wiki-root '@configured' --limit <N> --output-checkpoint .checkpoints/ --markdown`
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"`
 
 ### Skills
 

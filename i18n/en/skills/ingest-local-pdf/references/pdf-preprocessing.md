@@ -36,7 +36,7 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
 Once you have the title (possibly empty), first try metadata-only Zotero enrichment:
 
 ```shell
-uv run python tools/enrich_local_pdf_bibtex.py --source <pdf-path> [--title "<agent-recovered-title>"]
+uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source <pdf-path> [--title "<agent-recovered-title>"]
 ```
 
 - Use this only to enrich metadata/BibTeX for the same local PDF. Do not switch the content source to Zotero's PDF from this skill.
@@ -46,7 +46,7 @@ uv run python tools/enrich_local_pdf_bibtex.py --source <pdf-path> [--title "<ag
 Then run:
 
 ```shell
-uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <pdf-path> [--title "<agent-recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]
+uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <pdf-path> [--title "<agent-recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]
 ```
 
 - Pass `--title` only when the title is confident. Do not pass a title derived from PDF metadata or the filename.
@@ -86,7 +86,7 @@ From this point on, treat the prepared `.md` as the canonical source for `/inges
 Prepared math should already use `$...$` and `$$...$$`. If you need to repair an existing prepared source, inspect first:
 
 ```shell
-uv run python tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'
+uv run python -X utf8 tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'
 ```
 
 Only run without `--dry-run` after confirming the report is limited to math-span repairs.

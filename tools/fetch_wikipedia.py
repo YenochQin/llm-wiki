@@ -25,6 +25,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from _cli_io import configure_utf8_stdio
+
 API = "https://en.wikipedia.org/w/api.php"
 REST_SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/"
 USER_AGENT = "OmegaWiki-prefill/0.1 (https://github.com/skyllwt/OmegaWiki)"
@@ -126,4 +128,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

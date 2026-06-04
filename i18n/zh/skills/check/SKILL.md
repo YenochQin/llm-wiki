@@ -44,32 +44,32 @@ description: Scan the full wiki to detect health issues and produce a tiered fix
 
 ## Workflow
 
-**Pre-conditions**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-conditions**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
-If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py '@configured' '@raw-root'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 ### Step 1: Run the Automated Lint Tool
 
 **Default mode (report only)**:
 ```shell
-uv run python tools/lint.py --wiki-dir '@configured' --json
+uv run python -X utf8 tools/lint.py --wiki-dir '@configured' --json
 ```
 
 **Auto-fix mode** (when user specifies `--fix`):
 ```shell
-uv run python tools/lint.py --wiki-dir '@configured' --fix --json
+uv run python -X utf8 tools/lint.py --wiki-dir '@configured' --fix --json
 ```
 Auto-fixes deterministic issues (xref reverse-link completion, missing fields filled with default values) and outputs a fix report.
 
 **Preview mode** (when user specifies `--fix --dry-run`):
 ```shell
-uv run python tools/lint.py --wiki-dir '@configured' --fix --dry-run --json
+uv run python -X utf8 tools/lint.py --wiki-dir '@configured' --fix --dry-run --json
 ```
 Previews what would be fixed without applying any changes.
 
@@ -168,7 +168,7 @@ Classification:
 
 Append log:
 ```shell
-uv run python tools/research_wiki.py log '@configured' "check | report: N 🔴, M 🟡, K 🔵"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "check | report: N 🔴, M 🟡, K 🔵"
 ```
 
 ## Constraints
@@ -189,6 +189,6 @@ uv run python tools/research_wiki.py log '@configured' "check | report: N 🔴, 
 ## Dependencies
 
 ### Tools
-- `uv run python tools/lint.py --wiki-dir '@configured' [--json] [--fix] [--dry-run] [--suggest]` — automated structural check + fix (core dependency)
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
-- `uv run python tools/research_wiki.py stats '@configured'` — get statistics (optional, for the report)
+- `uv run python -X utf8 tools/lint.py --wiki-dir '@configured' [--json] [--fix] [--dry-run] [--suggest]` — automated structural check + fix (core dependency)
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python -X utf8 tools/research_wiki.py stats '@configured'` — get statistics (optional, for the report)

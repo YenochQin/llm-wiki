@@ -57,13 +57,13 @@ argument-hint: <research-direction-or-brief> [--auto] [--start-from stage1|stage
 ## Workflow
 
 **Precondition**:
-1. A configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`.
+1. A configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`.
 2. If `--start-from` is specified, read `@configured/outputs/pipeline-progress.md` to restore state.
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 0: Initialize
@@ -71,7 +71,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 1. **Parse input**:
    - If file path: read RESEARCH_BRIEF.md, extract direction, domain, constraints, target_venue
    - If text: use as direction; leave domain/constraints blank
-   - Generate slug: `uv run python tools/research_wiki.py slug "{direction}"`
+   - Generate slug: `uv run python -X utf8 tools/research_wiki.py slug "{direction}"`
 
 2. **Auto-recovery detection** (when `--start-from` is not specified):
    - If `wiki/outputs/pipeline-progress.md` exists and `status == running`:
@@ -122,26 +122,26 @@ uv run python tools/research_wiki.py stats '@configured' --json
 
 5. **Append log**:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "research | started | direction: {direction} | mode: {auto|interactive}"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "research | started | direction: {direction} | mode: {auto|interactive}"
    ```
 
 6. **Snapshot wiki state** (for Growth Report in Step Final):
    ```shell
-   uv run python tools/research_wiki.py maturity '@configured' --json
+   uv run python -X utf8 tools/research_wiki.py maturity '@configured' --json
    ```
    Save returned JSON as `maturity_before`.
 
 ### Stage 0: Bootstrap (auto-triggered when wiki is empty)
 
-**Trigger condition**: run `uv run python tools/research_wiki.py maturity '@configured' --json`. If `level == "cold"` and `papers < 3`: enter Bootstrap. Otherwise skip and proceed to Stage 1.
+**Trigger condition**: run `uv run python -X utf8 tools/research_wiki.py maturity '@configured' --json`. If `level == "cold"` and `papers < 3`: enter Bootstrap. Otherwise skip and proceed to Stage 1.
 
 1. **Initialize wiki** (if not yet initialized):
    ```shell
-   uv run python tools/research_wiki.py init '@configured'
+   uv run python -X utf8 tools/research_wiki.py init '@configured'
    ```
 
 2. **Search for relevant papers**:
-   - Literature lookup: `uv run python tools/fetch_literature.py search "{direction}" --limit 20`
+   - Literature lookup: `uv run python -X utf8 tools/fetch_literature.py search "{direction}" --limit 20`
 
 3. **Merge, rank, and select top 5**:
    - Deduplicate by DOI/title/provider ID
@@ -152,14 +152,14 @@ uv run python tools/research_wiki.py stats '@configured' --json
 
 5. **Rebuild derived data**:
    ```shell
-   uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-   uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
    ```
 
 6. **Log + update progress**:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "research | stage0-bootstrap | auto-ingested {N} papers | maturity: {level}"
-   uv run python tools/research_wiki.py set-meta "@configured/outputs/pipeline-progress.md" current_stage stage1
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "research | stage0-bootstrap | auto-ingested {N} papers | maturity: {level}"
+   uv run python -X utf8 tools/research_wiki.py set-meta "@configured/outputs/pipeline-progress.md" current_stage stage1
    ```
 
 ### Stage 1: Idea Discovery
@@ -203,7 +203,7 @@ Args: "{idea_slug}" --review
 3. Set `current_stage: stage3-eval` (so the next session resumes at the verdict step)
 4. Append log:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "research | stage2 | designed {N} experiments | pipeline: {slug}"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "research | stage2 | designed {N} experiments | pipeline: {slug}"
    ```
 
 5. **End the session here.** Output the handoff message:
@@ -372,7 +372,7 @@ Generate `wiki/outputs/PIPELINE_REPORT.md`:
 
 Append log:
 ```shell
-uv run python tools/research_wiki.py log '@configured' "research | completed | idea: {slug} | claims: {N} updated | paper: {yes/no}"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "research | completed | idea: {slug} | claims: {N} updated | paper: {yes/no}"
 ```
 
 Update pipeline-progress: status: completed.
@@ -418,12 +418,12 @@ Update pipeline-progress: status: completed.
 - `/paper-draft` — Stage 4 paper writing
 
 ### Tools
-- `uv run python tools/research_wiki.py slug "{title}"` — generate pipeline slug
-- `uv run python tools/research_wiki.py set-meta <path> <field> <value>` — update pipeline-progress fields
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log entry
-- `uv run python tools/research_wiki.py maturity '@configured' --json` — wiki maturity (Stage 0 trigger + Growth Report)
-- `uv run python tools/research_wiki.py init '@configured'` — initialize wiki structure (Stage 0)
-- `uv run python tools/fetch_literature.py search "{query}" --limit 20` — no-key literature search (Stage 0)
+- `uv run python -X utf8 tools/research_wiki.py slug "{title}"` — generate pipeline slug
+- `uv run python -X utf8 tools/research_wiki.py set-meta <path> <field> <value>` — update pipeline-progress fields
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log entry
+- `uv run python -X utf8 tools/research_wiki.py maturity '@configured' --json` — wiki maturity (Stage 0 trigger + Growth Report)
+- `uv run python -X utf8 tools/research_wiki.py init '@configured'` — initialize wiki structure (Stage 0)
+- `uv run python -X utf8 tools/fetch_literature.py search "{query}" --limit 20` — no-key literature search (Stage 0)
 
 ### Claude Code Native
 - `Read` — read pipeline-progress, wiki pages, RESEARCH_BRIEF

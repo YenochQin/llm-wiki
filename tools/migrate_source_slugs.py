@@ -23,6 +23,7 @@ from typing import Any
 
 import frontmatter
 
+from _cli_io import configure_utf8_stdio
 import find_zotero_pdf
 from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
 from _zotero_snapshot import prepare_snapshot
@@ -539,4 +540,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     raise SystemExit(main())

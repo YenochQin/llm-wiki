@@ -24,7 +24,7 @@ Open this reference when a step fails. `/ingest` prefers to degrade gracefully: 
 If `` is missing or empty, run:
 
 ```shell
-uv run python tools/research_wiki.py init '@configured'
+uv run python -X utf8 tools/research_wiki.py init '@configured'
 ```
 
 Then retry `/ingest`. Do not attempt to create pages in a non-initialized wiki; `index.md` and `graph/` scaffolding must exist first.

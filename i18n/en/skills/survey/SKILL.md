@@ -53,12 +53,12 @@ argument-hint: <research-question-or-claim-slugs> [--format latex|markdown] [--m
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Locate Relevant Knowledge
@@ -145,7 +145,7 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 
 1. **Generate slug**:
    ```shell
-   uv run python tools/research_wiki.py slug "<query-keywords>"
+   uv run python -X utf8 tools/research_wiki.py slug "<query-keywords>"
    ```
 
 2. **Write archive file**:
@@ -165,12 +165,12 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 3. **Add graph edges**:
    ```shell
    # output → each cited paper
-   uv run python tools/research_wiki.py add-edge '@configured' --from "outputs/related-work-{slug}-{date}" --to "papers/{paper-slug}" --type derived_from --evidence "Cited in related work section"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "outputs/related-work-{slug}-{date}" --to "papers/{paper-slug}" --type derived_from --evidence "Cited in related work section"
    ```
 
 4. **Append log**:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "survey | {topic} | {N} papers, {G} groups, format: {format}"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "survey | {topic} | {N} papers, {G} groups, format: {format}"
    ```
 
 5. **Terminal output**: complete Related Work body text + citation coverage statistics
@@ -197,10 +197,10 @@ If output format is LaTeX, following `shared-references/citation-verification.md
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py slug "<title>"` — generate slug
-- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
-- `uv run python tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
+- `uv run python -X utf8 tools/research_wiki.py slug "<title>"` — generate slug
+- `uv run python -X utf8 tools/research_wiki.py add-edge '@configured' ...` — add graph edge
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python -X utf8 tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
 
 ### MCP Servers
 - None (survey does not require Review LLM; use /review --focus writing for separate review)

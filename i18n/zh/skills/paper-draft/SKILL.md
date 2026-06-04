@@ -60,12 +60,12 @@ argument-hint: <paper-plan-path> [--review] [--sections <section-numbers>]
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Initialize Paper Directory
@@ -261,7 +261,7 @@ Make final adjustments based on Review LLM feedback.
    - all `\ref{label}` have a corresponding `\label{label}`
 3. Append log:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "paper-draft | drafted {venue} paper '{title}' | {N} sections, {M} figures, {K} citations ({V} verified)"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "paper-draft | drafted {venue} paper '{title}' | {N} sections, {M} figures, {K} citations ({V} verified)"
    ```
 4. Print to terminal:
    ```markdown
@@ -313,8 +313,8 @@ Make final adjustments based on Review LLM feedback.
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
-- `uv run python tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python -X utf8 tools/fetch_literature.py search "<title>"` — BibTeX fallback (no-key literature search)
 - `python3` — execute matplotlib figure scripts
 
 ### MCP Servers

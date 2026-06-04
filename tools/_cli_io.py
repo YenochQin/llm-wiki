@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import Any
 
@@ -19,6 +20,9 @@ def _reconfigure_stream(stream: Any) -> None:
 
 
 def configure_utf8_stdio() -> None:
-    """Use UTF-8 for CLI stdout/stderr when the host console defaults otherwise."""
+    """Use UTF-8 for CLI stdio when the host console defaults otherwise."""
+    os.environ.setdefault("PYTHONUTF8", "1")
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    _reconfigure_stream(sys.stdin)
     _reconfigure_stream(sys.stdout)
     _reconfigure_stream(sys.stderr)

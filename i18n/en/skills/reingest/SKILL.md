@@ -25,12 +25,12 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Resolve and refresh source
@@ -38,7 +38,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 1. If input is a PDF, run:
 
    ```shell
-   uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <pdf-path> [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] --overwrite
+   uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <pdf-path> [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] --overwrite
    ```
 
    Pass `--title` only when confidently recovered from the PDF itself or an existing trusted paper page. Pass `--citation-key` when Zotero/Better BibTeX provides one; otherwise pass authors/year/title so the source filename falls back to `author_year_veryshorttitle`.
@@ -50,7 +50,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 1. Read the prepared markdown frontmatter title and generate slug:
 
    ```shell
-   uv run python tools/research_wiki.py slug "<title>"
+   uv run python -X utf8 tools/research_wiki.py slug "<title>"
    ```
 
 2. If `wiki/papers/{slug}.md` does not exist, stop and suggest `/ingest`; do not silently create a new paper page.
@@ -108,11 +108,11 @@ Do not remove old graph edges automatically. If the regenerated page or migrated
 Run:
 
 ```shell
-uv run python tools/research_wiki.py rebuild-index '@configured'
-uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-uv run python tools/research_wiki.py rebuild-open-questions '@configured'
-uv run python tools/lint.py --wiki-dir '@configured'
-uv run python tools/research_wiki.py log '@configured' "reingest | refreshed papers/<slug> | updated: <list>"
+uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
+uv run python -X utf8 tools/lint.py --wiki-dir '@configured'
+uv run python -X utf8 tools/research_wiki.py log '@configured' "reingest | refreshed papers/<slug> | updated: <list>"
 ```
 
 If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content.

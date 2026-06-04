@@ -62,7 +62,7 @@ for k, label in keys.items():
 
 Also detect the Python environment and `.venv` status:
 ```shell
-uv run python -c "from pathlib import Path; print('venv:present' if Path('.venv').exists() else 'venv:absent')"
+uv run python -X utf8 -c "from pathlib import Path; print('venv:present' if Path('.venv').exists() else 'venv:absent')"
 uv --version
 ```
 

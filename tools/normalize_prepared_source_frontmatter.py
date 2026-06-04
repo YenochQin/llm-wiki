@@ -17,6 +17,7 @@ from typing import Any
 
 import yaml
 
+from _cli_io import configure_utf8_stdio
 import find_zotero_pdf
 from prepare_paper_source import _render_yaml
 
@@ -243,4 +244,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     raise SystemExit(main())

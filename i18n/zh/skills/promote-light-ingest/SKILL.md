@@ -40,8 +40,8 @@ Do not prioritize pure `background` or broad `review-context` pages unless they 
 **Pre-condition**: run from the repository root. Use runtime path aliases; do not hard-code `wiki/` or external vault paths.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
-uv run python tools/resolve_path_alias.py '@configured' '@configured-sources-papers'
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@configured-sources-papers'
 ```
 
 ### Step 1: Scan Light Pages
@@ -49,19 +49,19 @@ uv run python tools/resolve_path_alias.py '@configured' '@configured-sources-pap
 Run:
 
 ```shell
-uv run python tools/promote_light_ingest.py --wiki-dir '@configured' --limit 20
+uv run python -X utf8 tools/promote_light_ingest.py --wiki-dir '@configured' --limit 20
 ```
 
 For machine-readable output:
 
 ```shell
-uv run python tools/promote_light_ingest.py --wiki-dir '@configured' --limit 20 --json
+uv run python -X utf8 tools/promote_light_ingest.py --wiki-dir '@configured' --limit 20 --json
 ```
 
 For a persistent report:
 
 ```shell
-uv run python tools/promote_light_ingest.py --wiki-dir '@configured' --limit 30 --output .checkpoints/promote-light-ingest.md
+uv run python -X utf8 tools/promote_light_ingest.py --wiki-dir '@configured' --limit 30 --output .checkpoints/promote-light-ingest.md
 ```
 
 ### Step 2: Explain the Ranking
@@ -93,13 +93,13 @@ Never auto-apply the whole shortlist.
 ### Step 4: Log
 
 ```shell
-uv run python tools/research_wiki.py log '@configured' "promote-light-ingest | scanned light papers | candidates=<N>"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "promote-light-ingest | scanned light papers | candidates=<N>"
 ```
 
 If `--apply` was used, log:
 
 ```shell
-uv run python tools/research_wiki.py log '@configured' "promote-light-ingest | promoted papers/<slug>"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "promote-light-ingest | promoted papers/<slug>"
 ```
 
 ## Constraints
@@ -113,9 +113,9 @@ uv run python tools/research_wiki.py log '@configured' "promote-light-ingest | p
 
 ### Tools
 
-- `uv run python tools/promote_light_ingest.py --wiki-dir '@configured' [--limit N] [--min-score N] [--json] [--output <path>]`
-- `uv run python tools/research_wiki.py log '@configured' "<message>"`
-- `uv run python tools/resolve_path_alias.py '@configured' '@configured-sources-papers'`
+- `uv run python -X utf8 tools/promote_light_ingest.py --wiki-dir '@configured' [--limit N] [--min-score N] [--json] [--output <path>]`
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"`
+- `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@configured-sources-papers'`
 
 ### Skills
 

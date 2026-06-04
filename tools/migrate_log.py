@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from _cli_io import configure_utf8_stdio
 from _paths import load_paths
 from research_wiki import LOG_DIR, LOG_HEADER, _log_period_filename, _parse_log_message
 
@@ -266,4 +267,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     main()

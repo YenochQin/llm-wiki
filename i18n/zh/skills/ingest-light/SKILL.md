@@ -64,11 +64,11 @@ No default writes to:
 **Pre-condition**: run from the repository root and use runtime path aliases. Do not hard-code `wiki/`, `raw/`, or external vault paths.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
-uv run python tools/resolve_path_alias.py '@configured' '@configured-sources-papers'
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@configured-sources-papers'
 ```
 
-If path diagnosis is needed, use `uv run python tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured`, `@configured-sources`, and `@configured-sources-papers`.
 Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or plain shell commands such as `cat`, `cp`, `mkdir`, or redirection. They do not resolve aliases and will create literal directories in the code repository.
@@ -88,7 +88,7 @@ Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or 
 Correct preparation command shape:
 
 ```shell
-uv run python tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<selected-pdf-path>' [--title '<zotero-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year "<year>"] [--bibtex "$BIBTEX"]
+uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<selected-pdf-path>' [--title '<zotero-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year "<year>"] [--bibtex "$BIBTEX"]
 ```
 
 Use single quotes around Zotero-derived PDF paths and metadata values in shell commands. Some Zotero filenames contain `$` or TeX math such as `$$^{143-147}$$`; double quotes allow Bash to expand `$$` into the process id and corrupt the path.
@@ -124,8 +124,8 @@ Add the paper under a role-based subsection in `<resolved-wiki-root>/Summary/{ta
 Run:
 
 ```shell
-uv run python tools/research_wiki.py rebuild-index '@configured'
-uv run python tools/research_wiki.py log '@configured' "ingest-light | added papers/<slug> | role=<role> | target=Summary/<target-summary>"
+uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
+uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | added papers/<slug> | role=<role> | target=Summary/<target-summary>"
 ```
 
 ### Step 5: Scoped verification
@@ -133,7 +133,7 @@ uv run python tools/research_wiki.py log '@configured' "ingest-light | added pap
 Run scoped lint only on touched files:
 
 ```shell
-uv run python tools/lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "Summary/{target-summary}.md"
+uv run python -X utf8 tools/lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "Summary/{target-summary}.md"
 ```
 
 Do not report unrelated full-wiki lint debt.

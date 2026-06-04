@@ -60,12 +60,12 @@ argument-hint: <question>
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Load Global Context
@@ -74,8 +74,8 @@ uv run python tools/research_wiki.py stats '@configured' --json
 2. Read `wiki/graph/open_questions.md` — understand known open questions and knowledge gaps
 3. If both are missing, rebuild first:
    ```shell
-   uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-   uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
    ```
 
 ### Step 2: Retrieve Relevant Pages
@@ -121,7 +121,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 Choose the crystallize target based on answer content:
 
 **Case A — Write to outputs/ (default):**
-1. Generate slug: `uv run python tools/research_wiki.py slug "<query-summary>"`
+1. Generate slug: `uv run python -X utf8 tools/research_wiki.py slug "<query-summary>"`
 2. Create `wiki/outputs/{query-slug}.md`:
    ```yaml
    ---
@@ -135,7 +135,7 @@ Choose the crystallize target based on answer content:
    Body is the answer content (preserve wikilinks)
 3. Add a graph edge for each cited source page:
    ```shell
-   uv run python tools/research_wiki.py add-edge '@configured' --from outputs/<slug> --to papers/<source-slug> --type derived_from --evidence "query answer"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from outputs/<slug> --to papers/<source-slug> --type derived_from --evidence "query answer"
    ```
 
 **Case B — Create new concept:**
@@ -159,16 +159,16 @@ Choose the crystallize target based on answer content:
 1. **index.md**: append new page entries under the appropriate category
 2. **log/**:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "ask | <question-summary> | crystallized: <target-path>"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "ask | <question-summary> | crystallized: <target-path>"
    ```
    If not crystallized:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "ask | <question-summary> | answer-only"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "ask | <question-summary> | answer-only"
    ```
 3. **Rebuild derived graph files** (only if crystallize created new pages):
    ```shell
-   uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-   uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
    ```
 
 ### Step 7: Report to User
@@ -194,21 +194,21 @@ Output a summary including:
 
 ## Error Handling
 
-- **context_brief.md missing**: run `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` to rebuild, then retry
+- **context_brief.md missing**: run `uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'` to rebuild, then retry
 - **wiki is empty**: inform the user to first run `/init` or `/ingest` to build the knowledge base
 - **no matching pages**: honestly report that no relevant content exists in the wiki, suggest search and ingest directions
 - **crystallize slug conflict**: append a numeric suffix (e.g. `query-result-2`)
-- **index.md missing**: run `uv run python tools/research_wiki.py init '@configured'` to initialize, then retry
+- **index.md missing**: run `uv run python -X utf8 tools/research_wiki.py init '@configured'` to initialize, then retry
 
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py slug "<title>"` — slug generation
-- `uv run python tools/research_wiki.py add-edge '@configured' --from <id> --to <id> --type <type> --evidence "<text>"` — add graph edge
-- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild compressed context
-- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild knowledge gap map
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log entry
-- `uv run python tools/research_wiki.py init '@configured'` — initialize wiki (fallback)
+- `uv run python -X utf8 tools/research_wiki.py slug "<title>"` — slug generation
+- `uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from <id> --to <id> --type <type> --evidence "<text>"` — add graph edge
+- `uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild compressed context
+- `uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild knowledge gap map
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log entry
+- `uv run python -X utf8 tools/research_wiki.py init '@configured'` — initialize wiki (fallback)
 
 ### Skills（via Skill tool）
 - `/ingest` — referenced when suggesting the user supplement knowledge

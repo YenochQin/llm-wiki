@@ -57,12 +57,12 @@ argument-hint: <artifact-slug-or-path> [--max-rounds N] [--target-score N] [--di
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Initialize
@@ -148,8 +148,8 @@ Classify and handle each actionable item:
 
 If this round had wiki changes (Category C):
 ```shell
-uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-uv run python tools/research_wiki.py rebuild-open-questions '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
 ```
 
 ### Step 3: Final Report
@@ -195,7 +195,7 @@ After iteration ends, generate the REFINE_REPORT:
 
 Append log:
 ```shell
-uv run python tools/research_wiki.py log '@configured' "refine | {artifact-slug} | {N} rounds | score {initial}→{final} | verdict: {verdict}"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "refine | {artifact-slug} | {N} rounds | score {initial}→{final} | verdict: {verdict}"
 ```
 
 ## Constraints
@@ -219,10 +219,10 @@ uv run python tools/research_wiki.py log '@configured' "refine | {artifact-slug}
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
-- `uv run python tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
-- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge (if needed)
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log entry
+- `uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
+- `uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'` — rebuild gap_map
+- `uv run python -X utf8 tools/research_wiki.py add-edge '@configured' ...` — add graph edge (if needed)
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log entry
 
 ### Skills（via Skill tool）
 - `/review` — each round's review (core dependency)

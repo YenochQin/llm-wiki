@@ -60,12 +60,12 @@ argument-hint: <claim-slugs...> --venue <ICLR|NeurIPS|ICML|ACL|CVPR|IEEE> [--tit
 
 ## Workflow
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### Step 1: Load Claim Graph
@@ -291,7 +291,7 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
 
 1. **Generate slug**:
    ```shell
-   uv run python tools/research_wiki.py slug "<working-title>"
+   uv run python -X utf8 tools/research_wiki.py slug "<working-title>"
    ```
 
 2. **Write PAPER_PLAN.md**:
@@ -306,20 +306,20 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
 3. **Add graph edges**:
    ```shell
    # plan → target claim
-   uv run python tools/research_wiki.py add-edge '@configured' --from "outputs/paper-plan-{slug}-{date}" --to "claims/{primary-claim}" --type derived_from --evidence "Paper plan built from this claim"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "outputs/paper-plan-{slug}-{date}" --to "claims/{primary-claim}" --type derived_from --evidence "Paper plan built from this claim"
 
    # plan → key papers
-   uv run python tools/research_wiki.py add-edge '@configured' --from "outputs/paper-plan-{slug}-{date}" --to "papers/{paper-slug}" --type derived_from --evidence "Paper plan cites this paper"
+   uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "outputs/paper-plan-{slug}-{date}" --to "papers/{paper-slug}" --type derived_from --evidence "Paper plan cites this paper"
    ```
 
 4. **Rebuild derived data**:
    ```shell
-   uv run python tools/research_wiki.py rebuild-context-brief '@configured'
+   uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
    ```
 
 5. **Append log**:
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "paper-plan | {venue} paper outline for [[{slug}]] | claims: {claim-list} | citations: {verified}/{total}"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "paper-plan | {venue} paper outline for [[{slug}]] | claims: {claim-list} | citations: {verified}/{total}"
    ```
 
 6. **Print PAPER_PLAN_REPORT to terminal**:
@@ -382,11 +382,11 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
 ## Dependencies
 
 ### Tools
-- `uv run python tools/research_wiki.py slug "<title>"` — generate slug
-- `uv run python tools/research_wiki.py add-edge '@configured' ...` — add graph edge
-- `uv run python tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
-- `uv run python tools/research_wiki.py log '@configured' "<message>"` — append log
-- `uv run python tools/fetch_literature.py search "<title>"` — no-key literature search (citation plan fallback)
+- `uv run python -X utf8 tools/research_wiki.py slug "<title>"` — generate slug
+- `uv run python -X utf8 tools/research_wiki.py add-edge '@configured' ...` — add graph edge
+- `uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'` — rebuild query_pack
+- `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
+- `uv run python -X utf8 tools/fetch_literature.py search "<title>"` — no-key literature search (citation plan fallback)
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Step 7 outline review (mandatory)

@@ -72,11 +72,11 @@ Execute the following searches in parallel (use Agent tool for concurrency):
 
 **Source B — no-key literature search:**
 ```shell
-uv run python tools/fetch_literature.py search "<method-keywords>" --limit 20
+uv run python -X utf8 tools/fetch_literature.py search "<method-keywords>" --limit 20
 ```
 - Fetch details for top 5 results:
 ```shell
-uv run python tools/fetch_literature.py paper <doi-or-title>
+uv run python -X utf8 tools/fetch_literature.py paper <doi-or-title>
 ```
 
 **Source C — Wiki Internal Search:**
@@ -178,8 +178,8 @@ Synthesize Step 2 search results and Step 3 Review LLM assessment into a structu
 ## Dependencies
 
 ### Tools
-- `uv run python tools/fetch_literature.py search "<query>" --limit 20` — no-key literature search
-- `uv run python tools/fetch_literature.py paper <doi-or-title>` — fetch paper details
+- `uv run python -X utf8 tools/fetch_literature.py search "<query>" --limit 20` — no-key literature search
+- `uv run python -X utf8 tools/fetch_literature.py paper <doi-or-title>` — fetch paper details
 
 ### MCP Servers
 - `mcp__llm-review__chat` — Review LLM cross-verify (Step 3)

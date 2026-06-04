@@ -33,7 +33,7 @@ Updated wiki files, `index.md`, `log/`
 Run commands from the repository root.
 
 ```shell
-uv run python tools/research_wiki.py stats '@configured' --json
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 ### STEP 1: Parse User Intent
@@ -58,7 +58,7 @@ uv run python tools/research_wiki.py stats '@configured' --json
 2. Append a log entry via the tool (not by manually editing `log/`):
 
    ```shell
-   uv run python tools/research_wiki.py log '@configured' "edit | {description}"
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "edit | {description}"
    ```
 
 ### STEP 4: Report

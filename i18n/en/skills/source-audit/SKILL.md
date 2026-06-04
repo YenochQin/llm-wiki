@@ -61,7 +61,7 @@ argument-hint: [slug|path|--all] [--type papers|concepts|claims|all] [--batch-si
 **Precondition**: run from the llm-wiki repository root. Resolve the configured wiki root; do not hard-code repository-local `wiki/` if `config/paths.json` points elsewhere.
 
 ```shell
-uv run python tools/resolve_path_alias.py '@configured'
+uv run python -X utf8 tools/resolve_path_alias.py '@configured'
 ```
 
 Use the resolved absolute path for direct file reads/edits. If `uv` is unavailable but `.venv` exists, use the project Python described in `AGENTS.md`.
@@ -194,7 +194,7 @@ After edits, re-read changed files and confirm the correction is present.
 Append a concise log line after a completed batch:
 
 ```shell
-uv run python tools/research_wiki.py log '@configured' "source-audit | type=papers batch={first}..{last} findings={critical}/{major}/{minor} mode=report-only"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "source-audit | type=papers batch={first}..{last} findings={critical}/{major}/{minor} mode=report-only"
 ```
 
 Skip logging only if the user asks for a no-write audit.

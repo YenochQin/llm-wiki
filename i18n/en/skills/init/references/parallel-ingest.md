@@ -58,12 +58,12 @@ git switch <base-branch>
 git merge --no-ff init-<base-branch>-<rank>-<paper-slug> --no-edit
 git worktree remove ../.worktrees/init-<base-branch>-<rank>-<paper-slug>
 git branch -d init-<base-branch>-<rank>-<paper-slug>
-uv run python tools/research_wiki.py dedup-edges '@configured'
-uv run python tools/research_wiki.py dedup-citations '@configured'
-uv run python tools/research_wiki.py rebuild-index '@configured'
-uv run python tools/research_wiki.py rebuild-context-brief '@configured'
-uv run python tools/research_wiki.py rebuild-open-questions '@configured'
-uv run python tools/lint.py --wiki-dir '@configured' --fix
+uv run python -X utf8 tools/research_wiki.py dedup-edges '@configured'
+uv run python -X utf8 tools/research_wiki.py dedup-citations '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
+uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
+uv run python -X utf8 tools/lint.py --wiki-dir '@configured' --fix
 ```
 
 If `stash_ref` exists, pop it at the end. If stash pop fails, keep the checkpoint and report the failure.
