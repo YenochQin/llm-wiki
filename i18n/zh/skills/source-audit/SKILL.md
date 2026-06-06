@@ -1,6 +1,6 @@
 ---
 description: Source-grounded audit of wiki pages against prepared source markdown. Use when checking whether wiki interpretations are faithful to original sources by listing exact source-to-wiki mismatches, including misreadings, unsupported claims, omissions, wrong numbers/units/signs, overgeneralization, source-excerpt mismatches, and classification/tag errors.
-argument-hint: [slug|path|--all] [--type papers|concepts|claims|all] [--batch-size N] [--start-after slug] [--fix] [--dry-run] [--write-report] [--adversarial]
+argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--batch-size N] [--start-after slug] [--fix] [--dry-run] [--write-report] [--adversarial]"
 ---
 
 # /source-audit
