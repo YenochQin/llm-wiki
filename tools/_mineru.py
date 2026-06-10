@@ -478,12 +478,20 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
             if stem_match in candidates:
                 stem_match.rename(canonical_json)
             else:
-                names = ", ".join(p.name for p in candidates)
-                raise RuntimeError(
-                    f"ambiguous content list JSON files in {cache_dir} ({names}); "
-                    "delete the cache directory and re-run, or rename the correct one to "
-                    f"{canonical_json.name}"
-                )
+                # Stem-match failed (common with cloud UUIDs + non-ASCII stems).
+                # Prefer v1 content_list; keep v2 as fallback when v1 is absent.
+                v1_candidates = [p for p in candidates if not p.name.endswith("_content_list_v2.json")]
+                if len(v1_candidates) == 1:
+                    v1_candidates[0].rename(canonical_json)
+                elif len(v1_candidates) == 0 and len(candidates) == 1:
+                    candidates[0].rename(canonical_json)
+                else:
+                    names = ", ".join(p.name for p in candidates)
+                    raise RuntimeError(
+                        f"ambiguous content list JSON files in {cache_dir} ({names}); "
+                        "delete the cache directory and re-run, or rename the correct one to "
+                        f"{canonical_json.name}"
+                    )
 
     debug_globs = [
         "*_middle.json",
