@@ -64,6 +64,24 @@
 
 论文正文必须包含 `## Research classification`，分别说明：属于理论/计算/实验中的哪些方向；每个方向具体用了什么理论、计算方案或实验流程；研究对象是什么。无法从文献中确定时写 `unclear`，不要编造。
 
+### BibTeX 存放规范
+
+`papers/{slug}.md` 的 YAML frontmatter 不得包含 `bibtex` 字段。BibTeX 属于正文内容，必须放在 `## BibTeX` 小节中的 fenced code block：
+
+````markdown
+## BibTeX
+
+```bibtex
+@article{key,
+  author = {...},
+  title = {...},
+  year = {...}
+}
+```
+````
+
+BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`title`、`year`、一个 venue 字段（`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`）、`volume`、`number`、`pages`、`doi`。不要把 URL、tags/keywords、abstract、language、rights 或笔记类字段写进 BibTeX。
+
 ### 概念页原文溯源规范
 
 每个 `concepts/{slug}.md` 页面必须在 `## Definition` 后包含 `## Source excerpts`。
@@ -157,6 +175,7 @@ uv run python tools/research_wiki.py log '@configured' "ingest-light | added som
 - skill 通过 `uv run python tools/<name>.py …` 运行工具（uv 会按 `pyproject.toml` 自动定位 `.venv`）；当 `.venv/` 已存在时，等价写法是 `.venv/bin/python tools/<name>.py …`
 - Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
 - 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；`active_profile: auto` 会按系统选择 `macos`、`windows` 或 `linux`，也可用 `LLM_WIKI_PATH_PROFILE` 临时指定；未配置时回退到仓库内 `wiki/` 和 `raw/`
+- `@configured`、`@raw-root`、`@configured-sources-papers` 等别名只由支持 `tools/_paths.py` 的 Python 工具解析。对直接文件编辑、`cat`、`cp`、`mkdir`、shell 重定向等普通文件操作，必须先运行 `uv run python tools/resolve_path_alias.py ...` 得到绝对路径，再使用绝对路径；禁止创建字面目录 `@configured/` 或 `@raw-root/`。
 - 可选 MinerU 本地后端需显式启用：`uv sync --extra local`（首次会下载数 GB 模型权重）
 - 本项目没有测试套件（无 `tests/`、无 `test_*.py`），也没有 Python 代码的 lint/format 配置（无 ruff、black、mypy）；`tools/lint.py` 是 wiki 内容 linter，不是 Python 代码 linter
 

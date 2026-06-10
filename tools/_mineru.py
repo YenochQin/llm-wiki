@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -37,9 +38,11 @@ from pathlib import Path
 import _env  # noqa: F401 — load llm-wiki user config for MinerU keys
 
 DEFAULT_API_BASE = "https://mineru.net/api/v4"
-DEFAULT_MODEL_VERSION = "vlm"
+DEFAULT_MODEL_VERSION = "pipeline"
 POLL_INTERVAL_SEC = 3
+POLL_READ_TIMEOUT_SEC = 120
 POLL_TIMEOUT_SEC = 30 * 60  # 30 minutes per PDF
+DATA_ID_MAX_LENGTH = 128
 
 
 def _config(name: str, default: str = "") -> str:
@@ -56,6 +59,54 @@ def _existing_outputs(cache_dir: Path) -> tuple[Path, Path] | None:
     if md_candidates and json_candidates:
         return md_candidates[0], json_candidates[0]
     return None
+
+
+def _safe_data_id(pdf: Path) -> str:
+    """Return a MinerU API-safe data_id derived from the PDF filename.
+
+    MinerU's cloud API documents data_id as limited to ASCII letters, digits,
+    underscores, hyphens, and dots. Zotero filenames often contain spaces,
+    Unicode punctuation, and non-Latin names, so using ``pdf.stem`` directly can
+    make polling brittle even when upload succeeds.
+    """
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", pdf.stem).strip("-.")
+    if not safe:
+        safe = "pdf"
+    return safe[:DATA_ID_MAX_LENGTH].rstrip("-.") or "pdf"
+
+
+def _write_api_task_state(cache_dir: Path, state: dict) -> None:
+    (cache_dir / "api-task.json").write_text(
+        json.dumps(state, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _read_api_task_state(
+    cache_dir: Path,
+    *,
+    api_base: str = "",
+    model_version: str = "",
+    language: str = "",
+) -> dict | None:
+    path = cache_dir / "api-task.json"
+    if not path.exists():
+        return None
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(state, dict):
+        return None
+    if not state.get("batch_id") or not state.get("data_id"):
+        return None
+    if api_base and state.get("api_base") and str(state.get("api_base")).rstrip("/") != api_base.rstrip("/"):
+        return None
+    if model_version and state.get("model_version") and state.get("model_version") != model_version:
+        return None
+    if language and state.get("language") and state.get("language") != language:
+        return None
+    return state
 
 
 def extract(
@@ -104,6 +155,11 @@ def _extract_via_api(pdf: Path, cache_dir: Path, language: str) -> None:
             "uv pip install -e \".[api]\""
         ) from exc
 
+    _extract_via_api_with_requests(requests, pdf, cache_dir, language)
+
+
+def _extract_via_api_with_requests(requests_module, pdf: Path, cache_dir: Path, language: str) -> None:
+
     token = _config("MINERU_API_TOKEN")
     if not token:
         raise RuntimeError(
@@ -117,13 +173,28 @@ def _extract_via_api(pdf: Path, cache_dir: Path, language: str) -> None:
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
     }
+    data_id = _safe_data_id(pdf)
+    existing_task = _read_api_task_state(
+        cache_dir,
+        api_base=api_base,
+        model_version=model_version,
+        language=language,
+    )
+    if existing_task is not None:
+        batch_id = str(existing_task["batch_id"])
+        data_id = str(existing_task["data_id"])
+        print(f"mineru api: resuming extraction (batch_id={batch_id})", file=sys.stderr)
+        full_zip_url = _poll_batch_until_done(requests_module, api_base, headers, batch_id, data_id)
+        print(f"mineru api: downloading result zip", file=sys.stderr)
+        _download_and_extract_zip(requests_module, full_zip_url, cache_dir, pdf.stem)
+        return
 
     print(f"mineru api: requesting upload URL for {pdf.name}", file=sys.stderr)
-    submit = requests.post(
+    submit = requests_module.post(
         f"{api_base}/file-urls/batch",
         headers=headers,
         json={
-            "files": [{"name": pdf.name, "data_id": pdf.stem}],
+            "files": [{"name": pdf.name, "data_id": data_id}],
             "model_version": model_version,
             "language": language,
         },
@@ -138,17 +209,29 @@ def _extract_via_api(pdf: Path, cache_dir: Path, language: str) -> None:
     file_urls = data["file_urls"]
     if not file_urls:
         raise RuntimeError(f"mineru api returned no upload URLs: {body}")
+    _write_api_task_state(
+        cache_dir,
+        {
+            "batch_id": batch_id,
+            "data_id": data_id,
+            "file_name": pdf.name,
+            "api_base": api_base,
+            "model_version": model_version,
+            "language": language,
+            "submitted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        },
+    )
 
     print(f"mineru api: uploading PDF (batch_id={batch_id})", file=sys.stderr)
     with pdf.open("rb") as fh:
-        put = requests.put(file_urls[0], data=fh, timeout=300)
+        put = requests_module.put(file_urls[0], data=fh, timeout=300)
     put.raise_for_status()
 
     print(f"mineru api: polling extraction (batch_id={batch_id})", file=sys.stderr)
-    full_zip_url = _poll_batch_until_done(requests, api_base, headers, batch_id, pdf.stem)
+    full_zip_url = _poll_batch_until_done(requests_module, api_base, headers, batch_id, data_id)
 
     print(f"mineru api: downloading result zip", file=sys.stderr)
-    _download_and_extract_zip(requests, full_zip_url, cache_dir, pdf.stem)
+    _download_and_extract_zip(requests_module, full_zip_url, cache_dir, pdf.stem)
 
 
 def _poll_batch_until_done(
@@ -161,11 +244,19 @@ def _poll_batch_until_done(
     deadline = time.monotonic() + POLL_TIMEOUT_SEC
     last_progress = ""
     while time.monotonic() < deadline:
-        resp = requests_module.get(
-            f"{api_base}/extract-results/batch/{batch_id}",
-            headers=headers,
-            timeout=60,
-        )
+        try:
+            resp = requests_module.get(
+                f"{api_base}/extract-results/batch/{batch_id}",
+                headers=headers,
+                timeout=POLL_READ_TIMEOUT_SEC,
+            )
+        except _request_timeout_exceptions(requests_module):
+            msg = f"  poll read timeout; retrying batch_id={batch_id}"
+            if msg != last_progress:
+                print(msg, file=sys.stderr)
+                last_progress = msg
+            time.sleep(POLL_INTERVAL_SEC)
+            continue
         resp.raise_for_status()
         body = resp.json()
         if body.get("code") != 0:
@@ -200,6 +291,15 @@ def _poll_batch_until_done(
         time.sleep(POLL_INTERVAL_SEC)
 
     raise RuntimeError(f"mineru api timed out after {POLL_TIMEOUT_SEC}s (batch_id={batch_id})")
+
+
+def _request_timeout_exceptions(requests_module) -> tuple[type[BaseException], ...]:
+    exceptions = getattr(requests_module, "exceptions", None)
+    timeout_types = [
+        getattr(exceptions, "Timeout", None),
+        getattr(exceptions, "ReadTimeout", None),
+    ]
+    return tuple(t for t in timeout_types if isinstance(t, type)) or (TimeoutError,)
 
 
 def _download_and_extract_zip(
