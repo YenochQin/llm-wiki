@@ -232,6 +232,75 @@ class MineruApiTests(unittest.TestCase):
         self.assertEqual(FakeRequests.calls, 2)
         self.assertEqual(FakeRequests.timeouts, [_mineru.POLL_READ_TIMEOUT_SEC, _mineru.POLL_READ_TIMEOUT_SEC])
 
+    def test_normalize_library_layout_accepts_v2_content_list(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache_dir = Path(tmp) / "cache"
+            cache_dir.mkdir()
+            (cache_dir / "full.md").write_text("# parsed\n", encoding="utf-8")
+            (cache_dir / "task_content_list_v2.json").write_text('[{"type": "text"}]\n', encoding="utf-8")
+
+            _mineru._normalize_library_layout(cache_dir, "paper")
+
+            self.assertEqual((cache_dir / "paper.md").read_text(encoding="utf-8"), "# parsed\n")
+            self.assertEqual((cache_dir / "paper.json").read_text(encoding="utf-8"), '[{"type": "text"}]\n')
+            self.assertFalse((cache_dir / "task_content_list_v2.json").exists())
+
+    def test_existing_outputs_ignores_api_task_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache_dir = Path(tmp) / "cache"
+            cache_dir.mkdir()
+            md_path = cache_dir / "paper.md"
+            json_path = cache_dir / "paper.json"
+            md_path.write_text("# parsed\n", encoding="utf-8")
+            json_path.write_text("[]\n", encoding="utf-8")
+            (cache_dir / "api-task.json").write_text('{"batch_id": "batch-123"}\n', encoding="utf-8")
+
+            self.assertEqual(_mineru._existing_outputs(cache_dir), (md_path, json_path))
+
+    def test_poll_matches_original_file_name_when_data_id_is_sanitized(self) -> None:
+        original_file_name = "Gaigalas 等 - 2026 - Second-order rayleigh–schrödinger perturbation theory.pdf"
+        safe_data_id = _mineru._safe_data_id(Path(original_file_name))
+
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "code": 0,
+                    "data": {
+                        "extract_result": [
+                            {
+                                "data_id": "other-paper",
+                                "file_name": "other.pdf",
+                                "state": "done",
+                                "full_zip_url": "https://download.example/wrong.zip",
+                            },
+                            {
+                                "file_name": original_file_name,
+                                "state": "done",
+                                "full_zip_url": "https://download.example/correct.zip",
+                            },
+                        ]
+                    },
+                }
+
+        class FakeRequests:
+            @staticmethod
+            def get(url, headers, timeout):
+                return FakeResponse()
+
+        url = _mineru._poll_batch_until_done(
+            FakeRequests,
+            "https://mineru.net/api/v4",
+            {"Authorization": "Bearer token"},
+            "batch-123",
+            safe_data_id,
+            file_name=original_file_name,
+        )
+
+        self.assertEqual(url, "https://download.example/correct.zip")
+
 
 if __name__ == "__main__":
     unittest.main()

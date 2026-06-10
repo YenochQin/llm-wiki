@@ -50,11 +50,34 @@ def _config(name: str, default: str = "") -> str:
     return os.environ.get(name, "").strip() or default
 
 
+def _is_mineru_content_json(path: Path) -> bool:
+    name = path.name
+    if name in {"api-task.json", "layout.json", "manifest.json"}:
+        return False
+    if name.endswith(("_middle.json", "_model.json")):
+        return False
+    return True
+
+
+def _content_list_candidates(cache_dir: Path) -> list[Path]:
+    names = ("content_list.json", "content_list_v2.json")
+    candidates = [cache_dir / name for name in names if (cache_dir / name).exists()]
+    candidates.extend(cache_dir.glob("*_content_list.json"))
+    candidates.extend(cache_dir.glob("*_content_list_v2.json"))
+    return sorted(set(candidates))
+
+
+def _is_content_list_json(path: Path) -> bool:
+    return path.name in {"content_list.json", "content_list_v2.json"} or path.name.endswith(
+        ("_content_list.json", "_content_list_v2.json")
+    )
+
+
 def _existing_outputs(cache_dir: Path) -> tuple[Path, Path] | None:
     md_candidates = sorted(p for p in cache_dir.glob("*.md") if p.name != "full.md")
     json_candidates = sorted(
-        p for p in cache_dir.glob("*.json")
-        if p.name != "manifest.json" and not p.name.endswith("_content_list_v2.json")
+        (p for p in cache_dir.glob("*.json") if _is_mineru_content_json(p)),
+        key=lambda p: (_is_content_list_json(p), p.name),
     )
     if md_candidates and json_candidates:
         return md_candidates[0], json_candidates[0]
@@ -183,8 +206,16 @@ def _extract_via_api_with_requests(requests_module, pdf: Path, cache_dir: Path, 
     if existing_task is not None:
         batch_id = str(existing_task["batch_id"])
         data_id = str(existing_task["data_id"])
+        file_name = str(existing_task.get("file_name") or "")
         print(f"mineru api: resuming extraction (batch_id={batch_id})", file=sys.stderr)
-        full_zip_url = _poll_batch_until_done(requests_module, api_base, headers, batch_id, data_id)
+        full_zip_url = _poll_batch_until_done(
+            requests_module,
+            api_base,
+            headers,
+            batch_id,
+            data_id,
+            file_name=file_name or None,
+        )
         print(f"mineru api: downloading result zip", file=sys.stderr)
         _download_and_extract_zip(requests_module, full_zip_url, cache_dir, pdf.stem)
         return
@@ -228,7 +259,14 @@ def _extract_via_api_with_requests(requests_module, pdf: Path, cache_dir: Path, 
     put.raise_for_status()
 
     print(f"mineru api: polling extraction (batch_id={batch_id})", file=sys.stderr)
-    full_zip_url = _poll_batch_until_done(requests_module, api_base, headers, batch_id, data_id)
+    full_zip_url = _poll_batch_until_done(
+        requests_module,
+        api_base,
+        headers,
+        batch_id,
+        data_id,
+        file_name=pdf.name,
+    )
 
     print(f"mineru api: downloading result zip", file=sys.stderr)
     _download_and_extract_zip(requests_module, full_zip_url, cache_dir, pdf.stem)
@@ -240,6 +278,8 @@ def _poll_batch_until_done(
     headers: dict,
     batch_id: str,
     data_id: str,
+    *,
+    file_name: str | None = None,
 ) -> str:
     deadline = time.monotonic() + POLL_TIMEOUT_SEC
     last_progress = ""
@@ -263,10 +303,7 @@ def _poll_batch_until_done(
             raise RuntimeError(f"mineru api poll failed: {body}")
 
         files = (body.get("data") or {}).get("extract_result") or []
-        target = next(
-            (f for f in files if f.get("data_id") == data_id or f.get("file_name", "").startswith(data_id)),
-            files[0] if files else None,
-        )
+        target = _extract_result_target(files, data_id, file_name)
         if target is None:
             time.sleep(POLL_INTERVAL_SEC)
             continue
@@ -291,6 +328,19 @@ def _poll_batch_until_done(
         time.sleep(POLL_INTERVAL_SEC)
 
     raise RuntimeError(f"mineru api timed out after {POLL_TIMEOUT_SEC}s (batch_id={batch_id})")
+
+
+def _extract_result_target(files: list[dict], data_id: str, file_name: str | None = None) -> dict | None:
+    for item in files:
+        if item.get("data_id") == data_id:
+            return item
+    if file_name:
+        for item in files:
+            if item.get("file_name") == file_name:
+                return item
+    if len(files) == 1:
+        return files[0]
+    return None
 
 
 def _request_timeout_exceptions(requests_module) -> tuple[type[BaseException], ...]:
@@ -386,13 +436,13 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
 
     - ``mineru.cli.common.do_parse`` (local)  → ``<stem>.md`` + ``<stem>_content_list.json``
     - ``mineru.net`` cloud ZIP                → ``full.md`` + ``<task-uuid>_content_list.json``
+    - MinerU 2.x pipeline output              → ``full.md`` + ``<task-uuid>_content_list_v2.json``
 
     Either way, after this function runs the cache contains exactly one
     ``<stem>.md`` and one ``<stem>.json`` that the manifest synthesizer can
     pick up. Debug artifacts (``<*>_middle.json``, ``<*>_model.json``,
-    ``layout.json``, ``content_list_v2.json``, ``<*>_origin.pdf``,
-    ``layout.pdf``, ``spans.pdf``) are removed so they don't confuse the
-    cache-discovery glob.
+    ``layout.json``, ``<*>_origin.pdf``, ``layout.pdf``, ``spans.pdf``) are
+    removed so they don't confuse the cache-discovery glob.
     """
     canonical_md = cache_dir / f"{stem}.md"
     canonical_json = cache_dir / f"{stem}.json"
@@ -410,17 +460,27 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
                 stem_md.rename(canonical_md)
 
     if not canonical_json.exists():
-        candidates = sorted(cache_dir.glob("*_content_list.json"))
+        candidates = _content_list_candidates(cache_dir)
         if len(candidates) == 1:
             candidates[0].rename(canonical_json)
         elif len(candidates) > 1:
-            stem_match = cache_dir / f"{stem}_content_list.json"
+            stem_match = next(
+                (
+                    p
+                    for p in (
+                        cache_dir / f"{stem}_content_list.json",
+                        cache_dir / f"{stem}_content_list_v2.json",
+                    )
+                    if p in candidates
+                ),
+                None,
+            )
             if stem_match in candidates:
                 stem_match.rename(canonical_json)
             else:
                 names = ", ".join(p.name for p in candidates)
                 raise RuntimeError(
-                    f"ambiguous *_content_list.json files in {cache_dir} ({names}); "
+                    f"ambiguous content list JSON files in {cache_dir} ({names}); "
                     "delete the cache directory and re-run, or rename the correct one to "
                     f"{canonical_json.name}"
                 )
@@ -432,8 +492,6 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
         "layout.json",
         "layout.pdf",
         "spans.pdf",
-        "content_list_v2.json",
-        "*_content_list_v2.json",
     ]
     for pattern in debug_globs:
         for path in cache_dir.glob(pattern):
