@@ -25,6 +25,17 @@ Anchor mode (rough weight order):
 
 Topic / wiki mode: same signals minus anchor overlap and minus the anchor-influence edge (no anchor exists in topic mode; wiki-derived anchors do score the edge signal). Influence and freshness carry more weight to compensate.
 
+## Heavy-relation filtering
+
+After scoring, anchor mode and wiki mode apply a hard relevance gate before the shortlist is shown. A candidate must have at least one strong relation signal:
+
+- it appears in a direct `references` or `citations` channel;
+- it appears through multiple channels, such as both `recommend` and `references`;
+- it is surfaced by two or more anchors;
+- a provider marks an explicit influential anchor-candidate edge.
+
+A single `recommend` / title-search hit is not enough, even if the candidate is highly cited. This keeps post-`/ingest --discover` suggestions focused on papers that are heavily connected to the current wiki context. Topic mode stays exploratory and does not use this hard gate.
+
 ### Why keep edge influence in the schema?
 
 `is_influential_edge` stays in the normalized candidate schema so future no-key or user-configured providers can expose edge-specific importance without changing downstream ranking code. Today it is usually false.

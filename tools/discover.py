@@ -35,6 +35,7 @@ from typing import Any
 import _env  # noqa: F401 — load .env files
 
 import fetch_literature
+import find_zotero_pdf
 from _cli_io import configure_utf8_stdio
 from _paths import load_paths, resolve_runtime_path
 
@@ -85,6 +86,18 @@ def _candidate_key(c: dict[str, Any]) -> str:
         return f"provider:{str(c['paperId']).lower()}"
     title = re.sub(r"\s+", " ", (c.get("title") or "").strip().lower())
     return f"title:{title}" if title else ""
+
+
+def _candidate_doi(c: dict[str, Any]) -> str:
+    external_ids = c.get("externalIds") or {}
+    doi = external_ids.get("DOI") or external_ids.get("doi") or ""
+    if not doi and c.get("paperId"):
+        paper_id = str(c.get("paperId") or "").strip()
+        if re.match(r"^10\.\d{4,9}/\S+$", paper_id, flags=re.IGNORECASE):
+            doi = paper_id
+    doi = str(doi or "").strip()
+    doi = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", doi, flags=re.IGNORECASE)
+    return doi
 
 
 def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> None:
@@ -177,6 +190,92 @@ def _filter_against_wiki(candidates: list[dict[str, Any]], known: set[str]) -> l
     return [c for c in candidates if _candidate_key(c) not in known]
 
 
+# ---------- Zotero collection status ---------------------------------------
+
+def _title_norm(value: str) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip().lower())
+
+
+def _zotero_match_for_candidate(c: dict[str, Any], zotero_root: Path | None) -> dict[str, Any]:
+    """Return a confident Zotero match for a candidate, if the local library has it."""
+    doi = _candidate_doi(c)
+    title = str(c.get("title") or "").strip()
+    if not (doi or title):
+        return {}
+    try:
+        result = find_zotero_pdf.find(zotero_root, title, doi, "", 5)
+    except Exception:
+        return {}
+    if result.get("status") != "ok":
+        return {}
+
+    title_key = _title_norm(title)
+    doi_key = doi.lower()
+    for item in result.get("candidates") or []:
+        item_doi = str(item.get("doi") or "").strip().lower()
+        item_title = _title_norm(str(item.get("title") or ""))
+        if doi_key and item_doi == doi_key:
+            return item
+        if title_key and item_title == title_key:
+            return item
+    return {}
+
+
+def _annotate_zotero_status(candidates: list[dict[str, Any]]) -> None:
+    """Add _zotero_status: collected / not collected / unknown to each candidate."""
+    try:
+        zotero_root, _notes = find_zotero_pdf._discover_zotero_root(find_zotero_pdf.DEFAULT_CONFIG_PATH)
+    except Exception:
+        zotero_root = None
+    if zotero_root is None:
+        for c in candidates:
+            c["_zotero_status"] = "unknown"
+            c["_zotero_match"] = {}
+        return
+
+    for c in candidates:
+        match = _zotero_match_for_candidate(c, zotero_root)
+        c["_zotero_status"] = "collected" if match else "not collected"
+        c["_zotero_match"] = match
+
+
+def _provider_authors_to_names(authors: list[Any]) -> list[str]:
+    names: list[str] = []
+    for author in authors:
+        if isinstance(author, dict):
+            name = str(author.get("name") or "").strip()
+        else:
+            name = str(author or "").strip()
+        if name:
+            names.append(name)
+    return names
+
+
+def _enrich_candidate_metadata(candidates: list[dict[str, Any]]) -> None:
+    """Fill missing title/author/venue/year fields from DOI or title metadata."""
+    for c in candidates:
+        identifier = _candidate_doi(c) or str(c.get("title") or "").strip()
+        if not identifier:
+            continue
+        needs_enrichment = not c.get("title") or not c.get("authors") or not c.get("venue") or not c.get("year")
+        if not needs_enrichment:
+            continue
+        try:
+            record = fetch_literature.paper(identifier)
+        except Exception:
+            continue
+        if not c.get("title") and record.get("title"):
+            c["title"] = record["title"]
+        if not c.get("authors"):
+            c["authors"] = _provider_authors_to_names(record.get("authors") or [])
+        if not c.get("venue") and record.get("venue"):
+            c["venue"] = record["venue"]
+        if not c.get("year") and record.get("year"):
+            c["year"] = record["year"]
+        if not _candidate_doi(c) and (record.get("externalIds") or {}).get("DOI"):
+            c.setdefault("externalIds", {})["DOI"] = (record.get("externalIds") or {})["DOI"]
+
+
 # ---------- ranking --------------------------------------------------------
 
 def _influence_score(infl: int, total: int) -> float:
@@ -232,6 +331,30 @@ def _channel_diversity_score(c: dict[str, Any]) -> float:
 def _anchor_influence_edge_score(c: dict[str, Any]) -> float:
     """Provider-specific per-edge importance signal, when available."""
     return 1.0 if c.get("is_influential_edge") else 0.0
+
+
+def _is_heavily_related(c: dict[str, Any]) -> bool:
+    """Gate anchor/wiki recommendations to papers with strong relation evidence."""
+    sources = set(c.get("_sources") or [])
+    anchors = set(a for a in (c.get("_anchors") or []) if a)
+    if c.get("is_influential_edge"):
+        return True
+    if len(anchors) >= 2:
+        return True
+    if len(sources) >= 2:
+        return True
+    return bool(sources & {"literature_reference", "literature_citation"})
+
+
+def _filter_heavily_related(candidates: list[dict[str, Any]], *, anchor_mode: bool) -> list[dict[str, Any]]:
+    """Keep only strong follow-up reads for anchor/wiki discovery.
+
+    Topic mode remains exploratory; this gate is only for recommendations tied
+    to existing wiki anchors, especially post-/ingest suggestions.
+    """
+    if not anchor_mode:
+        return candidates
+    return [c for c in candidates if _is_heavily_related(c)]
 
 
 def _score(c: dict[str, Any], *, anchor_mode: bool) -> float:
@@ -432,8 +555,11 @@ def build_shortlist(
         c["_score"] = round(_score(c, anchor_mode=anchor_mode), 4)
         c["_rationale"] = _rationale(c, anchor_mode=anchor_mode)
 
+    candidates = _filter_heavily_related(candidates, anchor_mode=anchor_mode)
     candidates.sort(key=lambda c: c["_score"], reverse=True)
     shortlist = candidates[:limit]
+    _enrich_candidate_metadata(shortlist)
+    _annotate_zotero_status(shortlist)
 
     return {
         "generated_at": _dt.datetime.now().isoformat(timespec="seconds"),
@@ -472,11 +598,16 @@ def _format_markdown(payload: dict[str, Any]) -> str:
     lines.append("")
     for i, c in enumerate(payload.get("shortlist") or [], start=1):
         title = c.get("title") or "(untitled)"
-        identifier = c.get("paperId") or c.get("title") or ""
         rationale = c.get("_rationale") or ""
         score = c.get("_score", 0)
+        authors = ", ".join(c.get("authors") or []) or "unknown"
+        doi = _candidate_doi(c) or "unavailable"
+        zotero_status = c.get("_zotero_status") or "unknown"
         lines.append(f"{i}. **{title}**  ")
-        lines.append(f"   `{identifier}` — score {score} — {rationale}")
+        lines.append(f"   Authors: {authors}  ")
+        lines.append(f"   DOI: {doi}  ")
+        lines.append(f"   Zotero: {zotero_status}  ")
+        lines.append(f"   Score: {score} — {rationale}")
         if c.get("tldr"):
             lines.append(f"   > {c['tldr']}")
         lines.append("")

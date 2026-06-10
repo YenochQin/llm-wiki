@@ -81,7 +81,9 @@ uv run python -X utf8 tools/discover.py from-wiki --wiki-root '@configured' --li
 
 Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key provider used here does not expose a full citing-works graph.
 
-The tool handles candidate gathering, wiki dedup, ranking, and writes the checkpoint. Always pass `--wiki-root '@configured'` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
+The tool handles candidate gathering, wiki dedup, heavy-relation filtering, ranking, Zotero collection-status annotation, and writes the checkpoint. Always pass `--wiki-root '@configured'` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
+
+For anchor and wiki modes, `tools/discover.py` only keeps candidates with strong relation evidence: direct reference/citation channel, multiple discovery channels, multiple anchors, or an explicit influential-edge signal. A single `recommend`/title-search hit is not enough, even if it has many citations. Topic mode remains exploratory and is not filtered this way.
 
 If Crossref is unavailable in topic mode, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
 
@@ -89,7 +91,10 @@ If Crossref is unavailable in topic mode, abort with a clear message rather than
 
 Show the markdown output to the user. For each candidate, the user needs enough to decide whether to ingest:
 
-- title and DOI or provider identifier, when available
+- title
+- authors
+- DOI, or `unavailable` when the provider exposes none
+- Zotero collection status: `collected`, `not collected`, or `unknown`
 - one-line rationale (already produced by the tool: anchor count, citation count when available, year)
 - abstract excerpt if the tool surfaced one
 
@@ -113,7 +118,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "discover | mode=
 
 ### From `/ingest --discover`
 
-When `/ingest` is invoked with the optional `--discover` flag (default off), it calls `/discover` after the final report, using the just-ingested paper's DOI when available, otherwise its title. The shortlist is appended to `/ingest`'s report under a "Related papers you may want to ingest next" heading. `/ingest` never auto-ingests anything from this list.
+When `/ingest` is invoked with the optional `--discover` flag (default off), it calls `/discover` after the final report, using the just-ingested paper's DOI when available, otherwise its title. The shortlist is appended to `/ingest`'s report under a "Related papers you may want to ingest next" heading. Because this is a post-ingest follow-up, surface only the heavy-relation shortlist produced by the tool, and keep each candidate's title, authors, DOI, and Zotero collection status visible. `/ingest` never auto-ingests anything from this list.
 
 ### From `/init`
 

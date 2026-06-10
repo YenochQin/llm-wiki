@@ -25,7 +25,7 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 - Zotero lookup form: one or more of `--title <str>`, `--doi <doi>`, or `--item-key <key>`, optionally plus `--zotero-root <dir>`. If `--zotero-root` is omitted, read the selected profile's `zotero_roots` in `config/paths.json` and scan the listed Zotero data/profile directory candidates. A root may be the Zotero data directory containing `zotero.sqlite` and `storage/`, or a Zotero profile directory whose `prefs.js` points to the data directory.
 - Zotero metadata enrichment is optional: after a Zotero lookup selects an `item_key`, try `tools/fetch_zotero_metadata.py --item-key <key>` to read richer metadata from Zotero Desktop's local API. If Zotero Desktop is closed or local API access is disabled, continue with the existing SQLite/Crossref path.
 - Zotero metadata by itself is not a grounded source. If the user only provides metadata with no PDF, prepared Markdown, source note, or web/notes content, do not create a paper page; ask for a content source or record the metadata as a future ingest aid only when explicitly requested.
-- `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the shortlist to the report as "Related papers you may want to ingest next". Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
+- `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the heavy-relation shortlist to the report as "Related papers you may want to ingest next". Each recommendation must show title, authors, DOI, and Zotero collection status; do not emit DOI-only or citation-key-only suggestions. Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
 ## Outputs
 
@@ -233,7 +233,7 @@ When active, invoke `/discover` with the just-ingested paper as the single ancho
 uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title-of-this-paper> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Append the markdown output to the report under a heading like "Related papers you may want to ingest next". Do not auto-ingest anything from the shortlist — the user picks. If discovery fails (provider outage, all channels empty), note the failure in one line and continue — a failed `/discover` must not fail an otherwise successful `/ingest`.
+Append the markdown output to the report under a heading like "Related papers you may want to ingest next". The tool already filters anchor-mode output to papers with strong wiki/anchor relation evidence and annotates each candidate with title, authors, DOI, and Zotero collection status. Do not replace that output with DOI-only, citation-key-only, or weakly related suggestions. Do not auto-ingest anything from the shortlist — the user picks. If discovery fails (provider outage, all channels empty), note the failure in one line and continue — a failed `/discover` must not fail an otherwise successful `/ingest`.
 
 ## Constraints
 
@@ -277,7 +277,7 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <zotero-pdf-path> [--title "<zotero-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]`
 - `uv run python -X utf8 tools/fetch_zotero_metadata.py --item-key <key>` — optional after Zotero PDF lookup succeeds and only if Zotero Desktop Local API is reachable; returns Zotero metadata plus a derived `bibtex` entry
 - `uv run python -X utf8 tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
-- `uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set
+- `uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set; emits heavy-relation recommendations with title, authors, DOI, and Zotero collection status
 
 ### Shared References
 
