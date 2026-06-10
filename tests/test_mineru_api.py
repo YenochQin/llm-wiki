@@ -257,6 +257,29 @@ class MineruApiTests(unittest.TestCase):
 
             self.assertEqual(_mineru._existing_outputs(cache_dir), (md_path, json_path))
 
+    def test_normalize_library_layout_prefers_v1_over_bare_v2_content_list(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache_dir = Path(tmp) / "cache"
+            cache_dir.mkdir()
+            (cache_dir / "full.md").write_text("# parsed\n", encoding="utf-8")
+            (cache_dir / "task_content_list.json").write_text('[{"type": "v1"}]\n', encoding="utf-8")
+            (cache_dir / "content_list_v2.json").write_text('[{"type": "v2"}]\n', encoding="utf-8")
+
+            _mineru._normalize_library_layout(cache_dir, "paper")
+
+            self.assertEqual((cache_dir / "paper.json").read_text(encoding="utf-8"), '[{"type": "v1"}]\n')
+
+    def test_normalize_library_layout_rejects_multiple_v2_content_lists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache_dir = Path(tmp) / "cache"
+            cache_dir.mkdir()
+            (cache_dir / "full.md").write_text("# parsed\n", encoding="utf-8")
+            (cache_dir / "content_list_v2.json").write_text('[{"type": "v2-a"}]\n', encoding="utf-8")
+            (cache_dir / "task_content_list_v2.json").write_text('[{"type": "v2-b"}]\n', encoding="utf-8")
+
+            with self.assertRaisesRegex(RuntimeError, "ambiguous content list JSON"):
+                _mineru._normalize_library_layout(cache_dir, "paper")
+
     def test_poll_matches_original_file_name_when_data_id_is_sanitized(self) -> None:
         original_file_name = "Gaigalas 等 - 2026 - Second-order rayleigh–schrödinger perturbation theory.pdf"
         safe_data_id = _mineru._safe_data_id(Path(original_file_name))

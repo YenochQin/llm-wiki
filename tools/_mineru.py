@@ -73,6 +73,10 @@ def _is_content_list_json(path: Path) -> bool:
     )
 
 
+def _is_v2_content_list_json(path: Path) -> bool:
+    return path.name == "content_list_v2.json" or path.name.endswith("_content_list_v2.json")
+
+
 def _existing_outputs(cache_dir: Path) -> tuple[Path, Path] | None:
     md_candidates = sorted(p for p in cache_dir.glob("*.md") if p.name != "full.md")
     json_candidates = sorted(
@@ -480,11 +484,9 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
             else:
                 # Stem-match failed (common with cloud UUIDs + non-ASCII stems).
                 # Prefer v1 content_list; keep v2 as fallback when v1 is absent.
-                v1_candidates = [p for p in candidates if not p.name.endswith("_content_list_v2.json")]
+                v1_candidates = [p for p in candidates if not _is_v2_content_list_json(p)]
                 if len(v1_candidates) == 1:
                     v1_candidates[0].rename(canonical_json)
-                elif len(v1_candidates) == 0 and len(candidates) == 1:
-                    candidates[0].rename(canonical_json)
                 else:
                     names = ", ".join(p.name for p in candidates)
                     raise RuntimeError(
