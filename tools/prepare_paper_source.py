@@ -248,6 +248,25 @@ def _is_real_heading(text: str) -> bool:
     )
 
 
+def _looks_like_plain_document_title(text: str) -> bool:
+    h = text.strip()
+    if not h or len(h) > 240:
+        return False
+    if (
+        _heading_is_junk(h)
+        or _heading_is_cutoff(h)
+        or _heading_is_reference(h)
+        or _is_journal_name(h)
+        or _looks_like_author(h)
+        or _looks_like_furniture(h)
+    ):
+        return False
+    if h.startswith("!") or re.match(r"^(?:doi|pacs|received|published)\b", h, re.IGNORECASE):
+        return False
+    words = [w for w in re.split(r"\s+", h) if any(c.isalpha() for c in w)]
+    return len(words) >= 2
+
+
 def _normalize_heading_text(heading: str) -> str:
     return re.sub(r"^(\d+(?:\.\d+)*\.)([A-Za-z])", r"\1 \2", heading.strip())
 
@@ -461,8 +480,10 @@ def _transform_markdown(
     image_root = f"assets/{slug}"
     in_cover = True
     title_emitted = False
+    lines = full_md.splitlines()
+    has_markdown_headings = any(line.lstrip().startswith("#") for line in lines)
 
-    for raw in full_md.splitlines():
+    for raw in lines:
         if raw.lstrip().startswith("#"):
             heading_text = _normalize_heading_text(raw.lstrip("#").strip())
 
@@ -518,6 +539,19 @@ def _transform_markdown(
             out.append(f"{'#' * depth} {heading_text}")
             skip_body = False
             continue
+
+        if in_cover and not has_markdown_headings:
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            if _looks_like_plain_document_title(stripped):
+                in_cover = False
+                if not title_emitted:
+                    out.append(f"# {stripped}")
+                    out.append("")
+                    title_emitted = True
+                skip_body = False
+                continue
 
         if in_cover or skip_body:
             continue

@@ -66,6 +66,29 @@ Section content that must remain.
         )
         self.assertIn("Section content that must remain.", body)
 
+    def test_plain_text_title_starts_body_when_mineru_emits_no_markdown_headings(self) -> None:
+        title = "Bose-Einstein Condensation of Erbium"
+        full_md = f"""{title}
+
+K. Aikawa, A. Frisch, and F. Ferlaino
+
+We report on the achievement of Bose-Einstein condensation of erbium atoms.
+
+DOI: 10.1103/PhysRevLett.108.210401
+"""
+
+        body, _, _, _ = prepare_paper_source._transform_markdown(
+            full_md,
+            "aikawa-2012-erbium",
+            title,
+        )
+
+        self.assertIn(f"# {title}", body)
+        self.assertIn(
+            "We report on the achievement of Bose-Einstein condensation of erbium atoms.",
+            body,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
