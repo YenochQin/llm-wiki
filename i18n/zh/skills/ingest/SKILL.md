@@ -29,13 +29,13 @@ Open `docs/runtime-page-templates.en.md` before drafting any wiki page frontmatt
 - Zotero metadata enrichment is optional: after a DOI/title Zotero lookup selects an unambiguous candidate, use that candidate's internal `item_key` with `tools/fetch_zotero_metadata.py --item-key <key>` to read richer metadata from Zotero Desktop's local API. This internal metadata call is allowed; a user-supplied `--item-key` lookup path is not. If Zotero Desktop is closed or local API access is disabled, continue with the existing SQLite/Crossref path.
 - Never pass DOI or title directly to `tools/fetch_zotero_metadata.py`; that helper only accepts `--item-key` (or `--ping`). For DOI/title-based Zotero lookup, first run `tools/find_zotero_pdf.py --doi <doi>` or `--title "<title>"`, select an unambiguous candidate, then call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>`.
 - Zotero metadata by itself is not a grounded source. If the user only provides metadata with no PDF, prepared Markdown, source note, or web/notes content, do not create a paper page; ask for a content source or record the metadata as a future ingest aid only when explicitly requested.
-- `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the heavy-relation shortlist to the report as "Related papers you may want to ingest next". Each recommendation must show title, authors, DOI, and Zotero collection status; do not emit DOI-only or citation-key-only suggestions. Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
+- `--discover` (optional, default **off**): after the final report, invoke `/discover --anchor <this-paper's-doi-or-title>` and append the heavy-relation shortlist to the report as "Related papers you may want to ingest next". Each recommendation must show title, authors, DOI, and Zotero collection status; do not emit DOI-only, citation-key-only, author-year-only, venue-only, or prose-only suggestions. Never auto-ingests the suggestions. Skipped automatically in INIT MODE. Treat this as a user-owned flag: do not set it based on repo state.
 
 ## Outputs
 
 - One fully-wired paper page plus linked entities (concepts, claims, people)
 - Graph edges and citations appended via `tools/research_wiki.py`
-- Terminal summary with page counts and suggested follow-up ingests
+- Terminal summary with page counts and optional structured follow-up ingest candidates
 - A minimum viable ingest normally touches the paper page, at least one concept or existing concept update, at least one claim or existing claim update, author/person handling, `index.md`, `log/`, and graph/context files. If the source genuinely cannot support a claim or concept, say why in the log and final report.
 
 ## Wiki Interaction
@@ -202,7 +202,7 @@ uv run python -X utf8 tools/fetch_literature.py citations <doi-or-title>
 - For each reference whose DOI or title resolves to an existing `@configured/papers/{slug}.md`, add a bibliographic `cites` row to `graph/citations.jsonl`.
 - Add a semantic paper-to-paper edge in `graph/edges.jsonl` only when the source text gives a clear cue. Edge-type selection is in `references/cross-references.md`. If no semantic relation cleanly fits, keep only the `cites` row.
 - For each citation already in the wiki, append the citer's slug to this paper's `cited_by`.
-- Surface unmatched high-citation references in the final report so the user can decide whether to follow up with another `/ingest`.
+- Do not surface unmatched references as follow-up ingest suggestions from this step unless they have first been normalized into structured candidates with verified `title`, `authors`, `year`, `doi`, and relation evidence. If normalization fails, mention only the count of unresolved high-citation references, not their names. Never write author-year or venue-only prose such as `Berengut 2012 (PRL 114, 150801)` as a recommendation.
 
 ### Step 6: Topics and index
 
@@ -237,11 +237,22 @@ uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured
 
 ### Step 8: Report
 
-Emit one compact summary covering: pages created, pages updated, graph edges added, topic/Summary placement (`Topic placement: matched N topics; Summary placement: matched S summaries` — if `N=0`, append a one-line suggestion to run `/edit` and create a topic page for the paper's domain; if `S=0`, suggest adding or updating a Summary page), contradictions surfaced (if any), and high-citation references not yet in the wiki (suggested follow-up ingests). Close with:
+Emit one compact summary covering: pages created, pages updated, graph edges added, topic/Summary placement (`Topic placement: matched N topics; Summary placement: matched S summaries` — if `N=0`, append a one-line suggestion to run `/edit` and create a topic page for the paper's domain; if `S=0`, suggest adding or updating a Summary page), contradictions surfaced (if any), and structured follow-up ingest candidates only when they pass the candidate gate below. Close with:
 
 ```
 Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges
 ```
+
+**Follow-up candidate gate**: Any paper recommendation in the final report, whether from unmatched references or optional discovery, must be a structured row with all of:
+
+- exact title
+- authors
+- year
+- DOI
+- Zotero collection status (`collected`, `not collected`, or `unknown`)
+- one-line relation evidence explaining why it is relevant to the just-ingested paper
+
+If any required field is missing, omit that candidate from the recommendation list. Do not compensate with a prose citation, author-year label, journal/volume/page tuple, or "key literature" sentence. A report may say `No structured follow-up candidates passed the gate` or `N unresolved bibliography items need DOI/title verification`, but it must not name those unresolved papers as ingest suggestions.
 
 If the ingest falls below the normal minimum viable output (paper + concept/update + claim/update + index + log + graph), include a one-line reason rather than silently shipping a thin wiki.
 
@@ -278,7 +289,7 @@ When active, invoke `/discover` with the just-ingested paper as the single ancho
 uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title-of-this-paper> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Append the markdown output to the report under a heading like "Related papers you may want to ingest next". The tool already filters anchor-mode output to papers with strong wiki/anchor relation evidence and annotates each candidate with title, authors, DOI, and Zotero collection status. Do not replace that output with DOI-only, citation-key-only, or weakly related suggestions. Do not auto-ingest anything from the shortlist — the user picks. If discovery fails (provider outage, all channels empty), note the failure in one line and continue — a failed `/discover` must not fail an otherwise successful `/ingest`.
+Append only gated candidates from the markdown output to the report under a heading like "Related papers you may want to ingest next". The tool already filters anchor-mode output to papers with strong wiki/anchor relation evidence and annotates each candidate with title, authors, DOI, and Zotero collection status. Still apply the Step 8 follow-up candidate gate: drop any candidate whose DOI is `unavailable`, empty, or inferred; drop any candidate missing title, authors, year, Zotero collection status, or relation evidence. Do not replace omitted candidates with DOI-only, citation-key-only, author-year-only, venue-only, or weakly related prose suggestions. Do not auto-ingest anything from the shortlist — the user picks. If discovery fails (provider outage, all channels empty) or every candidate is dropped by the gate, note that in one line and continue — a failed or empty `/discover` must not fail an otherwise successful `/ingest`.
 
 ## Constraints
 

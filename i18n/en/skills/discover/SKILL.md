@@ -93,10 +93,13 @@ Show the markdown output to the user. For each candidate, the user needs enough 
 
 - title
 - authors
-- DOI, or `unavailable` when the provider exposes none
+- year
+- DOI, or `unavailable` when the provider exposes none in manual `/discover` runs
 - Zotero collection status: `collected`, `not collected`, or `unknown`
-- one-line rationale (already produced by the tool: anchor count, citation count when available, year)
+- one-line rationale / relation evidence (already produced by the tool: anchor count, relation channel, citation count when available, year)
 - abstract excerpt if the tool surfaced one
+
+Do not rewrite incomplete bibliographic hints into prose recommendations. A visible candidate must have at least a title and authors. If title or authors are missing, drop it from the user-facing shortlist and report only the number dropped. Do not output author-year-only, venue-only, DOI-only, citation-key-only, or "important paper" prose bullets.
 
 Append a short "next step" hint:
 
@@ -120,6 +123,8 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "discover | mode=
 
 When `/ingest` is invoked with the optional `--discover` flag (default off), it calls `/discover` after the final report, using the just-ingested paper's DOI when available, otherwise its title. The shortlist is appended to `/ingest`'s report under a "Related papers you may want to ingest next" heading. Because this is a post-ingest follow-up, surface only the heavy-relation shortlist produced by the tool, and keep each candidate's title, authors, DOI, and Zotero collection status visible. `/ingest` never auto-ingests anything from this list.
 
+For this caller, apply a stricter candidate gate before anything reaches the final `/ingest` report. Each candidate must include exact title, authors, year, DOI, Zotero collection status, and one-line relation evidence. `DOI: unavailable` is allowed in manual `/discover` output, but not in `/ingest --discover` output. Drop candidates that fail the gate; if all are dropped, report `No structured follow-up candidates passed the gate` instead of naming unresolved references.
+
 ### From `/init`
 
 `/init` does not call `/discover`. `/init` ingests only local user-owned papers from `raw/papers/`; it does not propose or download external candidates. `/discover` is the right tool for follow-up reading suggestions after `/init` finishes.
@@ -130,6 +135,7 @@ When `/ingest` is invoked with the optional `--discover` flag (default off), it 
 - **No writes to `wiki/` other than `log/`**: paper pages, concepts, claims, graph edges all belong to `/ingest`.
 - **No writes to `raw/`**: `/discover` does not download papers. For Zotero-managed PDFs, the user can run `/ingest --title "<candidate title>"` or `/ingest --doi <doi>` and let `/ingest` scan the selected profile's `zotero_roots` in `config/paths.json`; for non-Zotero PDFs, they can pass the local PDF path directly to `/ingest`.
 - **Always dedupe against the wiki**: pass `--wiki-root '@configured'` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
+- **Structured recommendations only**: Never invent or preserve partial citation strings as recommendations. If a provider returns only author/year, venue, pages, or an ambiguous title fragment, treat it as unresolved metadata, not as a paper candidate.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
 - **No-key provider coverage**: anchor mode uses Crossref title/DOI lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
 
