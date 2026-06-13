@@ -252,12 +252,19 @@ def _provider_authors_to_names(authors: list[Any]) -> list[str]:
 
 
 def _enrich_candidate_metadata(candidates: list[dict[str, Any]]) -> None:
-    """Fill missing title/author/venue/year fields from DOI or title metadata."""
+    """Fill missing bibliographic and citation fields from DOI or title metadata."""
     for c in candidates:
         identifier = _candidate_doi(c) or str(c.get("title") or "").strip()
         if not identifier:
             continue
-        needs_enrichment = not c.get("title") or not c.get("authors") or not c.get("venue") or not c.get("year")
+        needs_enrichment = (
+            not c.get("title")
+            or not c.get("authors")
+            or not c.get("venue")
+            or not c.get("year")
+            or not c.get("citation_count")
+            or not c.get("influential_citation_count")
+        )
         if not needs_enrichment:
             continue
         try:
@@ -274,6 +281,25 @@ def _enrich_candidate_metadata(candidates: list[dict[str, Any]]) -> None:
             c["year"] = record["year"]
         if not _candidate_doi(c) and (record.get("externalIds") or {}).get("DOI"):
             c.setdefault("externalIds", {})["DOI"] = (record.get("externalIds") or {})["DOI"]
+        if not c.get("citation_count") and record.get("citationCount"):
+            c["citation_count"] = record["citationCount"]
+        if not c.get("influential_citation_count") and record.get("influentialCitationCount"):
+            c["influential_citation_count"] = record["influentialCitationCount"]
+
+
+def _filter_low_cited_old_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop pre-1990 papers unless they have more than 100 citations."""
+    kept: list[dict[str, Any]] = []
+    for c in candidates:
+        try:
+            year = int(c.get("year"))
+        except (TypeError, ValueError):
+            kept.append(c)
+            continue
+        if year < 1990 and int(c.get("citation_count") or 0) <= 100:
+            continue
+        kept.append(c)
+    return kept
 
 
 # ---------- ranking --------------------------------------------------------
@@ -550,6 +576,8 @@ def build_shortlist(
     candidates = _dedupe(candidates)
     known = _wiki_known_paper_keys(wiki_root) if wiki_root else set()
     candidates = _filter_against_wiki(candidates, known)
+    _enrich_candidate_metadata(candidates)
+    candidates = _filter_low_cited_old_candidates(candidates)
 
     for c in candidates:
         c["_score"] = round(_score(c, anchor_mode=anchor_mode), 4)
@@ -558,7 +586,6 @@ def build_shortlist(
     candidates = _filter_heavily_related(candidates, anchor_mode=anchor_mode)
     candidates.sort(key=lambda c: c["_score"], reverse=True)
     shortlist = candidates[:limit]
-    _enrich_candidate_metadata(shortlist)
     _annotate_zotero_status(shortlist)
 
     return {

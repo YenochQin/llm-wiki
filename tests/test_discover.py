@@ -19,6 +19,8 @@ def candidate(
     score: float = 0.0,
     rationale: str = "candidate",
     zotero: str = "unknown",
+    year: int | None = None,
+    citation_count: int = 0,
 ) -> dict:
     external_ids = {"DOI": doi} if doi else {}
     return {
@@ -32,6 +34,8 @@ def candidate(
         "_rationale": rationale,
         "_zotero_status": zotero,
         "_zotero_match": {},
+        "year": year,
+        "citation_count": citation_count,
     }
 
 
@@ -63,6 +67,21 @@ class DiscoverRecommendationQualityTests(unittest.TestCase):
         kept = discover._filter_heavily_related(candidates, anchor_mode=False)
 
         self.assertEqual(kept, candidates)
+
+    def test_old_candidates_need_more_than_one_hundred_citations(self) -> None:
+        candidates = [
+            candidate("old low-cited paper", year=1989, citation_count=100),
+            candidate("old highly cited paper", year=1989, citation_count=101),
+            candidate("boundary-year paper", year=1990, citation_count=0),
+            candidate("undated paper", year=None, citation_count=0),
+        ]
+
+        kept = discover._filter_low_cited_old_candidates(candidates)
+
+        self.assertEqual(
+            [c["title"] for c in kept],
+            ["old highly cited paper", "boundary-year paper", "undated paper"],
+        )
 
     def test_markdown_includes_title_authors_doi_and_zotero_status(self) -> None:
         payload = {
@@ -104,6 +123,8 @@ class DiscoverRecommendationQualityTests(unittest.TestCase):
             "externalIds": {"DOI": "10.1234/enriched"},
             "venue": "Journal of Useful Metadata",
             "year": 2026,
+            "citationCount": 42,
+            "influentialCitationCount": 7,
         }
 
         with mock.patch.object(discover.fetch_literature, "paper", return_value=enriched_record):
@@ -113,6 +134,8 @@ class DiscoverRecommendationQualityTests(unittest.TestCase):
         self.assertEqual(candidates[0]["authors"], ["Katherine Johnson", "Dorothy Vaughan"])
         self.assertEqual(candidates[0]["venue"], "Journal of Useful Metadata")
         self.assertEqual(candidates[0]["year"], 2026)
+        self.assertEqual(candidates[0]["citation_count"], 42)
+        self.assertEqual(candidates[0]["influential_citation_count"], 7)
 
 
 if __name__ == "__main__":

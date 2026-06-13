@@ -25,6 +25,15 @@ Anchor mode (rough weight order):
 
 Topic / wiki mode: same signals minus anchor overlap and minus the anchor-influence edge (no anchor exists in topic mode; wiki-derived anchors do score the edge signal). Influence and freshness carry more weight to compensate.
 
+## Age/citation gate
+
+Before scoring and shortlist display, discovery applies one hard quality gate across all modes:
+
+- if `year < 1990`, keep the candidate only when `citation_count > 100`;
+- if `year >= 1990` or year is unknown, this gate does not apply.
+
+This prevents weakly cited older papers from being recommended just because they appear in a reference list or topic search. It is a filter, not a ranking bonus; a pre-1990 paper with exactly 100 citations is dropped.
+
 ## Heavy-relation filtering
 
 After scoring, anchor mode and wiki mode apply a hard relevance gate before the shortlist is shown. A candidate must have at least one strong relation signal:

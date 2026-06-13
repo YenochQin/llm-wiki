@@ -85,6 +85,8 @@ Anchor (and wiki) mode run no-key related search plus best-effort `references` +
 
 The tool handles candidate gathering, wiki dedup, heavy-relation filtering, ranking, Zotero collection-status annotation, and writes the checkpoint. Always pass `--wiki-root '@configured'` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
 
+Before ranking and shortlist display, `tools/discover.py` applies a hard age/citation gate: if a candidate was published before 1990, recommend it only when `citation_count > 100`. Pre-1990 candidates with 100 or fewer citations must be dropped, even if they otherwise match the topic or anchor.
+
 For anchor and wiki modes, `tools/discover.py` only keeps candidates with strong relation evidence: direct reference/citation channel, multiple discovery channels, multiple anchors, or an explicit influential-edge signal. A single `recommend`/title-search hit is not enough, even if it has many citations. Topic mode remains exploratory and is not filtered this way.
 
 If Crossref is unavailable in topic mode, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
@@ -137,6 +139,7 @@ For this caller, apply a stricter candidate gate before anything reaches the fin
 - **No writes to `wiki/` other than `log/`**: paper pages, concepts, claims, graph edges all belong to `/ingest`.
 - **No writes to `raw/`**: `/discover` does not download papers. For Zotero-managed PDFs, the user can run `/ingest --title "<candidate title>"` or `/ingest --doi <doi>` and let `/ingest` scan the selected profile's `zotero_roots` in `config/paths.json`; for non-Zotero PDFs, they can pass the local PDF path directly to `/ingest`.
 - **Always dedupe against the wiki**: pass `--wiki-root '@configured'` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
+- **Pre-1990 citation gate**: candidates published before 1990 require `citation_count > 100`; otherwise drop them from every mode before ranking. This is a recommendation quality gate, not a soft scoring preference.
 - **Structured recommendations only**: Never invent or preserve partial citation strings as recommendations. If a provider returns only author/year, venue, pages, or an ambiguous title fragment, treat it as unresolved metadata, not as a paper candidate.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
 - **No-key provider coverage**: anchor mode uses Crossref title/DOI lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
