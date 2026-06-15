@@ -693,6 +693,68 @@ def dedup_edges(wiki_root: str) -> None:
     print(json.dumps({"status": "ok", "kept": len(kept), "removed": removed}))
 
 
+def set_edge_confidence(wiki_root: str, from_id: str, to_id: str,
+                        edge_type: str, confidence: str) -> None:
+    """Set confidence on an existing semantic edge."""
+    if edge_type not in VALID_EDGE_TYPES:
+        print(json.dumps({
+            "status": "error",
+            "message": f"Unknown edge type '{edge_type}'. Valid: {sorted(VALID_EDGE_TYPES)}"
+        }))
+        sys.exit(1)
+    if confidence not in EDGE_CONFIDENCE_VALUES:
+        print(json.dumps({
+            "status": "error",
+            "message": f"Unknown confidence '{confidence}'. Valid: {sorted(EDGE_CONFIDENCE_VALUES)}"
+        }))
+        sys.exit(1)
+
+    from_id, to_id, _, error = _canonical_edge_ids(
+        from_id, to_id, edge_type, False
+    )
+    if error:
+        print(json.dumps({"status": "error", "message": error}))
+        sys.exit(1)
+
+    edges_path = Path(wiki_root) / DERIVED_DIR / "edges.jsonl"
+    if not edges_path.exists():
+        print(json.dumps({"status": "error", "message": "edges.jsonl not found"}))
+        sys.exit(1)
+
+    target_key = _edge_key({"from": from_id, "to": to_id, "type": edge_type})
+    changed = False
+    updated_lines: list[str] = []
+    for line in edges_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            edge = json.loads(stripped)
+        except json.JSONDecodeError:
+            updated_lines.append(stripped)
+            continue
+        if _edge_key(edge) == target_key:
+            edge["confidence"] = confidence
+            changed = True
+            updated_lines.append(json.dumps(edge, ensure_ascii=False))
+        else:
+            updated_lines.append(stripped)
+
+    if not changed:
+        print(json.dumps({
+            "status": "error",
+            "message": f"edge not found: {from_id} --{edge_type}--> {to_id}"
+        }))
+        sys.exit(1)
+
+    edges_path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+    print(json.dumps({
+        "status": "ok",
+        "edge": f"{from_id} --{edge_type}--> {to_id}",
+        "confidence": confidence,
+    }))
+
+
 def dedup_citations(wiki_root: str) -> None:
     """Deduplicate citations.jsonl by (from, to), keeping first occurrence."""
     citations_path = Path(wiki_root) / DERIVED_DIR / "citations.jsonl"
@@ -2977,6 +3039,16 @@ def main():
                        help="Deduplicate edges.jsonl after parallel ingest merge")
     p.add_argument("wiki_root")
 
+    # set-edge-confidence
+    p = sub.add_parser("set-edge-confidence",
+                       help="Set confidence on an existing graph edge")
+    p.add_argument("wiki_root")
+    p.add_argument("--from", dest="from_id", required=True)
+    p.add_argument("--to", dest="to_id", required=True)
+    p.add_argument("--type", dest="edge_type", required=True)
+    p.add_argument("--confidence", required=True,
+                   choices=sorted(EDGE_CONFIDENCE_VALUES))
+
     # dedup-citations
     p = sub.add_parser("dedup-citations",
                        help="Deduplicate citations.jsonl by paper pair")
@@ -3130,6 +3202,9 @@ def main():
         batch_edges(args.wiki_root)
     elif args.command == "dedup-edges":
         dedup_edges(args.wiki_root)
+    elif args.command == "set-edge-confidence":
+        set_edge_confidence(args.wiki_root, args.from_id, args.to_id,
+                            args.edge_type, args.confidence)
     elif args.command == "dedup-citations":
         dedup_citations(args.wiki_root)
     elif args.command == "rebuild-index":
