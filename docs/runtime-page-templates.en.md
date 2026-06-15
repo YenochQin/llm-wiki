@@ -30,7 +30,18 @@ cited_by: []
 ---
 ```
 
-Body sections: `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## BibTeX` / `## Related`
+Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## BibTeX` / `## Related`
+
+`## Evidence Pack` is mandatory for generated paper pages. It must appear before interpretive sections and contain short source-grounding cards copied from the prepared MinerU markdown:
+
+```markdown
+## Evidence Pack
+
+- `E1` ([prepared markdown](../sources/papers/paper-slug.md), Section or figure/table label):
+  > short exact source fragment
+```
+
+Every card must link to an existing `wiki/sources/papers/{source-slug}.md` prepared source and include an exact blockquote that occurs in that source. Subsequent `## Method`, `## Results`, `## Limitations`, and claim-generating statements may only use facts supported by these cards. If the source does not support a detail, write `unclear` or move it to `## Open questions`; do not fill gaps from model memory.
 
 BibTeX must not be stored in YAML frontmatter. When Zotero/Crossref metadata provides a BibTeX entry, write it in the paper body under `## BibTeX` as a fenced code block:
 

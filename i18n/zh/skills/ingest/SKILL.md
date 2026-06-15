@@ -147,6 +147,28 @@ Raw persistence rule: never copy or duplicate a file already under `@configured-
 
 Open `docs/runtime-page-templates.en.md` for the paper template and `references/content-quality-gate.md` for the content floor. Fill every required frontmatter field; leave `cited_by` empty for now (step 5 backfills it).
 
+Before drafting any interpretive paper/concept/claim prose, build a **source Evidence Pack** from the prepared MinerU markdown. This is a hard anti-hallucination gate, not optional context:
+
+1. Extract short evidence cards from the canonical prepared source (`wiki/sources/papers/<source-slug>.md` or the INIT MODE handoff path). Each card must contain:
+   - an id such as `E1`
+   - the prepared source markdown link
+   - the source section, table, figure, equation, or heading label when available
+   - one short exact original-language blockquote
+   - the intended use: `Problem`, `Research classification`, `Method`, `Results`, `Limitations`, `Concept`, or `Claim`
+2. Evidence cards must be exact-source first. Do not replace them with an LLM summary of the source.
+3. Draft paper `## Method`, `## Results`, `## Limitations`, concept definitions, and claim evidence only from these cards. If no evidence card supports a detail, write `unclear`, omit it, or put the uncertainty under `## Open questions`; do not use model memory to fill the gap.
+4. High-risk statements require direct card support: numbers, units, signs, sample sizes, dataset names, benchmark comparisons, causality, mechanism, "first", "best", "SOTA", necessary/sufficient wording, and broad generalizations.
+5. Put the Evidence Pack into the paper page as the first body section:
+
+   ```markdown
+   ## Evidence Pack
+
+   - `E1` ([prepared markdown](../sources/papers/<source-slug>.md), <source section>):
+     > short exact source fragment
+   ```
+
+If the prepared source is too poor to extract evidence cards, stop the ingest and report a source-quality blocker instead of generating a wiki page from memory.
+
 Before writing, run a **shape check** on the frontmatter you are about to emit — no more than this:
 
 - every required key is present and non-empty, including `paper_type`, `research_modes`, and `research_object_tags`; `bibtex` is absent from frontmatter
@@ -157,7 +179,7 @@ Before writing, run a **shape check** on the frontmatter you are about to emit �
 
 The shape check is intentionally narrow. Backlink symmetry, dangling-node detection, and cross-entity consistency are `/check`'s job, not this skill's.
 
-Body sections to populate: Problem, Key idea, Research classification, Method, Results, Limitations, Open questions, My take, BibTeX, Related.
+Body sections to populate: Evidence Pack, Problem, Key idea, Research classification, Method, Results, Limitations, Open questions, My take, BibTeX, Related.
 
 Paper page content must be both structured and source-faithful:
 
@@ -188,7 +210,7 @@ Follow `references/dedup-policy.md`. In short:
 5. For every paper with importance ≥ 4, create or update at least one claim. A missing `claims/` layer for a high-importance paper is a failed ingest unless the source is purely bibliographic, editorial, or otherwise has no defensible claim; record that exception in the log and final report. The "at most N" entity limits in the Constraints section are upper bounds, not targets — zero claims for an importance ≥ 4 paper violates this floor.
 6. For every concept page created or materially edited, add or refresh `## Source excerpts` with at least **two substantively different excerpts** per concept page when the source covers the concept in multiple passages. Each excerpt must be an exact original-language blockquote linked to that paper's actual prepared MinerU markdown (`../sources/papers/<source-slug>.md`, derived from `canonical_ingest_path` or prepared frontmatter `sourceSlug`). If the source contains formulas or precise definitions for the concept, include a short formula/definition excerpt rather than only paraphrase. Do not cherry-pick a generic opening sentence — the excerpts should collectively demonstrate the concept's formal structure. If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
 7. For concept pages, fill the reusable-knowledge sections, not just a definition: `## Intuition`, `## Formal notation`, `## Variants`, `## Comparison`, `## When to use`, `## Known limitations`, `## Open problems`, `## Key papers`, and `## My understanding`. **All listed sections are mandatory** — omit none silently. If a section truly does not apply, write a one-line scoped reason. `## Comparison` must include a compact table when two or more variants, neighboring concepts, or methods are worth contrasting. `## When to use` must give concrete applicability conditions (quantitative thresholds, physical regimes, specific task types), not purely qualitative "use when working with [topic]" formulations. `## Formal notation` must use `$`/`$$` LaTeX notation, never code fences or `\(` `\)`. `## My understanding` must include **at least one concrete connection sentence** tying the concept to the user's active research direction(s) declared in `@configured/Summary/research-direction.md` — e.g. how the concept appears in that direction, what role it plays (descriptor feature, computational bottleneck, validation benchmark, …). Only omit the connection if the source paper genuinely cannot defend one; in that case write a one-line scoped reason instead of forcing a generic tie-in. If the anchor file is absent, write a synthesis in the maintainer's voice and add `_no research-direction anchor file found_` on its own line.
-8. For claim pages, include `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. Keep confidence conservative: reserve ≥0.85 for claims with direct, strong evidence and clear scope; avoid wording like "necessary and sufficient" unless the paper proves exactly that.
+8. For claim pages, include `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. Every frontmatter `evidence` item must include a `source_anchor` field naming the supporting Evidence Pack id or prepared-source location, or its `detail` must contain an explicit `source_anchor:` marker. Keep confidence conservative: reserve ≥0.85 for claims with direct, strong evidence and clear scope; avoid wording like "necessary and sufficient" unless the paper proves exactly that.
 
 ### Step 5: Paper-to-paper edges and `cited_by`
 
@@ -258,16 +280,24 @@ If the ingest falls below the normal minimum viable output (paper + concept/upda
 
 **Self-check** (run before finalizing the report):
 1. `@configured/papers/{slug}.md` exists and frontmatter YAML parses.
-2. At least one concept page created or materially updated with all mandatory body sections.
-3. At least one claim exists for importance ≥ 4 papers, or the report names the exception.
-4. `@configured/graph/edges.jsonl` has at least one edge involving the new paper.
-5. The current weekly file under `@configured/log/` has a new `[today]` entry under `## ingest`.
-6. `@configured/index.md` includes the new paper and all new entities.
-7. LaTeX in all written pages uses `$`/`$$` exclusively — no code-fence equations, no `\(` `\)`.
-8. Every `[prepared markdown](../sources/papers/<source-slug>.md)` link written by this ingest resolves to an existing file with size > 0 bytes. If any target is missing or empty, the prepared MinerU markdown got wiped after preparation — surface the missing source slugs in the report and stop instead of shipping dead links. (If the user truly intends to keep concept pages without a source backing, the concept page must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.)
-9. For every concept page created or materially updated, `## My understanding` either contains the research-direction connection sentence required in Step 4 item 7, or contains a one-line scoped reason for omission, or notes that the anchor file `@configured/Summary/research-direction.md` was not found.
-10. No written page contains directory-prefixed wikilinks such as `[[wiki/...]]`, `[[wiki_glm/...]]`, `[[wiki_back.../...]]`, or `[[topics/slug]]`. If Obsidian later rewrites links for disambiguation, report that as an external post-ingest change; `/ingest` itself must emit slug-only wikilinks.
-11. No written page contains wikilinks to paper slugs absent from `@configured/papers/`. Unmatched bibliography references must remain plain text or be surfaced in the final report as follow-up `/ingest` candidates.
+2. The paper page contains `## Evidence Pack` with at least one exact excerpt linked to existing prepared markdown.
+3. Run the source-grounding gate on every touched paper/concept/claim file:
+
+   ```shell
+   uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "concepts/{new-or-edited}.md" --only "claims/{new-or-edited}.md" --json
+   ```
+
+   If it reports any red issue, stop and fix the grounding problem before finalizing. Do not downgrade this to a warning.
+4. At least one concept page created or materially updated with all mandatory body sections.
+5. At least one claim exists for importance ≥ 4 papers, or the report names the exception.
+6. `@configured/graph/edges.jsonl` has at least one edge involving the new paper.
+7. The current weekly file under `@configured/log/` has a new `[today]` entry under `## ingest`.
+8. `@configured/index.md` includes the new paper and all new entities.
+9. LaTeX in all written pages uses `$`/`$$` exclusively — no code-fence equations, no `\(` `\)`.
+10. Every `[prepared markdown](../sources/papers/<source-slug>.md)` link written by this ingest resolves to an existing file with size > 0 bytes. If any target is missing or empty, the prepared MinerU markdown got wiped after preparation — surface the missing source slugs in the report and stop instead of shipping dead links. (If the user truly intends to keep concept pages without a source backing, the concept page must use the documented `prepared markdown: missing` fallback wording, not a live link to an empty file.)
+11. For every concept page created or materially updated, `## My understanding` either contains the research-direction connection sentence required in Step 4 item 7, or contains a one-line scoped reason for omission, or notes that the anchor file `@configured/Summary/research-direction.md` was not found.
+12. No written page contains directory-prefixed wikilinks such as `[[wiki/...]]`, `[[wiki_glm/...]]`, `[[wiki_back.../...]]`, or `[[topics/slug]]`. If Obsidian later rewrites links for disambiguation, report that as an external post-ingest change; `/ingest` itself must emit slug-only wikilinks.
+13. No written page contains wikilinks to paper slugs absent from `@configured/papers/`. Unmatched bibliography references must remain plain text or be surfaced in the final report as follow-up `/ingest` candidates.
 
 If any check fails, fix it before emitting the report.
 
@@ -337,6 +367,7 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 - `uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<zotero-pdf-path>' [--title '<zotero-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]` — use single quotes for Zotero-derived paths/metadata because filenames may contain `$` or TeX math such as `$$^{143-147}$$`
 - `uv run python -X utf8 tools/fetch_zotero_metadata.py --item-key <key>` — internal metadata enrichment only after DOI/title Zotero PDF lookup selects an unambiguous candidate; returns Zotero metadata, `metadata.paper_slug`, and a derived `bibtex` entry
 - `uv run python -X utf8 tools/fetch_literature.py paper|citations|references <doi-or-title>` — only when a DOI or confident title is available
+- `uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/<paper-slug>.md" --only "concepts/<concept-slug>.md" --only "claims/<claim-slug>.md" --json` — mandatory scoped source-grounding gate for touched paper/concept/claim pages before final report
 - `uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown` — only when `--discover` is set; emits heavy-relation recommendations with title, authors, DOI, and Zotero collection status
 
 ### Shared References
