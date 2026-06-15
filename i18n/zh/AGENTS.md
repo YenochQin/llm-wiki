@@ -34,6 +34,13 @@
 - `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
 - `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
 
+### 正式页面语言规范
+
+- 正式 wiki 页面默认使用英文写作，尤其是 `wiki/papers/`、`wiki/concepts/`、`wiki/claims/`、`wiki/experiments/`、`wiki/Summary/` 等可复用研究资产。
+- 除非用户明确要求中文，生成或重写正式页面正文时使用英文；用户对话、运行汇报、`wiki/log/`、临时 notes 和个人草稿可使用中文。
+- 中文论文或中文资料可以保留中文标题、术语和必要说明，但分析性正文仍优先英文；关键术语可在首次出现时给出中英文对照。
+- `## Source excerpts`、blockquote、BibTeX、标题、作者名和原始元数据保持 source 原语言和原始拼写，不为满足正文语言规范而翻译。
+
 ### `raw/` 和 `config/`
 
 - `raw/papers/`、`raw/notes/`、`raw/web/` 是用户拥有的输入

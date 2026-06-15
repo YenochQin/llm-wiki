@@ -8,6 +8,8 @@ argument-hint: "<local-pdf-or-wiki/sources/papers/*.md> [--paper-only] [--update
 
 > 中文运行提示：除非用户特别要求英文输出，执行本 skill 时请用中文汇报；命令、路径、YAML 字段、slug、frontmatter key、工具参数和 wikilink 语法保持原样。
 
+> 内容语言提醒：写入正式 wiki 页面时遵守 `AGENTS.md` 的正式页面语言规范；除非用户明确要求中文，页面正文默认使用英文，source excerpts 保持原语言。
+
 Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `mineru-md` source. Use this when the PDF→markdown adapter changed, the paper template changed, or the previous ingest was incomplete. By default, `/reingest` also audits and migrates affected `concepts`, `claims`, and `people` pages. `--update-entities` is now the default behavior and can be treated as a backward-compatible no-op. Use `--paper-only` only when the user explicitly wants to skip entity migration.
 
 ## Scope
