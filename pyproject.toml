@@ -17,8 +17,6 @@ local = ["mineru[all]>=2.0"]
 
 [tool.uv]
 package = false
-cache-dir = ".cache/uv"
-python-preference = "only-managed"
 
 [[tool.uv.index]]
 name = "aliyun"
