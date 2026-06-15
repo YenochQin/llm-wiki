@@ -1,0 +1,1677 @@
+[
+  {
+    "level": "🔴",
+    "category": "missing-field",
+    "file": "claims\\ci-sd-hfs-constants-rf.md",
+    "message": "Missing required field: slug",
+    "suggestion": "Add required field 'slug' to frontmatter (needs manual value)"
+  },
+  {
+    "level": "🔴",
+    "category": "missing-field",
+    "file": "claims\\finite-nuclear-size-zcrit.md",
+    "message": "Missing required field: slug",
+    "suggestion": "Add required field 'slug' to frontmatter (needs manual value)"
+  },
+  {
+    "level": "🔴",
+    "category": "missing-field",
+    "file": "claims\\finite-nuclear-size-zcrit.md",
+    "message": "Missing required field: evidence",
+    "suggestion": "Add required field 'evidence' to frontmatter (needs manual value)"
+  },
+  {
+    "level": "🔴",
+    "category": "missing-field",
+    "file": "claims\\gamow-supercritical-framework.md",
+    "message": "Missing required field: slug",
+    "suggestion": "Add required field 'slug' to frontmatter (needs manual value)"
+  },
+  {
+    "level": "🔴",
+    "category": "missing-field",
+    "file": "claims\\gamow-supercritical-framework.md",
+    "message": "Missing required field: evidence",
+    "suggestion": "Add required field 'evidence' to frontmatter (needs manual value)"
+  },
+  {
+    "level": "🔴",
+    "category": "missing-field",
+    "file": "claims\\seaton-pec-resonance-convergence-bprm-photoionization.md",
+    "message": "Missing required field: slug",
+    "suggestion": "Add required field 'slug' to frontmatter (needs manual value)"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\borschevsky_2007_Predicted.md",
+    "message": "[[anastasia-borschevsky]] → file not found",
+    "suggestion": "Remove [[anastasia-borschevsky]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\laatiaoui_2020_Laser.md",
+    "message": "[[ion-mobility-spectrometry]] → file not found",
+    "suggestion": "Remove [[ion-mobility-spectrometry]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\liu_2007_Atomic.md",
+    "message": "[[yong-liu]] → file not found",
+    "suggestion": "Remove [[yong-liu]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\liu_2007_Atomic.md",
+    "message": "[[yaming-zou]] → file not found",
+    "suggestion": "Remove [[yaming-zou]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\nahar_2024_Rmatrix.md",
+    "message": "[[seaton-pec-resonance-convergence]] → file not found",
+    "suggestion": "Remove [[seaton-pec-resonance-convergence]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\safronova_2009_Development.md",
+    "message": "[[ci-effective-hamiltonian]] → file not found",
+    "suggestion": "Remove [[ci-effective-hamiltonian]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\safronova_2009_Development.md",
+    "message": "[[ci-all-order-accuracy-improvement]] → file not found",
+    "suggestion": "Remove [[ci-all-order-accuracy-improvement]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\safronova_2009_Development.md",
+    "message": "[[ci-all-order-z-consistency]] → file not found",
+    "suggestion": "Remove [[ci-all-order-z-consistency]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\schriber_2016_Communication.md",
+    "message": "[[schriber_2017_Adaptive, \"[[ghosh_2021_Configuration]] → file not found",
+    "suggestion": "Remove [[schriber_2017_Adaptive, \"[[ghosh_2021_Configuration]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "papers\\windberger_2015_Identification.md",
+    "message": "[[fock-space-coupled-cluster]] → file not found",
+    "suggestion": "Remove [[fock-space-coupled-cluster]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "concepts\\ci-mbpt-combined-method-relativistic-atomic.md",
+    "message": "[[fast-configuration-interaction]] → file not found",
+    "suggestion": "Remove [[fast-configuration-interaction]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "concepts\\ci-mbpt-combined-method-relativistic-atomic.md",
+    "message": "[[fast-configuration-interaction]] → file not found",
+    "suggestion": "Remove [[fast-configuration-interaction]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\chintan-shah.md",
+    "message": "[[leutenegger_2020_New]] → file not found",
+    "suggestion": "Remove [[leutenegger_2020_New]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\gaute-hagen.md",
+    "message": "[[hagen_2016_neutron-and-weak-charge]] → file not found",
+    "suggestion": "Remove [[hagen_2016_neutron-and-weak-charge]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\jason-holt.md",
+    "message": "[[stroberg_2017_Nucleus]] → file not found",
+    "suggestion": "Remove [[stroberg_2017_Nucleus]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\jason-holt.md",
+    "message": "[[stroberg_2019_Nonempirical]] → file not found",
+    "suggestion": "Remove [[stroberg_2019_Nonempirical]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\kei-minamisono.md",
+    "message": "[[miller_2019_Proton]] → file not found",
+    "suggestion": "Remove [[miller_2019_Proton]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\kei-minamisono.md",
+    "message": "[[rossi_2015_Charge]] → file not found",
+    "suggestion": "Remove [[rossi_2015_Charge]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\kyohei-kawaguchi.md",
+    "message": "[[kawaguchi_2021_Opacity]] → file not found",
+    "suggestion": "Remove [[kawaguchi_2021_Opacity]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\kyohei-kawaguchi.md",
+    "message": "[[kawaguchi_2018_Kilonova]] → file not found",
+    "suggestion": "Remove [[kawaguchi_2018_Kilonova]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\kyohei-kawaguchi.md",
+    "message": "[[kawaguchi_2020_Kilonova]] → file not found",
+    "suggestion": "Remove [[kawaguchi_2020_Kilonova]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\shinya-wanajo.md",
+    "message": "[[wanajo_2018_MFE]] → file not found",
+    "suggestion": "Remove [[wanajo_2018_MFE]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\shinya-wanajo.md",
+    "message": "[[wanajo_2014_R-process]] → file not found",
+    "suggestion": "Remove [[wanajo_2014_R-process]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\steffen-kuhn.md",
+    "message": "[[leutenegger_2020_New]] → file not found",
+    "suggestion": "Remove [[leutenegger_2020_New]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\takayuki-miyagi.md",
+    "message": "[[miyagi_2020_Ab-initio]] → file not found",
+    "suggestion": "Remove [[miyagi_2020_Ab-initio]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\takayuki-miyagi.md",
+    "message": "[[miyagi_2022_Converged]] → file not found",
+    "suggestion": "Remove [[miyagi_2022_Converged]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\thomas-papenbrock.md",
+    "message": "[[hagen_2014_Coupled]] → file not found",
+    "suggestion": "Remove [[hagen_2014_Coupled]] or create a page for it"
+  },
+  {
+    "level": "🟡",
+    "category": "broken-link",
+    "file": "people\\thomas-papenbrock.md",
+    "message": "[[hagen_2016_neutron-and-weak-charge]] → file not found",
+    "suggestion": "Remove [[hagen_2016_neutron-and-weak-charge]] or create a page for it"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\aldridge_2011_Experimental.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\alheit_1992_Hyperfine.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\amaro_2018_Quantum.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\amarsi_2016_NonLTE.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ambalampitiya_2021_Electron.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\arias-aragon_2024_Production.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\badnell_2024_FAC.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\bartschat_2018_Electron.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\batteiger_2009_Precision.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\bieron_2018_initio.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\bisling_1998_Highlying.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\bisson_1995_Method.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\bizzarro_2025_cosmochemistry.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\borras_2023_Attosecond.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\botz_2026_Highresolution.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\brage_1993_Systematic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\brandt_1963_Lowfield.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\brewer_2016_Spectral.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\brown_2020_Whats.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\bucci_2021_Rubidium.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\burger_1982_Hyperfine.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\burt_2009_Highresolution.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\caddell_2023_Accurate.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\carette_2014_Theoretical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\cdexcollaboration_2024_Experimental.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\celik_2011_Transition.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\celik_2012_Electric.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\chen_2024_Largescale.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\cowan_1967_Atomic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\daygoodacre_2021_Charge.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\delzanna_2018_Solar.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\dinh_2009_Calculation.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\dzuba_2005_Calculationa.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\dzuba_2019_Calculations.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ekman_2014_Calculations.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\eliav_2019_Electronic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\esteban_2025_Alphaelement.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\fedele_2020_Measuring.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\fernandez-menchero_2020_PSTGF.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ferrara_2024_Experimental.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ferrer_2014_Ingascell.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\finger_2022_Highorder.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\fox_2026_Xray.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\frisch_2013_Hyperfine.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\fritzsche_2022_Lorentzforce.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\frpnccollaboration_2015_Hyperfine.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\furmann_2009_Experimental.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\gaigalas_2015_Lifetimes.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\gomez_2018_simple.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\gorczyca_2024_Photoionization.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\gorges_2015_Isotope.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\griffith_2021_similarity.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\griffith_2023_Untangling.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\griffith_2025_Many.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\gryzlova_2022_Influence.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\guo_2021_Chapter.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hamilton_2020_Electronimpact.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hamilton_2023_Experimental.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hasselquist_2021_APOGEE.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hattori_2025_Metallicity.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\heuvel_2016_Configurationaveraged.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\he_2026_Threebody.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hillier_2023_Photoionization.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hirayama_2019_Efficient.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hongu_2023_simple.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\horst_2026_transferable.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hourihane_2023_gaiaESO.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\huang_1995_Atomic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\huang_2026_Magnetic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\huang_2026_Quantum.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hua_2023_Structures.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\husain_2020_Critically.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\hu_2022_Probing.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ikonnikova_2020_Highresolution.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ito_2018_Structure.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\jachimowicz_2021_Properties.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\jiang_2026_Generalized.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\jonsson_2013_Energy.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\jonsson_2014_Relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\karinkuzhi_2021_Lowmass.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\karpov_2020_effects.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kato_2001_Finestructure.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ketelaer_2008_TRIGASPEC.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kimura_2023_Anomalous.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kimura_2023_Hyperfinestructureresolved.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\klempka_2024_Fine.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kogel_2025_Highresolution.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kosugi_2023_Strong.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kotochigova_2007_initio.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kromer_2024_Atomic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kucas_2023_Time.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kumar_2022_Theoretical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kumar_2023_Relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\kunitomo_2022_Evidence.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\lawler_2011_Atomic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\leckenby_2024_Hightemperature.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\liu_2022_Multiple.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\liu_2024_Transient.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\li_2022_ReEvaluation.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\lodders_2025_Solar.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\loos_2010_Invariance.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\lowe_2013_Selfenergy.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ludin_1995_Highresolution.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\luo_2024_Linear.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\lu_2023_M_Fdependent.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\magg_2022_Observational.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\mailhiot_2023_Multielectron.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\mallow_1981_Relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\mann_1973_Selfconsistent.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\march_1993_groundstate.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\marcos_2024_Relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\masuda_2022_161Dy.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\materese_2021_Laboratory.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\mazza_2020_Mapping.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ma_2026_Nuclear.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\mendez_2024_Relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\mills_2017_Improved.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\morbidelli_2024_Formation.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\muller_2026_Splitting.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nandi_2026_Revealing.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\naubereit_2018_Excited.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\naubereit_2018_Intrinsic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\neely_2021_Isotope.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nguyen_2023_Abundant.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nidever_2020_lazy.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nielsen_2023_Planet.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nishimura_2023_Charge.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nissen_2020_Highprecision.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nittler_2020_Presolar.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\niu_2024_magnetic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\nortershauser_2014_Recent.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ohshiro_2023_Measurement.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\orce_2024_Electric.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\palmeri_2005_Transition.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\palme_2024_Nucleosynthetic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\pan_2024_Investigation.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\perez-garcia_2026_Spectral.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\peterson_2017_New.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\petitdemange_2023_Pathways.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\pindzola_2019_Triple.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\pinheiro_2023_Angular.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\popova_2021_Symmetry.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\porsev_2020_Optical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\powell_1968_Relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\pradhan_2023_Photoionization.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\priti_2020_Identification.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\qiao_2023_Diurnal.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\qu_2024_Largescale.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\reiter_2020_Observational.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\roberts_2023_Electricdipole.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\schelfhout_2022_Multiconfiguration.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\schippers_2022_Kedge.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\schmidt_2024_Atomic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\schneider_2020_Numerical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\schofield_2022_Isotopic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\sevilla-gutierrez_2024_Spectral.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\sewtz_2003_First.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\shang_2017_Radiative.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\shi_2016_Unexpectedly.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\siddiki_2023_Role.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\sims_2023_Exponentially.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\singh_2026_Fragmentation.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\song_2022_Theoretical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\steffen_2025_Effect.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\storey_2023_New.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\surzhykov_2013_Hyperfineinduced.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\svinarenko_2017_Theoretical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\tayal_2010_BREIT.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\tayal_2016_Bspline.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\tayal_2021_Benchmark.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\tayal_2022_Effective.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\teske_2024_star.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\ting_2022_How.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\tong_2023_Electronic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\trabert_2015_Hyperfine.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\tu_2023_Experimental.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\volkov_2026_QED.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\vujnovic_1992_critical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\wang_2016_Lowenergy.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\wang_2021_Relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\wang_2023_Effect.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\white_1929_Hyperfine.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\windt_2024_Fermionic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\wolcott_2024_Developing.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\wu_2024_Softcontrolled.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\xiang_2021_program.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\xie_2019_Nuclear.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\xu_2024_Theoretical.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\yordanov_2013_Spins.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\yu_2018_Transition.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zatsarinny_2019_Photoionization.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zatsarinny_2020_Partial.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zengin_2024_Line.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zeng_2023_Nonideal.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zeng_2024_Electron.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zhang_2019_Electronnuclear.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zhang_2023_Effect.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zhang_2024_Dynamic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zhang_2024_Line.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zhang_2024_Photoionization.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zhao_2026_Enhancement.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "papers\\zhu_2026_Revisiting.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "concepts\\isoelectronic-scaling-line-assist-transition-identification.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "concepts\\resis.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "people\\crespo-pez-urrutia.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "people\\keitel.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "people\\schmidt.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "people\\shabaev.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "people\\tupitsyn.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "people\\yerokhin.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\aci-provides-tunable-ground-state-energy.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\ci-all-order-improves-binding-energy.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\ci-all-order-maintains-accuracy-light.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\ci-all-order-method-extends-valence.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\emu-ci-enables-saturated-ci-five.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\fscc-calculations-three-times-more-accurate.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\gaussian-basis-set-ckg-spinor-calculates.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\ir17-m2-e3-transition-highest-predicted.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\jac-provides-domain-specific-language-relativistic.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\lr-ground-state-transition-energies-fscc.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\relativity-changes-she-ground-states.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\seaton-pec-resonance-convergence-bprm-photoionization.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "claims\\symmetry-energy-slope-less-than-equal.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🔵",
+    "category": "orphan",
+    "file": "Summary\\fundamental-physics-varying-constants-tests.md",
+    "message": "No incoming links"
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\beloy_2021_Frequency.md",
+    "message": "links to people/jun-ye but person doesn't link back to [[beloy_2021_Frequency]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\borschevsky_2007_Predicted.md",
+    "message": "links to people/ephraim-eliav but person doesn't link back to [[borschevsky_2007_Predicted]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\borschevsky_2007_Predicted.md",
+    "message": "links to people/yasuyuki-ishikawa but person doesn't link back to [[borschevsky_2007_Predicted]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\borschevsky_2007_Predicted.md",
+    "message": "links to people/uzi-kaldor but person doesn't link back to [[borschevsky_2007_Predicted]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\eustice_2023_Optical.md",
+    "message": "links to people/marianna-safronova but person doesn't link back to [[eustice_2023_Optical]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\holmes_2016_Heatbath.md",
+    "message": "links to people/adam-holmes but person doesn't link back to [[holmes_2016_Heatbath]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\kozlov_2018_Highly.md",
+    "message": "links to people/marianna-safronova but person doesn't link back to [[kozlov_2018_Highly]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\safronova_2018_Nuclear.md",
+    "message": "links to people/marianna-safronova but person doesn't link back to [[safronova_2018_Nuclear]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "xref-asymmetry",
+    "file": "papers\\sanner_2019_Optical.md",
+    "message": "links to people/marianna-safronova but person doesn't link back to [[sanner_2019_Optical]]",
+    "fixable": true
+  },
+  {
+    "level": "🟡",
+    "category": "dangling-edge",
+    "file": "graph/edges.jsonl:192",
+    "message": "to='claims/relativistic-effects-alter-superheavy-chemistry' but file not found"
+  },
+  {
+    "level": "🟡",
+    "category": "dangling-edge",
+    "file": "graph/edges.jsonl:657",
+    "message": "to='foundations/hyperfine-interaction' but file not found"
+  },
+  {
+    "level": "🟡",
+    "category": "dangling-edge",
+    "file": "graph/edges.jsonl:780",
+    "message": "to='foundations/ci-mbpt-combined-method-relativistic-atomic' but file not found"
+  },
+  {
+    "level": "🟡",
+    "category": "dangling-edge",
+    "file": "graph/edges.jsonl:812",
+    "message": "to='foundations/configuration-interaction' but file not found"
+  },
+  {
+    "level": "🟡",
+    "category": "dangling-edge",
+    "file": "graph/citations.jsonl:86",
+    "message": "to='papers/dzuba_2017_CIPT' but file not found"
+  }
+]
