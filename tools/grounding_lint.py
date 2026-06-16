@@ -135,6 +135,7 @@ def _check_source_quotes(
         )
         return issues
 
+    source_paths: list[Path] = []
     for link in links:
         source_path = _resolve_markdown_link(page_path, link)
         try:
@@ -159,16 +160,20 @@ def _check_source_quotes(
                 )
             )
             continue
-        for quote in quotes:
-            if not _excerpt_present(source_path, quote):
-                issues.append(
-                    GroundingIssue(
-                        "red",
-                        "source-excerpt-not-found",
-                        rel,
-                        f"Quoted excerpt was not found in prepared source: {quote[:120]}",
-                    )
+        source_paths.append(source_path)
+    if not source_paths:
+        return issues
+
+    for quote in quotes:
+        if not any(_excerpt_present(source_path, quote) for source_path in source_paths):
+            issues.append(
+                GroundingIssue(
+                    "red",
+                    "source-excerpt-not-found",
+                    rel,
+                    f"Quoted excerpt was not found in any linked prepared source: {quote[:120]}",
                 )
+            )
     return issues
 
 

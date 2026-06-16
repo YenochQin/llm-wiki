@@ -98,6 +98,36 @@ class GroundingLintTests(unittest.TestCase):
             self.assertEqual(len(issues), 1)
             self.assertEqual(issues[0].category, "source-excerpt-not-found")
 
+    def test_accepts_concept_excerpts_backed_by_different_linked_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            wiki = Path(tmp) / "wiki"
+            write(wiki / "sources" / "papers" / "one.md", "# One\nFirst exact source excerpt.")
+            write(wiki / "sources" / "papers" / "two.md", "# Two\nSecond exact source excerpt.")
+            write(
+                wiki / "concepts" / "sample-concept.md",
+                """
+                ---
+                title: Sample concept
+                slug: sample-concept
+                ---
+
+                ## Definition
+
+                A concept with two source-backed examples.
+
+                ## Source excerpts
+
+                - [[one]] ([prepared markdown](../sources/papers/one.md)):
+                  > First exact source excerpt.
+                - [[two]] ([prepared markdown](../sources/papers/two.md)):
+                  > Second exact source excerpt.
+                """,
+            )
+
+            issues = grounding_lint.lint(wiki, only=["concepts/sample-concept.md"])
+
+            self.assertEqual(issues, [])
+
     def test_flags_claim_evidence_without_source_anchor(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             wiki = Path(tmp) / "wiki"
