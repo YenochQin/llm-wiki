@@ -1,5 +1,6 @@
 ---
-description: "Multi-phase research idea generation pipeline: landscape scan → dual-model brainstorm → first-pass filter → deep validation → write to wiki"
+name: ideate
+description: Use when the user wants to generate new research ideas or directions grounded in the wiki and external literature — for example asking what to work on next or for ideas around a given topic.
 argument-hint: "[research-direction-or-topic] [--max-ideas N] [--skip-validation] [--auto]"
 ---
 
@@ -335,6 +336,14 @@ Write the validated ideas to the wiki (including eliminated ideas, with their el
    | Maturity | {before_level} | {after_level} | {unchanged/upgraded} |
    (Only rows with delta != 0 are shown. Data is computed by comparing `maturity_before` from the pre-condition step against a fresh `maturity --json` call here.)
    ```
+
+## Source grounding
+
+This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Every idea, gap, and cited prior work must trace to a wiki page or a captured search/literature result — do not invent papers, methods, or benchmark numbers.
+- Mark speculative leaps explicitly; check the failed-idea banlist (`failure_reason`) before proposing so dead ends are not re-explored.
+- `grounding_lint.py` does not cover `ideas/`; run a manual grounding self-check before writing.
 
 ## Constraints
 

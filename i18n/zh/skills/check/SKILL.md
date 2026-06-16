@@ -1,4 +1,5 @@
 ---
+name: check
 description: Scan the full wiki to detect health issues and produce a tiered fix-recommendation report (covers all 9 entity types + graph consistency)
 ---
 

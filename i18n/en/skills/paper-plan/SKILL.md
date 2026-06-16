@@ -1,4 +1,5 @@
 ---
+name: paper-plan
 description: Compile a paper outline from the claim graph — evidence map → narrative structure → section plan + figure plan + citation plan, Review LLM review mandatory
 argument-hint: <claim-slugs...> --venue <ICLR|NeurIPS|ICML|ACL|CVPR|IEEE> [--title <working-title>]
 ---
@@ -353,6 +354,14 @@ Revise the outline based on Review LLM feedback (add sections, adjust page budge
    - Run `/paper-draft wiki/outputs/paper-plan-{slug}-{date}.md` to draft the paper
    - Resolve {verify_count} [UNCONFIRMED] citations before compiling the paper
    ```
+
+## Source grounding
+
+This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Every section's claim must map to a wiki claim backed by real evidence; every planned citation must resolve to an existing `wiki/papers/` page.
+- Do not plan sections around results that do not yet exist — flag missing evidence instead of assuming it.
+- Pre-fetch BibTeX per `citation-verification.md` and flag `[UNCONFIRMED]` entries early. Manual grounding self-check on the plan.
 
 ## Constraints
 

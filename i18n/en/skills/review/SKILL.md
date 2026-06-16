@@ -1,5 +1,6 @@
 ---
-description: General-purpose cross-model review — Review LLM independently reviews any research artifact, outputs structured scores, wiki entity mapping, and improvement suggestions
+name: review
+description: Use when the user wants an independent, adversarial critique of a research artifact such as an idea, claim, experiment design, or paper draft — a cross-model second opinion with structured scores and concrete fixes.
 argument-hint: <artifact-path-or-slug> [--difficulty standard|hard|adversarial] [--focus method|evidence|writing|completeness]
 ---
 

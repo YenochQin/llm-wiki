@@ -1,4 +1,5 @@
 ---
+name: ingest-local-pdf
 description: Ingest local PDF files or PDF directories into the wiki by preprocessing them into prepared MinerU markdown, then handing the prepared sources to /ingest.
 argument-hint: "(<local-pdf-or-dir> | <wiki/sources/papers/*.md>) [--title <str>] [--discover]"
 ---

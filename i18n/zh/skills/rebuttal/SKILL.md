@@ -1,5 +1,6 @@
 ---
-description: Parse review comments → atomize concerns (Rvx-Cy) → map to wiki claims → check evidence → Review LLM stress-test → generate rebuttal
+name: rebuttal
+description: Use when responding to peer-review comments on a paper — turning reviewer concerns into a point-by-point rebuttal backed by wiki claims and recorded experiment evidence.
 argument-hint: <review-file-or-path> [--paper-slug <slug>] [--venue <venue>] [--stress-test] [--format formal|rich]
 ---
 
@@ -345,6 +346,7 @@ Additional Experiments (if applicable):
 - `Grep` — search wiki for concern keywords
 
 ### Shared References
+- `.claude/skills/shared-references/source-grounding.md` — anti-hallucination source-grounding discipline (general)
 - `.claude/skills/shared-references/cross-model-review.md` — Review LLM stress-test independence principle
 
 ### Suggested follow-up skills

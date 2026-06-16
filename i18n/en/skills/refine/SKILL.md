@@ -1,5 +1,6 @@
 ---
-description: General-purpose multi-round iterative improvement — repeatedly calls /review on any research artifact, parses feedback, applies fixes, updates wiki, until the target score is reached
+name: refine
+description: Use when the user wants to iteratively improve a research artifact until it reaches a target quality — repeatedly reviewing, applying fixes, and re-checking rather than doing a single pass.
 argument-hint: <artifact-slug-or-path> [--max-rounds N] [--target-score N] [--difficulty standard|hard|adversarial] [--focus method|evidence|writing|completeness]
 ---
 
@@ -197,6 +198,14 @@ Append log:
 ```shell
 uv run python -X utf8 tools/research_wiki.py log '@configured' "refine | {artifact-slug} | {N} rounds | score {initial}→{final} | verdict: {verdict}"
 ```
+
+## Source grounding
+
+This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Apply only fixes grounded in the `/review` feedback; do not introduce new claims, numbers, or citations the review did not support.
+- List unresolved gaps explicitly rather than papering over them with invented content.
+- If a refinement touches `papers/`, `concepts/`, or `claims/`, re-run `grounding_lint.py` on those pages before finishing.
 
 ## Constraints
 

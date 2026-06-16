@@ -1,4 +1,5 @@
 ---
+name: survey
 description: Generate a Related Work section for a paper from wiki knowledge — thematic grouping → narrative structure → LaTeX output, following citation-verification and academic-writing
 argument-hint: <research-question-or-claim-slugs> [--format latex|markdown] [--max-papers 30]
 ---
@@ -176,6 +177,14 @@ If output format is LaTeX, following `shared-references/citation-verification.md
    ```
 
 5. **Terminal output**: complete Related Work body text + citation coverage statistics
+
+## Source grounding
+
+This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Only cite papers already in the wiki; every characterization of a paper must trace to its wiki page or prepared source.
+- Do not invent results, comparisons, or contributions to make the narrative flow — underclaim rather than overclaim.
+- BibTeX follows `citation-verification.md` (never from memory). Run a manual grounding self-check: no number or comparison without a source.
 
 ## Constraints
 

@@ -1,4 +1,5 @@
 ---
+name: exp-design
 description: Claim-driven experiment design — scope target claims → design experiment blocks (baseline/validation/ablation/robustness) → build run order → optional Review LLM review → write to wiki
 argument-hint: <idea-slug-or-hypothesis> [--review] [--budget <gpu-hours>]
 ---
@@ -309,6 +310,14 @@ Revise the experiment plan based on Review LLM feedback (add missing experiments
    - Set `status: completed` and fill `outcome`, `key_result`, `date_completed` in the frontmatter
    - Invoke `/exp-eval [[baseline-slug]]` to update the linked claim and graph; repeat for each stage
    ```
+
+## Source grounding
+
+This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Experiment setups, baselines, metrics, and success thresholds must come from the linked paper/claim or the user's stated hypothesis — do not invent datasets, baseline numbers, or reported results.
+- New claims created here are `proposed` hypotheses (confidence 0.3), not source-backed findings; label them as such.
+- If this run creates or edits `claims/` pages, run `grounding_lint.py` on them before reporting; otherwise do a manual grounding self-check on the experiment pages.
 
 ## Constraints
 

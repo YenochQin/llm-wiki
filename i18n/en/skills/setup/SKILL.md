@@ -1,4 +1,5 @@
 ---
+name: setup
 description: Interactive API key configuration guide — checks llm-wiki user config, then walks you through MinerU and Review LLM setup
 ---
 

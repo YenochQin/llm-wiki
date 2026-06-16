@@ -1,5 +1,6 @@
 ---
-description: Multi-source novelty verification — WebSearch + no-key literature search + wiki + Review LLM cross-verify — outputs novelty score and recommendations
+name: novelty
+description: Use when checking whether a research idea or method is genuinely novel — when the user asks if something has been done before, whether an idea is new, or wants a novelty score and recommendations before committing.
 argument-hint: <idea-description-or-slug>
 ---
 
@@ -189,4 +190,5 @@ Synthesize Step 2 search results and Step 3 Review LLM assessment into a structu
 - `Agent` tool — parallel execution of multi-source search (Step 2)
 
 ### Shared References
+- `.claude/skills/shared-references/source-grounding.md` — anti-hallucination source-grounding discipline (general)
 - `.claude/skills/shared-references/cross-model-review.md` (created in Phase 2, Review LLM independence principle)

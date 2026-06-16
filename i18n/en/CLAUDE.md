@@ -201,6 +201,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 | `/discover` | `skills/discover/SKILL.md` | manual / internal (called by `/ingest --discover`) |
 | `/ask` | `skills/ask/SKILL.md` | manual |
 | `/edit` | `skills/edit/SKILL.md` | manual |
+| `/code-analyze` | `skills/code-analyze/SKILL.md` | manual (analyze a code repository's architecture/flow/risk/tests, optionally archive to outputs) |
 | `/check` | `skills/check/SKILL.md` | biweekly/manual |
 | `/source-audit` | `skills/source-audit/SKILL.md` | manual (audit wiki interpretations against original source text) |
 | `/novelty` | `skills/novelty/SKILL.md` | manual |

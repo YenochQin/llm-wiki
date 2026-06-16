@@ -1,5 +1,6 @@
 ---
-description: Build a ranked shortlist of candidate papers (anchor-driven, topic-driven, or derived from current wiki state) that the user — or an upstream skill — may decide to feed into `/ingest`. Use whenever the user asks "what should I read next", "find papers similar to this one", "recommend related work", "what's around this topic", or whenever `/ingest` is invoked with `--discover`. Does not ingest; only proposes.
+name: discover
+description: Use when the user asks what to read next, wants papers similar to a given one, related-work recommendations, or what surrounds a topic — proposes a ranked shortlist of candidate papers to feed into /ingest, without ingesting them.
 argument-hint: "(--anchor <id> [--anchor <id>] [--negative <id>] | --topic <str> | --from-wiki) [--limit N]"
 ---
 

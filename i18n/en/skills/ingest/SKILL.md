@@ -1,4 +1,5 @@
 ---
+name: ingest
 description: Ingest a Zotero-backed paper into the wiki — creates pages (papers + concepts + people + claims) and builds all cross-references and graph edges. Trigger whenever the user says "ingest", "add this paper", or asks to fold a Zotero-backed paper into the knowledge base.
 argument-hint: "[--zotero-root <dir>] (--title <str>|--doi <doi>|--item-key <key>) [--discover]"
 ---
@@ -292,6 +293,7 @@ See `references/error-handling.md`. Highlights: MinerU API failures fall back to
 
 ### Shared References
 
+- `.claude/skills/shared-references/source-grounding.md` — anti-hallucination source-grounding discipline (general)
 - `.claude/skills/shared-references/citation-verification.md`
 
 ### Skills

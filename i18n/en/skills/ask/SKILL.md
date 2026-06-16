@@ -1,5 +1,6 @@
 ---
-description: Ask the wiki a question, retrieve and synthesize relevant pages, optionally crystallize the answer back into the wiki
+name: ask
+description: Use when the user asks a question that should be answered from the wiki's own accumulated knowledge — retrieving and synthesizing existing pages instead of searching externally, optionally crystallizing the answer back into the wiki.
 argument-hint: <question>
 ---
 
@@ -214,4 +215,5 @@ Output a summary including:
 - `/ingest` — referenced when suggesting the user supplement knowledge
 
 ### Shared References
+- `.claude/skills/shared-references/source-grounding.md` — anti-hallucination source-grounding discipline (general)
 - `.claude/skills/shared-references/citation-verification.md` (created in Phase 3)

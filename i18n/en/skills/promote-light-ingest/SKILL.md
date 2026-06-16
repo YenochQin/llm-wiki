@@ -6,8 +6,6 @@ argument-hint: "[--limit N] [--min-score N] [--apply <paper-slug>]"
 
 # /promote-light-ingest
 
-> 中文运行提示：除非用户特别要求英文输出，执行本 skill 时请用中文向用户汇报；命令、路径、YAML 字段、slug、frontmatter key、工具参数和 wikilink 语法保持原样。
-
 This skill audits paper pages created by `/ingest-light` and proposes which ones should be promoted to the full research graph. It is a proposal gate by default: it ranks candidates, explains why they matter, and gives exact `/reingest` commands. It does **not** batch-upgrade papers unless the user explicitly names a slug with `--apply`.
 
 ## Inputs

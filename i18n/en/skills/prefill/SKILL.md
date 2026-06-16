@@ -1,4 +1,5 @@
 ---
+name: prefill
 description: Seed wiki/foundations/ with domain background knowledge so subsequent /ingest does not create duplicate concept pages for textbook material
 argument-hint: "[domain] [--add 'concept name']"
 ---
@@ -138,6 +139,14 @@ Print a grouped summary:
 ```
 
 Remind the user that subsequent `/ingest` runs will dedup against these foundations and create wikilinks (`[[foundation-slug]]`) instead of new concept pages.
+
+## Source grounding
+
+This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Prefer Wikipedia-fetched text for definitions, notation, and variants; tag any LLM-supplied section `(LLM analysis)`.
+- Do not invent history, years, or formal notation that the fetched source does not provide — leave the field empty or marked instead.
+- `grounding_lint.py` does not cover `foundations/`; manually confirm every non-`(LLM analysis)` statement traces to the fetched summary/sections.
 
 ## Constraints
 

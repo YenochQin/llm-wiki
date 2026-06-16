@@ -1,4 +1,5 @@
 ---
+name: zotero-collection-list
 description: List papers from a Zotero collection or subcollection by reading the local Zotero SQLite database snapshot; returns citationKey, title, and DOI, with optional Markdown export. Use when the user names a Zotero collection path/category and asks to list or export its literature items.
 argument-hint: "<collection-path> [--zotero-root <dir>] [--no-recursive] [--output-md <path>]"
 ---

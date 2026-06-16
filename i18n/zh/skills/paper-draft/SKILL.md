@@ -1,4 +1,5 @@
 ---
+name: paper-draft
 description: Draft a LaTeX paper from PAPER_PLAN — write each section from wiki sources + generate figures/tables + BibTeX verification + de-AI polish
 argument-hint: <paper-plan-path> [--review] [--sections <section-numbers>]
 ---
@@ -285,6 +286,14 @@ Make final adjustments based on Review LLM feedback.
    - Run `/refine paper/main.tex --focus writing` for further polish
    - Compile the paper externally (e.g. `latexmk -pdf paper/main.tex`); llm-wiki does not bundle a /paper-compile skill
    ```
+
+## Source grounding
+
+This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Each section draws from wiki pages and prepared sources; numbers, tables, and comparisons must trace to recorded experiment results or source excerpts — never model memory.
+- Unverified citations carry the `[UNCONFIRMED]` marker until checked; never silently drop it.
+- BibTeX + `[UNCONFIRMED]` per `citation-verification.md`; run a manual grounding self-check on every drafted section.
 
 ## Constraints
 

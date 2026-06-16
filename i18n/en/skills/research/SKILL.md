@@ -1,4 +1,5 @@
 ---
+name: research
 description: End-to-end research orchestrator (design-only) — idea discovery → experiment design → user runs experiments externally → /exp-eval on returned results → paper plan + draft. No experiment execution, no paper compilation.
 argument-hint: <research-direction-or-brief> [--auto] [--start-from stage1|stage2|stage3-eval|stage4|stage5] [--skip-paper] [--venue ICLR|NeurIPS|ICML|ACL|CVPR]
 ---

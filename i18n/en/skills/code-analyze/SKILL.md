@@ -6,8 +6,6 @@ argument-hint: "<code-path-or-question> [--mode architecture|flow|risk|tests|onb
 
 # /code-analyze
 
-> 中文运行提示：除非用户特别要求英文输出，执行本 skill 时请用中文向用户汇报；命令、路径、YAML 字段、slug、frontmatter key、工具参数和 wikilink 语法保持原样。代码标识符、文件路径和命令保持原样。
-
 > Analyze source code as a knowledge object. This skill reads a repository or subdirectory,
 > maps architecture and execution flows, identifies risks and test gaps, and connects findings
 > to the research wiki when relevant. It is for understanding and knowledge capture, not for

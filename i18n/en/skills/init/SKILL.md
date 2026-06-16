@@ -1,4 +1,5 @@
 ---
+name: init
 description: Bootstrap LLM-Wiki from local user sources, then ingest the prepared local paper set in parallel through /ingest-local-pdf
 argument-hint: ""
 ---
