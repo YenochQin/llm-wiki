@@ -4,6 +4,22 @@
 This helper is for `/ingest-local-pdf`: the PDF content still comes from the
 user-provided local file, but bibliographic metadata may be enriched from a
 matching Zotero item when the user has already imported that PDF into Zotero.
+
+Purpose:
+    Produce a JSON metadata/BibTeX payload that can be passed to
+    `prepare_paper_source.py`.
+
+Inputs:
+    - A local PDF path.
+    - Optional title or DOI hints.
+    - Zotero Desktop local API or local Zotero database fallback.
+
+Writes:
+    Nothing. The result is printed as JSON.
+
+Usage:
+    uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source raw/papers/a.pdf
+    uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source raw/papers/a.pdf --title "Paper title"
 """
 
 from __future__ import annotations
@@ -162,7 +178,10 @@ def enrich(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--source", required=True, type=Path, help="Local PDF path being ingested.")
     parser.add_argument("--title", default="", help="Confident title recovered from the PDF first page.")
     parser.add_argument("--doi", default="", help="Optional DOI hint.")

@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""Rank light-ingested paper pages for promotion to full ingest."""
+"""Rank light-ingested paper pages for promotion to full ingest.
+
+Purpose:
+    Score light-ingested background papers and produce a shortlist for full
+    `/ingest` or `/reingest` promotion.
+
+Inputs:
+    Existing wiki/papers/*.md pages, especially pages tagged or structured by
+    `/ingest-light`.
+
+Writes:
+    Nothing by default. With --output, writes a Markdown promotion report.
+
+Usage:
+    uv run python -X utf8 tools/promote_light_ingest.py --wiki-dir @configured
+    uv run python -X utf8 tools/promote_light_ingest.py --wiki-dir @configured --min-score 5 --output .checkpoints/promote.md
+"""
 
 from __future__ import annotations
 
@@ -247,7 +263,10 @@ def _to_markdown(items: list[dict[str, Any]], limit: int) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--wiki-dir", default="@configured", help="Wiki root or alias.")
     parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path)
     parser.add_argument("--limit", type=int, default=20)

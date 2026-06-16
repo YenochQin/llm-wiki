@@ -19,6 +19,18 @@ Usage:
     python3 tools/discover.py from-topic "diffusion model fine-tuning" \\
         [--wiki-root wiki/] [--limit 10]
     python3 tools/discover.py from-wiki --wiki-root wiki/ [--limit 10]
+
+Inputs:
+    - Anchor paper titles/DOIs/IDs, a topic string, or recent wiki papers.
+    - Optional wiki root for de-duplicating papers already in the vault.
+
+Writes:
+    Nothing by default; JSON or Markdown is printed to stdout. If
+    --output-checkpoint is provided, a shortlist JSON checkpoint is written.
+
+Safety:
+    This tool recommends papers only. It does not ingest, edit wiki pages, or
+    modify raw sources.
 """
 
 from __future__ import annotations
@@ -659,7 +671,10 @@ def _resolve_output_checkpoint_path(raw_path: str | Path, seed_slug: str) -> Pat
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="llm-wiki discovery shortlist builder")
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     common_args: list[tuple[str, dict[str, Any]]] = [

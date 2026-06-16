@@ -3,6 +3,21 @@
 
 Default mode is a dry run. Pass --yes to write migrated entries. The old
 log.md file is never deleted or modified.
+
+Purpose:
+    Convert the legacy single log file into the current weekly log layout.
+
+Inputs:
+    Legacy wiki/log.md, or old weekly filenames when --rename-old-weekly is set.
+
+Writes:
+    Weekly wiki/log/yyyy-mm-wN.md files only when --yes is provided. The legacy
+    log.md file is preserved.
+
+Usage:
+    uv run python -X utf8 tools/migrate_log.py --wiki-root @configured
+    uv run python -X utf8 tools/migrate_log.py --wiki-root @configured --yes
+    uv run python -X utf8 tools/migrate_log.py --wiki-root @configured --rename-old-weekly --yes
 """
 
 from __future__ import annotations
@@ -247,7 +262,10 @@ def rename_old_weekly_logs(wiki_root: Path, *, dry_run: bool = True) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--wiki-root", default="@configured", help="Wiki root, default: @configured")
     parser.add_argument("--source", default="", help="Legacy log file path, default: <wiki-root>/log.md")
     parser.add_argument("--rename-old-weekly", action="store_true",

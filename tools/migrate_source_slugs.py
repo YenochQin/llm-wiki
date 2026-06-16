@@ -9,6 +9,22 @@ prepared-source naming rule used by ``prepare_paper_source.py``:
 
 It also updates prepared-source frontmatter, asset directories, image paths,
 and markdown links to prepared sources across the wiki.
+
+Purpose:
+    Bring existing prepared MinerU markdown files into the current source-slug
+    convention.
+
+Inputs:
+    Configured wiki root and optional Zotero metadata.
+
+Writes:
+    Only with --yes: renames source files/assets and rewrites prepared-source
+    links across the wiki. Without --yes, writes a JSON migration report only.
+
+Usage:
+    uv run python -X utf8 tools/migrate_source_slugs.py --wiki-root @configured
+    uv run python -X utf8 tools/migrate_source_slugs.py --wiki-root @configured --validate
+    uv run python -X utf8 tools/migrate_source_slugs.py --wiki-root @configured --yes
 """
 
 from __future__ import annotations
@@ -492,7 +508,10 @@ def _write_plan_report(report_path: Path | None, payload: dict[str, Any]) -> Non
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--wiki-root", default="@configured", help="Wiki root path or runtime alias (default: @configured)")
     parser.add_argument("--zotero-root", default="", help="Optional Zotero data root")
     parser.add_argument("--zotero-config", default=str(find_zotero_pdf.DEFAULT_CONFIG_PATH), help="Path config containing zotero_roots")

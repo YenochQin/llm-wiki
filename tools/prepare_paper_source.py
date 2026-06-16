@@ -36,6 +36,20 @@ CLI (preserves OmegaWiki's contract — `/ingest` invocations are unchanged):
 stdout: a single JSON object (one line) with the manifest shape `/ingest`
 expects. `canonical_ingest_path` is the file `/ingest` should read; for this
 build it is always a `.md` produced by MinerU + adapter (`ingest_format = "mineru-md"`).
+
+Inputs:
+    - One local PDF from raw/papers/ or an explicit path.
+    - Optional title, BibTeX, citation key, authors, and year metadata.
+    - MinerU API token for --backend api, or local MinerU install for --backend local.
+
+Writes:
+    - Prepared markdown under --output-dir.
+    - Extracted figure/table assets under --output-dir/assets/<source-slug>/.
+    - MinerU intermediate cache under --cache-root.
+    Raw source PDFs are read-only.
+
+Safety:
+    Existing prepared sources are preserved unless --overwrite is supplied.
 """
 
 from __future__ import annotations
@@ -1110,7 +1124,8 @@ def _resolve_source_path(source: Path, raw_root: Path, project_root: Path) -> Pa
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Prepare a local PDF for /ingest via the MinerU pipeline.",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--raw-root", default=None,
                         help="Raw source root used for source resolution. Accepts @raw-root. Defaults to config/paths.json or ./raw.")

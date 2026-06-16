@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""List Zotero item citation keys, titles, and DOIs under a collection path."""
+"""List Zotero item citation keys, titles, and DOIs under a collection path.
+
+Purpose:
+    Inspect a Zotero collection before ingesting or exporting a bibliography
+    checklist.
+
+Inputs:
+    A Zotero collection path such as `2026/202605/0507`.
+
+Writes:
+    Nothing by default. With --output-md, writes a Markdown table containing
+    citationKey, title, and DOI. Zotero itself is read-only.
+
+Usage:
+    uv run python -X utf8 tools/list_zotero_collection.py "2026/202605/0507"
+    uv run python -X utf8 tools/list_zotero_collection.py "2026/202605/0507" --output-md collection.md
+"""
 
 from __future__ import annotations
 
@@ -290,7 +306,10 @@ def _write_markdown(result: dict[str, Any], output: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("collection", nargs="?", default="", help="Collection path, e.g. '2026/202605/0507'.")
     parser.add_argument("--collection", dest="collection_flag", default="", help="Collection path. Alias for positional argument.")
     parser.add_argument("--zotero-root", type=Path, help="Zotero data/profile root. Defaults to config scan.")

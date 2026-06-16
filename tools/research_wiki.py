@@ -48,6 +48,22 @@ Commands:
     checkpoint-clear <wiki_root> <task_id>
     checkpoint-set-meta <wiki_root> <task_id> <key> <value>
     checkpoint-get-meta <wiki_root> <task_id> [<key>]
+
+Purpose:
+    Provide the stable command surface that skills use for wiki metadata,
+    graph, log, context, checkpoint, and query operations.
+
+Inputs:
+    A wiki root path or @configured for commands that operate on the vault.
+
+Writes:
+    Depends on subcommand. Mutating commands write wiki pages, graph JSONL,
+    derived context files, logs, or checkpoints. Query commands print JSON/text.
+
+Safety:
+    Do not pass the code repository root as wiki_root. Use @configured or an
+    explicit wiki vault path. Graph files should be changed through these
+    commands rather than manual edits.
 """
 
 from __future__ import annotations
@@ -2900,7 +2916,9 @@ def checkpoint_clear(wiki_root: str, task_id: str) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="OmegaWiki — core graph operations and utilities")
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command")
 
     # init

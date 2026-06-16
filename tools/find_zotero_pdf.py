@@ -12,6 +12,22 @@ Supported Zotero attachment forms:
   - linked-file attachments relative to the configured Zotero data root
 
 The tool never modifies Zotero files and opens the database in read-only mode.
+
+Purpose:
+    Resolve a paper identifier to candidate local PDF attachment paths and
+    normalized Zotero metadata.
+
+Inputs:
+    Title/query, DOI, or Zotero item key plus an optional Zotero root/config.
+
+Writes:
+    Nothing. Results are printed as JSON. A read-only SQLite snapshot may be
+    created under config/zotero-cache/ to avoid locking the live Zotero DB.
+
+Usage:
+    uv run python -X utf8 tools/find_zotero_pdf.py --title "Paper title"
+    uv run python -X utf8 tools/find_zotero_pdf.py --doi 10.1234/example
+    uv run python -X utf8 tools/find_zotero_pdf.py --item-key ABC123
 """
 
 from __future__ import annotations
@@ -576,7 +592,10 @@ def find(zotero_root: Path | None, query: str, doi: str, item_key: str, limit: i
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--zotero-root", type=Path,
                         help="Zotero data directory containing zotero.sqlite and storage/, or a profile directory with prefs.js. If omitted, config/paths.json is scanned.")
     parser.add_argument("--zotero-config", default=DEFAULT_CONFIG_PATH, type=Path,

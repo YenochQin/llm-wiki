@@ -18,6 +18,19 @@ Usage:
         --raw-root raw \\
         --prepared-manifest .checkpoints/init-prepare.json \\
         --output-sources .checkpoints/init-sources.json
+
+Purpose:
+    Build the local-source handoff files consumed by the `/init` skill.
+
+Inputs:
+    - raw/papers/ PDFs.
+    - raw/notes/ and raw/web/ text files.
+    - Optional JSON map of recovered PDF titles.
+
+Writes:
+    - Prepared source markdown and assets under wiki/sources/.
+    - .checkpoints/init-prepare.json and .checkpoints/init-sources.json.
+    Raw input files are read-only.
 """
 
 from __future__ import annotations
@@ -431,7 +444,10 @@ def _print_json(data: Any) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_prepare = sub.add_parser("prepare", help="Prepare local raw paper inputs into wiki/sources/ and emit a manifest")

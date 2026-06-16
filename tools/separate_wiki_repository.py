@@ -6,6 +6,21 @@ absolute external paths, then writes `config/paths.json` so tools can reconnect
 the code repository to the external vault.
 
 Default mode is a dry-run plan. Pass --yes to modify files.
+
+Purpose:
+    Split code and personal wiki data so the repository can stay lightweight
+    while tools continue to resolve the active vault through config/paths.json.
+
+Inputs:
+    Existing in-repo wiki/raw directories plus absolute destination paths.
+
+Writes:
+    Only with --yes: copies or moves wiki/raw to the requested destinations and
+    writes config/paths.json.
+
+Usage:
+    uv run python -X utf8 tools/separate_wiki_repository.py --wiki-root /abs/wiki --raw-root /abs/raw
+    uv run python -X utf8 tools/separate_wiki_repository.py --wiki-root /abs/wiki --raw-root /abs/raw --mode copy --yes
 """
 
 from __future__ import annotations
@@ -97,7 +112,10 @@ def execute(project_root: Path, wiki_root: Path, raw_root: Path, config_path: Pa
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--wiki-root", required=True, type=Path,
                         help="Absolute destination for the wiki vault directory.")
     parser.add_argument("--raw-root", required=True, type=Path,

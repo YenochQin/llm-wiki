@@ -4,6 +4,21 @@
 This is the supported CLI for checking aliases such as ``@configured`` and
 ``@configured-sources-papers``. Do not import path helpers from ``_env``;
 environment loading and runtime path resolution are separate concerns.
+
+Purpose:
+    Turn llm-wiki runtime aliases into absolute paths before using normal shell
+    commands that do not understand aliases.
+
+Inputs:
+    Aliases or paths. With no positional arguments, common aliases are printed.
+
+Writes:
+    Nothing. Results are printed as tab-separated text or JSON.
+
+Usage:
+    uv run python -X utf8 tools/resolve_path_alias.py
+    uv run python -X utf8 tools/resolve_path_alias.py @configured @raw-root
+    uv run python -X utf8 tools/resolve_path_alias.py --json @configured-sources-papers
 """
 
 from __future__ import annotations
@@ -28,7 +43,8 @@ DEFAULT_ALIASES = [
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Resolve llm-wiki runtime path aliases using tools/_paths.py.",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "paths",

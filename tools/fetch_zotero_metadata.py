@@ -6,6 +6,19 @@ running or local API access is disabled, callers should fall back to the
 existing SQLite PDF lookup plus Crossref enrichment path. Successful responses
 include normalized metadata plus a derived plain BibTeX entry in
 ``metadata.bibtex``.
+
+Purpose:
+    Read one Zotero item or ping the Zotero Local API.
+
+Inputs:
+    Zotero item key, or --ping.
+
+Writes:
+    Nothing. Results are printed as JSON. Zotero is accessed read-only.
+
+Usage:
+    uv run python -X utf8 tools/fetch_zotero_metadata.py --ping
+    uv run python -X utf8 tools/fetch_zotero_metadata.py --item-key ABC123
 """
 
 from __future__ import annotations
@@ -330,7 +343,10 @@ def ping(api_base: str = "", timeout: float = DEFAULT_TIMEOUT) -> dict[str, Any]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--item-key", default="", help="Zotero item key to fetch.")
     parser.add_argument("--api-base", default="", help=f"Zotero Local API base URL (default: {DEFAULT_API_BASE}, or ZOTERO_LOCAL_API).")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="HTTP timeout in seconds.")

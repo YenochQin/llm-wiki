@@ -6,6 +6,23 @@ in-repo `wiki/` and/or `raw/` directories after you have configured external
 absolute paths in `config/paths.json`.
 
 Default mode is dry-run. Pass --yes to modify files.
+
+Purpose:
+    Remove stale in-repository vault copies once the active wiki/raw roots live
+    outside the code repository.
+
+When to use:
+    Use after `separate_wiki_repository.py` has written external absolute paths
+    to `config/paths.json` and you have confirmed the external vault works.
+
+Writes:
+    Deletes only the selected in-repo `wiki/` and/or `raw/` directories when
+    --yes is provided. The configured external vault is never deleted.
+
+Usage:
+    uv run python -X utf8 tools/clean_wiki_repository.py
+    uv run python -X utf8 tools/clean_wiki_repository.py --target wiki
+    uv run python -X utf8 tools/clean_wiki_repository.py --target all --yes
 """
 
 from __future__ import annotations
@@ -76,7 +93,10 @@ def execute(paths, targets: list[str]) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--target", choices=("wiki", "raw", "all"), default="all",
                         help="Which in-repo directories to remove after separation.")
     parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path,

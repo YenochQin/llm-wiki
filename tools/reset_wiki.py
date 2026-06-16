@@ -16,6 +16,17 @@ Usage:
     python3 tools/reset_wiki.py --scope all --dry-run
 
 Without --yes the tool prints the plan and exits without touching the filesystem.
+
+Inputs:
+    Project root plus configured or explicit wiki/raw roots.
+
+Writes:
+    Only when --yes is provided. Depending on scope, deletes generated wiki
+    content, raw files, weekly logs, or checkpoints and recreates the scaffold.
+
+Safety:
+    Default behavior is a dry-run JSON plan. Use targeted scopes whenever
+    possible; `all` includes user-owned raw inputs.
 """
 
 from __future__ import annotations
@@ -217,7 +228,10 @@ def execute(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[st
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__)
+    p = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p.add_argument("--scope", required=True,
                    help="Comma-separated list, or one of: wiki, raw, log, checkpoints, all")
     p.add_argument("--project-root", default=None, type=Path, help="Project root (default: auto-detect)")

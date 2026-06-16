@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""Move paper BibTeX from YAML frontmatter into body fenced code blocks."""
+"""Move paper BibTeX from YAML frontmatter into body fenced code blocks.
+
+Purpose:
+    Enforce the wiki rule that BibTeX belongs in a `## BibTeX` fenced block,
+    not YAML frontmatter.
+
+Inputs:
+    Paper markdown files or directories. Defaults to configured wiki_root/papers.
+
+Writes:
+    Updated Markdown files unless --dry-run is set.
+
+Usage:
+    uv run python -X utf8 tools/migrate_bibtex_frontmatter.py --dry-run
+    uv run python -X utf8 tools/migrate_bibtex_frontmatter.py wiki/papers --dry-run
+    uv run python -X utf8 tools/migrate_bibtex_frontmatter.py wiki/papers
+"""
 
 from __future__ import annotations
 
@@ -79,7 +95,10 @@ def migrate_file(path: Path, dry_run: bool, fallback_bibtex: str = "") -> tuple[
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "paths",
         nargs="*",

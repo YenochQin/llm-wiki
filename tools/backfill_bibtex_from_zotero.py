@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-"""Backfill existing wiki paper BibTeX blocks from Zotero metadata."""
+"""Backfill existing wiki paper BibTeX blocks from Zotero metadata.
+
+Purpose:
+    Refresh paper pages and matching prepared sources with BibTeX derived from
+    local Zotero metadata, without re-ingesting paper content.
+
+When to use:
+    Use after old pages have missing, stale, or frontmatter-only BibTeX and the
+    corresponding PDF/item is already present in Zotero.
+
+Inputs:
+    - Configured wiki root, or --wiki-root.
+    - Existing wiki/papers/*.md pages.
+    - Zotero Desktop local API or local Zotero database fallback.
+
+Writes:
+    - Paper page ## BibTeX blocks.
+    - Matching prepared source ## BibTeX blocks when source metadata links them.
+    Use --dry-run to inspect the report without writing.
+
+Usage:
+    uv run python -X utf8 tools/backfill_bibtex_from_zotero.py --dry-run
+    uv run python -X utf8 tools/backfill_bibtex_from_zotero.py --slug paper_slug --dry-run
+    uv run python -X utf8 tools/backfill_bibtex_from_zotero.py --slug paper_slug
+"""
 
 from __future__ import annotations
 
@@ -154,7 +178,10 @@ def backfill_one(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--wiki-root", type=Path, help="Wiki root. Defaults to configured wiki_root.")
     parser.add_argument("--paths-config", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument("--slug", action="append", default=[], help="Only process this paper slug; may repeat.")

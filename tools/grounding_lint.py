@@ -4,6 +4,28 @@
 This checker is intentionally conservative and mechanical. It does not try to
 prove that every sentence is faithful; it blocks pages that lack explicit
 source anchors or quote excerpts that cannot be found in prepared sources.
+
+Purpose:
+    Catch hallucinated or unsupported generated content before it spreads
+    through papers, concepts, and claims.
+
+Checks:
+    - Paper pages have ## Evidence Pack with prepared markdown links and source
+      excerpts.
+    - Concept pages have ## Source excerpts with exact blockquotes.
+    - Claim evidence includes source files/anchors that resolve to wiki sources.
+    - Quoted excerpts are found exactly in linked prepared sources.
+
+Inputs:
+    A wiki root plus optional --only filters using wiki-relative paths.
+
+Writes:
+    Nothing. This is a reporting gate.
+
+Usage:
+    uv run python -X utf8 tools/grounding_lint.py --wiki-dir @configured
+    uv run python -X utf8 tools/grounding_lint.py --wiki-dir @configured --only papers/foo.md
+    uv run python -X utf8 tools/grounding_lint.py --wiki-dir @configured --json
 """
 
 from __future__ import annotations
@@ -266,7 +288,10 @@ def lint(wiki_dir: Path, only: Sequence[str] | None = None) -> list[GroundingIss
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Source-grounding gate for llm-wiki pages")
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "--wiki-dir",
         default=None,

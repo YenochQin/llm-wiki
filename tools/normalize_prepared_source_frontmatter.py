@@ -4,6 +4,19 @@ This maintenance helper rewrites ``wiki/sources/papers/*.md`` frontmatter into
 the canonical prepared-source field order and normalizes Zotero attachment paths
 to ``${Zotero data directory}/storage/...`` so the files remain portable across
 machines.
+
+Purpose:
+    Keep prepared MinerU source metadata stable and portable across machines.
+
+Inputs:
+    A directory containing prepared source markdown files.
+
+Writes:
+    Nothing by default. Pass --write to rewrite changed frontmatter.
+
+Usage:
+    uv run python -X utf8 tools/normalize_prepared_source_frontmatter.py wiki/sources/papers
+    uv run python -X utf8 tools/normalize_prepared_source_frontmatter.py wiki/sources/papers --write
 """
 
 from __future__ import annotations
@@ -188,7 +201,10 @@ def normalize_file(path: Path, zotero_root: Path | None = None) -> dict[str, Any
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("sources_dir", type=Path)
     parser.add_argument("--write", action="store_true", help="Write changes instead of reporting only.")
     parser.add_argument("--zotero-root", type=Path, default=None, help="Zotero data directory for matching non-storage source paths.")

@@ -4,6 +4,21 @@
 The repair pass only edits math spans and display math blocks. Markdown code
 fences and inline code are copied through untouched so BibTeX and examples do
 not get rewritten accidentally.
+
+Purpose:
+    Fix common MinerU/OCR spacing artifacts inside LaTeX math while preserving
+    prose, code fences, inline code, and BibTeX.
+
+Inputs:
+    Markdown files or directories. Runtime aliases such as
+    @configured-sources-papers are supported.
+
+Writes:
+    Rewrites changed Markdown files unless --dry-run is set.
+
+Usage:
+    uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers --dry-run
+    uv run python -X utf8 tools/repair_latex_math.py wiki/sources/papers
 """
 
 from __future__ import annotations
@@ -419,7 +434,8 @@ def _iter_markdown_files(paths: list[Path]) -> list[Path]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Repair OCR-spaced LaTeX math in Markdown files.",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("paths", nargs="+", help="Markdown files or directories. Supports configured-path aliases.")
     parser.add_argument("--dry-run", action="store_true", help="Report changes without writing files.")

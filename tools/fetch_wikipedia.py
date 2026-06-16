@@ -14,6 +14,15 @@ Exit codes:
     0  success
     2  page not found (HTTP 404 or API error indicating missing page)
     3  network or parse error
+
+Purpose:
+    Retrieve stable background text for `/prefill` without editing the wiki.
+
+Inputs:
+    A Wikipedia page title and, for `section`, a section index from `sections`.
+
+Writes:
+    Nothing. Results are printed as JSON.
 """
 
 from __future__ import annotations
@@ -90,7 +99,10 @@ def fetch_wikitext(title: str) -> str:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__)
+    p = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s1 = sub.add_parser("summary", help="Fetch page summary (REST API)")

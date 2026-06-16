@@ -21,6 +21,19 @@ Usage:
     python3 tools/lint.py --fix                # auto-fix deterministic issues
     python3 tools/lint.py --fix --dry-run      # preview fixes without applying
     python3 tools/lint.py --suggest            # output actionable suggestions for non-auto-fixable issues
+
+Purpose:
+    Report wiki health issues across page structure, links, frontmatter, graph
+    consistency, and source-grounding scaffolds.
+
+Writes:
+    Nothing by default. With --fix, only deterministic repairs are applied:
+    missing default fields and cross-reference backlinks that can be inferred
+    mechanically. Use --fix --dry-run to preview.
+
+Safety:
+    Non-deterministic content problems are reported as suggestions; this tool
+    does not invent scholarly content.
 """
 
 from __future__ import annotations
@@ -1311,7 +1324,10 @@ def _fix_missing_field(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OmegaWiki linter")
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "--wiki-dir",
         default=None,

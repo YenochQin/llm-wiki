@@ -9,6 +9,20 @@ Usage:
 The wrapper intentionally avoids API-key-gated literature services. Crossref is
 used for DOI metadata, title search, and reference lists when publishers have
 deposited them. OpenAlex is used for broader works search.
+
+Purpose:
+    Provide best-effort public literature metadata for discovery and ingest
+    enrichment without requiring API keys.
+
+Inputs:
+    Search queries, titles, DOIs, or anchor identifiers.
+
+Writes:
+    Nothing. Results are printed as JSON.
+
+Limitations:
+    Citation and reference coverage depends on what public indexes expose; a
+    missing result is not evidence that a citation relationship does not exist.
 """
 
 from __future__ import annotations
@@ -334,7 +348,10 @@ def paper_id_to_stub(identifier: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="No-key Crossref literature lookup")
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_search = sub.add_parser("search", help="Search papers")
