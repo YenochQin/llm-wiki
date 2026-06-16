@@ -73,38 +73,38 @@ uv run python -X utf8 tools/fetch_wikipedia.py section "<title>" --index <N>   #
 
 - The summary call returns `{title, extract, url}`.
 - The sections call returns a list of `{index, line, level}` — pick sections whose `line` matches `Variants`, `Types`, `Architecture`, `History`, `Limitations`, `Applications` (case-insensitive substring match).
-- Exit code `2` from any call means **page not found** — fall back to LLM knowledge for that seed and set `source_url: ""` in the resulting frontmatter.
+- Exit code `2` from the summary call means **page not found**. Do not fill factual fields from model memory. Either skip that seed and report `SOURCE_MISSING`, or create a minimal blocker stub with `source_url: ""`, `status: needs_source`, and no factual definition beyond the catalog title/domain.
 
 ### Step 4: Compose the foundation page
 
-Render each seed into the template below. Distinguish Wikipedia-derived content from LLM-supplied content by appending `(LLM analysis)` to sections that have no Wikipedia source material.
+Render each seed into the template below. Factual sections must come from Wikipedia-fetched content or explicit user/catalog input. LLM-authored synthesis is allowed only in sections explicitly tagged `(LLM analysis)` and must not introduce years, formal notation, variants, history, or technical claims that were not fetched.
 
 ```yaml
 ---
 title: "{title}"
 slug: "{slug}"
 domain: "{domain}"
-status: mainstream         # or historical, if the seed is a superseded technique
-aliases: []                # list any common aliases the LLM is confident about
+status: mainstream         # or historical, if source-backed; use needs_source for blocker stubs
+aliases: []                # list only source-backed or catalog-provided aliases
 first_introduced: "{year if present in Wikipedia summary, else empty}"
 date_updated: "{today}"
-source_url: "{wikipedia url, or empty if 404}"
+source_url: "{wikipedia url, or empty only for needs_source stubs}"
 ---
 
 ## Definition
-{First paragraph of Wikipedia summary, or LLM-supplied definition.}
+{First paragraph of Wikipedia summary. For needs_source stubs, write `SOURCE_MISSING: no retrievable source found for this catalog seed.`}
 
 ## Intuition
-{Plain-language explanation built on the definition.}
+{Plain-language explanation built on the sourced definition, or `(LLM analysis) unclear until source is available` for needs_source stubs.}
 
 ## Formal notation
-{Math/notation extracted from Wikipedia, or LLM-supplied with `(LLM analysis)` tag.}
+{Math/notation extracted from Wikipedia, or empty/`unclear` if not sourced.}
 
 ## Key variants
 {Bulleted list distilled from Wikipedia "Variants"/"Types"/"Architecture" sections.}
 
 ## Known limitations
-{From Wikipedia + LLM judgment.}
+{From Wikipedia sections, or `(LLM analysis) unclear` if not sourced.}
 
 ## Open problems
 {LLM analysis (LLM analysis)}
@@ -147,7 +147,7 @@ Remind the user that subsequent `/ingest` runs will dedup against these foundati
 This skill generates durable content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
 
 - Prefer Wikipedia-fetched text for definitions, notation, and variants; tag any LLM-supplied section `(LLM analysis)`.
-- Do not invent history, years, or formal notation that the fetched source does not provide — leave the field empty or marked instead.
+- Do not invent history, years, aliases, variants, definitions, or formal notation that the fetched source does not provide — leave the field empty, write `unclear`, or create a `needs_source` blocker stub.
 - `grounding_lint.py` does not cover `foundations/`; manually confirm every non-`(LLM analysis)` statement traces to the fetched summary/sections.
 
 ## Constraints
@@ -161,7 +161,7 @@ This skill generates durable content, so it follows the shared **Source Groundin
 ## Error Handling
 
 - **`wiki/foundations/` does not exist**: run `uv run python -X utf8 tools/research_wiki.py init '@configured'` first.
-- **Wikipedia 404**: log the missing page, fall back to LLM knowledge for that seed (`source_url: ""`).
+- **Wikipedia 404**: log the missing page and either skip that seed or create a `needs_source` blocker stub. Do not fall back to model memory for factual content.
 - **Network failure**: print which seeds failed and continue with the remainder; do not abort the whole batch.
 - **Catalog file missing**: print error pointing to `.claude/skills/prefill/foundations-catalog.yaml`.
 

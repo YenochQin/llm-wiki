@@ -150,10 +150,19 @@ uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
 uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
 uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
 uv run python -X utf8 tools/lint.py --wiki-dir '@configured'
+uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/<slug>.md" --only "concepts/<touched-concept>.md" --only "claims/<touched-claim>.md" --json
 uv run python -X utf8 tools/research_wiki.py log '@configured' "reingest | refreshed papers/<slug> | updated: <list>"
 ```
 
-If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content.
+Run `grounding_lint.py` only for touched `papers/`, `concepts/`, and `claims/` pages. Remove placeholder `--only` arguments for entity types that were not touched. If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content. If `grounding_lint.py` reports any `level: red` issue, fix the source-grounding issue before reporting success; do not downgrade it to a warning.
+
+## Source grounding
+
+This skill regenerates durable paper/entity content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
+
+- Regenerated paper interpretation must be drafted from evidence cards extracted from the prepared MinerU source, not model memory.
+- Concept `## Source excerpts` and claim evidence entries must preserve exact source anchors when migrated.
+- Every touched `papers/`, `concepts/`, or `claims/` page must pass the scoped `grounding_lint.py` gate in Step 5 before final reporting.
 
 ## Report
 
@@ -164,7 +173,7 @@ Summarize:
 - entity migration summary: concepts/claims/people reviewed, updated, created, or marked stale
 - graph edges/citations added
 - stale relationships or ambiguous old links that need review
-- lint result
+- lint and grounding_lint result
 
 Close with:
 

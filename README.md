@@ -102,17 +102,30 @@ uv run python -X utf8 tools/clean_wiki_repository.py --target all --yes
 uv run python -X utf8 tools/research_wiki.py rebuild-index @wiki
 ```
 
-## Skills (22)
+## Skills (27)
 
 Grouped by workflow phase:
 
 | Phase | Skills |
 |-------|--------|
 | Setup | `setup`, `reset` |
-| Bootstrap & ingest | `init`, `prefill`, `ingest`, `ingest-local-pdf`, `reingest`, `discover` |
-| Explore & maintain | `ask`, `edit`, `check`, `novelty`, `review` |
+| Bootstrap & ingest | `init`, `prefill`, `ingest`, `ingest-light`, `ingest-local-pdf`, `reingest`, `discover`, `promote-light-ingest`, `zotero-collection-list` |
+| Explore & maintain | `ask`, `edit`, `check`, `source-audit`, `novelty`, `review`, `code-analyze` |
 | Research cycle | `ideate`, `exp-design`, `exp-eval`, `refine`, `research` |
 | Produce | `paper-plan`, `paper-draft`, `survey`, `rebuttal` |
+
+## Source grounding
+
+Generated research content is source-first. The shared rule lives in `i18n/{lang}/shared-references/source-grounding.md` and is exposed through `skills/shared-references/source-grounding.md` after setup.
+
+- Generated paper pages use `## Evidence Pack` cards from prepared MinerU markdown.
+- Concept pages include exact `## Source excerpts`.
+- Claim evidence carries source anchors.
+- `papers/`, `concepts/`, and `claims/` should pass the scoped grounding gate before a generating skill reports success:
+
+```bash
+uv run python -X utf8 tools/grounding_lint.py --wiki-dir @configured --only papers/<slug>.md --json
+```
 
 ## PDF preprocessing
 
@@ -121,7 +134,9 @@ PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pip
 - **`/ingest-local-pdf`** — for raw PDFs or directory batches. Prepares `wiki/sources/papers/*.md` and hands off to `/ingest`.
 - **`/ingest`** — consumes prepared markdown or resolves a Zotero attachment via `--title` or `--doi`. Scans the selected profile's `zotero_roots` candidates in `config/paths.json`; override with `--zotero-root <Zotero data dir>`. The Zotero helper snapshots `zotero.sqlite` into `config/zotero-cache/` and queries it read-only. If Zotero Desktop's local API is running, metadata (title, DOI, year, venue, creators, abstract, tags, citation key, `bibtex`) is pulled from there and falls back to SQLite + Crossref. Zotero `--item-key` is not a user-facing `/ingest` selector; selected candidates may still use their internal `item_key` for metadata enrichment.
 - **`/ingest-light`** — lightweight intake for dissertation-introduction or background papers. Creates a compact paper page, tags it for `thesis-introduction`, and links it to a target Summary without expanding the full concept/claim/people graph.
+- **`/promote-light-ingest`** — ranks light-ingested pages that are worth upgrading to full `/ingest` or `/reingest`.
 - **`/reingest`** — rerun the adapter and migrate linked entities after the PDF adapter, template, or analysis policy changes. `--paper-only` skips the entity audit.
+- **`/code-analyze`** — analyzes an external or local code repository for architecture, flow, risks, tests, onboarding, or research-wiki mapping; it can archive reports to `wiki/outputs/`.
 
 Metadata-only inputs don't create paper pages on their own — they enrich an existing content source (prepared markdown, note, or web clip).
 
