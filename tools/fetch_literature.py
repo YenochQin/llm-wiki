@@ -244,13 +244,13 @@ def search(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Search no-key literature providers."""
     items: list[dict[str, Any]] = []
     try:
-        items.extend(_crossref_search(query, limit=limit))
-    except Exception as exc:
-        print(f"warn: Crossref search failed for {query!r}: {exc}", file=sys.stderr)
-    try:
         items.extend(_openalex_search(query, limit=limit))
     except Exception as exc:
         print(f"warn: OpenAlex search failed for {query!r}: {exc}", file=sys.stderr)
+    try:
+        items.extend(_crossref_search(query, limit=limit))
+    except Exception as exc:
+        print(f"warn: Crossref search failed for {query!r}: {exc}", file=sys.stderr)
     if not items:
         raise RuntimeError(f"all literature providers failed for query: {query}")
     return _dedupe(items, limit)

@@ -22,6 +22,31 @@ class FakeResponse:
 
 
 class OpenAlexSearchTests(unittest.TestCase):
+    def test_search_prefers_openalex_when_limit_truncates_provider_results(self) -> None:
+        crossref_result = {
+            "paperId": "10.1234/crossref",
+            "title": "Crossref Result",
+            "authors": [{"name": "Crossref Author"}],
+            "externalIds": {"DOI": "10.1234/crossref"},
+            "_provider": "crossref",
+        }
+        openalex_result = {
+            "paperId": "https://openalex.org/W1",
+            "title": "OpenAlex Result",
+            "authors": [{"name": "OpenAlex Author"}],
+            "externalIds": {"OpenAlex": "https://openalex.org/W1"},
+            "_provider": "openalex",
+        }
+
+        with (
+            mock.patch.object(fetch_literature, "_crossref_search", return_value=[crossref_result]),
+            mock.patch.object(fetch_literature, "_openalex_search", return_value=[openalex_result]),
+        ):
+            results = fetch_literature.search("neutral atoms", limit=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["_provider"], "openalex")
+
     def test_openalex_search_uses_works_search_api_and_normalizes_results(self) -> None:
         payload = {
             "results": [

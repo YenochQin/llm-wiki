@@ -82,7 +82,7 @@ uv run python -X utf8 tools/discover.py from-topic "<query>" --wiki-root '@confi
 uv run python -X utf8 tools/discover.py from-wiki --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key provider used here does not expose a full citing-works graph.
+Anchor (and wiki) mode run no-key related search plus best-effort `references` + `citations` channels per anchor. OpenAlex is the first-priority search provider; Crossref supplements search results and supplies DOI metadata/reference lists when publishers have deposited them. References surface older canonical work when Crossref has deposited reference lists; citations may be empty because the no-key provider used here does not expose a full citing-works graph.
 
 The tool handles candidate gathering, wiki dedup, heavy-relation filtering, ranking, Zotero collection-status annotation, and writes the checkpoint. Always pass `--wiki-root '@configured'` so already-ingested papers are filtered out — surfacing duplicates wastes the user's review time.
 
@@ -90,7 +90,7 @@ Before ranking and shortlist display, `tools/discover.py` applies a hard age/cit
 
 For anchor and wiki modes, `tools/discover.py` only keeps candidates with strong relation evidence: direct reference/citation channel, multiple discovery channels, multiple anchors, or an explicit influential-edge signal. A single `recommend`/title-search hit is not enough, even if it has many citations. Topic mode remains exploratory and is not filtered this way.
 
-If Crossref is unavailable in topic mode, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
+If all topic-mode literature providers are unavailable, abort with a clear message rather than emitting an empty shortlist as if it were a real recommendation.
 
 ### Step 3: Present the shortlist
 
@@ -143,7 +143,7 @@ For this caller, apply a stricter candidate gate before anything reaches the fin
 - **Pre-1990 citation gate**: candidates published before 1990 require `citation_count > 100`; otherwise drop them from every mode before ranking. This is a recommendation quality gate, not a soft scoring preference.
 - **Structured recommendations only**: Never invent or preserve partial citation strings as recommendations. If a provider returns only author/year, venue, pages, or an ambiguous title fragment, treat it as unresolved metadata, not as a paper candidate.
 - **Ranking is discovery-specific**: do not import or duplicate `tools/init_discovery.py`'s scoring helpers. The two skills have different objectives — `/init` wants broad foundational coverage; `/discover` wants relevant *next reads*. See `references/ranking-signals.md`.
-- **No-key provider coverage**: anchor mode uses Crossref title/DOI lookup plus reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
+- **No-key provider coverage**: search uses OpenAlex first and Crossref second; anchor mode also uses Crossref DOI metadata/reference lookup when available. This is less complete than key-gated citation graphs, but it works without account setup.
 
 ## Error Handling
 
@@ -168,4 +168,5 @@ For this caller, apply a stricter candidate gate before anything reaches the fin
 
 ### External APIs
 
-- Crossref — no-key search, paper metadata, and best-effort reference lookup via `tools/fetch_literature.py`
+- OpenAlex — first-priority no-key search via `tools/fetch_literature.py`
+- Crossref — supplemental no-key search, paper metadata, and best-effort reference lookup via `tools/fetch_literature.py`

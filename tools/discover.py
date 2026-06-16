@@ -274,8 +274,8 @@ def _enrich_candidate_metadata(candidates: list[dict[str, Any]]) -> None:
             or not c.get("authors")
             or not c.get("venue")
             or not c.get("year")
-            or not c.get("citation_count")
-            or not c.get("influential_citation_count")
+            or c.get("citation_count") is None
+            or c.get("influential_citation_count") is None
         )
         if not needs_enrichment:
             continue

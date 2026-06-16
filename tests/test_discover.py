@@ -137,6 +137,31 @@ class DiscoverRecommendationQualityTests(unittest.TestCase):
         self.assertEqual(candidates[0]["citation_count"], 42)
         self.assertEqual(candidates[0]["influential_citation_count"], 7)
 
+    def test_metadata_enrichment_does_not_refetch_complete_openalex_candidates(self) -> None:
+        candidates = [
+            candidate(
+                "OpenAlex Complete Paper",
+                doi="10.1234/openalex-complete",
+                authors=["Ada Lovelace"],
+                year=2024,
+                citation_count=0,
+            )
+            | {
+                "venue": "Journal of Provider Metadata",
+                "abstract": "Already complete enough for discovery.",
+                "externalIds": {
+                    "DOI": "10.1234/openalex-complete",
+                    "OpenAlex": "https://openalex.org/W1",
+                },
+                "influential_citation_count": 0,
+            }
+        ]
+
+        with mock.patch.object(discover.fetch_literature, "paper") as paper:
+            discover._enrich_candidate_metadata(candidates)
+
+        paper.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
