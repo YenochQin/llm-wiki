@@ -37,9 +37,11 @@ Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research 
 ```markdown
 ## Evidence Pack
 
-- `E1` ([prepared markdown](../sources/papers/paper-slug.md), Section or figure/table label):
-  > short exact source fragment
+- `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+  > exact source fragment
 ```
+
+This is the only valid Evidence Pack card header shape. Keep both markers: the readable evidence id stays at the start as `` `E1` ``, and the Obsidian block id goes at the very end of the same bullet header as `^E1`. Never start a card with `^E1`, and never replace `` `E1` `` with `^E1`. Subsequent prose cites the card with the literal Obsidian block-link string `[[#^E1]]`; the outer double brackets `[[...]]`, the leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Invalid citation forms include `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, and `[!E1]`.
 
 Every card must link to an existing `wiki/sources/papers/{source-slug}.md` prepared source and include an exact blockquote that occurs in that source. Subsequent `## Method`, `## Results`, `## Limitations`, and claim-generating statements may only use facts supported by these cards. If the source does not support a detail, write `unclear` or move it to `## Open questions`; do not fill gaps from model memory.
 

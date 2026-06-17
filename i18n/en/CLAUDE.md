@@ -31,6 +31,7 @@ Keep this mental map in immediate context:
 - For copyable page starter templates, use `docs/templates/`; do not keep a root-level template library
 - Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log/` format
 - `SKILL.md` is the immediate entrypoint for a skill; some larger skills may also provide local on-demand reference files under their skill directory
+- Treat skill documents as read-only runtime specifications while executing a skill: if you discover a problem in a skill description, template, command, or constraint, report it and suggest the needed change; unless the user explicitly asks to modify/fix/update the skill, do not edit `skills/`, `i18n/*/skills/`, `CLAUDE.md`, or `AGENTS.md` during that skill run
 - `/init` is the first concrete example of this pattern: read `skills/init/SKILL.md` first, then open `skills/init/references/*` only when needed
 - `skills/` is a symlink created by `setup.sh`, pointing to `i18n/{lang}/skills/`; edit skill content in `i18n/`, not the symlink target
 
@@ -164,6 +165,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 ## Constraints
 
 - **`raw/papers/`, `raw/notes/`, `raw/web/` are user-owned**: treat them as authoritative inputs. `/init` and `/ingest-local-pdf` may add vault-visible source copies under `wiki/sources/`: PDFs must be converted to `wiki/sources/papers/*.md` and never copied into `wiki/`; notes/web may be copied to `wiki/sources/notes/` and `wiki/sources/web/`. `/edit` may add raw sources only when the user explicitly asked for it. `/init` subagents running `/ingest` in INIT MODE still treat `raw/` as strictly read-only and must consume the handed-off canonical path directly.
+- **Read-only skill execution**: when using a skill to complete a user task, do not modify that skill or runtime entrypoint files just because you find a defect in the skill documentation. Continue within the safely executable scope and report the problem, risk, and suggested fix to the user. Edit `i18n/*/skills/`, `CLAUDE.md`, `AGENTS.md`, or similar spec files only when the user explicitly asks to modify skills or runtime rules.
 - **User-facing skill parameters are user-owned**: flags and values shown in a skill's `argument-hint` belong to the user's command, not to agent strategy. Do not invent, flip, or drop those parameters from repository state alone. If the user omitted a parameter, only use a default or derived value when that skill explicitly documents omission behavior; otherwise leave it unset or ask the user. Internal derived settings that are not user-facing parameters may still be inferred by the skill.
 - **INIT MODE handoff is manifest-driven**: when `/init` writes `.checkpoints/init-sources.json`, that manifest becomes the single source of truth for ingest order and canonical source paths. Prepared local inputs should point to `wiki/sources/papers/<slug>.md` (MinerU output).
 - **graph/ is auto-generated**: never manually edit files in `graph/` — only via `tools/research_wiki.py`.

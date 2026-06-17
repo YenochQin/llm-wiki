@@ -48,6 +48,11 @@ Required sections:
 ```markdown
 # Title
 
+## Evidence Pack
+
+- `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+  > exact source fragment
+
 ## Problem
 
 One short paragraph on what the paper is about.
@@ -104,6 +109,7 @@ Known limitations, scope limits, or reasons this paper is background-only.
 
 - Keep it compact: one to three paragraphs per prose section.
 - Do not invent details absent from metadata/prepared source.
+- `## Evidence Pack` is mandatory and must use the exact card shape shown above. Replace placeholders only. The readable id stays at the start as `` `E1` ``; the Obsidian block id goes at the end as `^E1`; prose cites cards with the literal Obsidian block-link string `[[#^E1]]`. The outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never use invalid citation forms such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, or legacy `[!E1]`; never start a card with `^E1`, and never replace `` `E1` `` with `^E1`.
 - Prefer Zotero BibTeX. Never put BibTeX in YAML frontmatter.
 - Use Obsidian wikilinks for internal pages and ordinary markdown links for prepared source files.
 - Do not create concept, claim, or people pages from a light ingest.

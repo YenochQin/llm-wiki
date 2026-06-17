@@ -32,6 +32,7 @@
 - 需要可复制的页面起始模板时，使用 `docs/templates/`；根目录不放模板库
 - 需要 graph 派生文件、`index.md` 或 `log/` 细节时，打开 `docs/runtime-support-files.en.md`
 - `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
+- 执行某个 skill 时必须把该 skill 文档视为只读运行规范：如果发现 skill 描述、模板、命令或约束有问题，可以在汇报中指出并建议修改；除非用户明确要求“修改/修复/更新 skill”，否则不得在执行该 skill 的过程中自行编辑 `skills/`、`i18n/*/skills/`、`CLAUDE.md` 或 `AGENTS.md`
 - `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
 - `skills/` 是 `setup.sh` 创建的符号链接，指向 `i18n/{lang}/skills/`；修改 skill 内容应编辑 `i18n/` 下的原件
 
@@ -162,7 +163,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 日志必须通过工具追加，不要手动编辑：
 
 ```shell
-uv run python tools/research_wiki.py log '@configured' "ingest-light | added something"
+uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | added something"
 ```
 
 ---
@@ -172,10 +173,10 @@ uv run python tools/research_wiki.py log '@configured' "ingest-light | added som
 - 本项目由 **uv 管理**：`setup.sh` 通过 `uv sync` 从 `pyproject.toml` 创建/更新 `.venv`
 - `.venv/` 存在时优先使用 `.venv/bin/python`（Unix/macOS）或 `.venv/Scripts/python.exe`（Windows）
 - 否则回退到 `python3`（Unix/macOS）或 `python`（Windows）
-- skill 通过 `uv run python tools/<name>.py …` 运行工具（uv 会按 `pyproject.toml` 自动定位 `.venv`）；当 `.venv/` 已存在时，等价写法是 `.venv/bin/python tools/<name>.py …`
+- skill 通过 `uv run python -X utf8 tools/<name>.py …` 运行工具（uv 会按 `pyproject.toml` 自动定位 `.venv`）；当 `.venv/` 已存在时，等价写法是 `.venv/bin/python tools/<name>.py …`
 - Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
 - 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；`active_profile: auto` 会按系统选择 `macos`、`windows` 或 `linux`，也可用 `LLM_WIKI_PATH_PROFILE` 临时指定；未配置时回退到仓库内 `wiki/` 和 `raw/`
-- `@configured`、`@raw-root`、`@configured-sources-papers` 等别名只由支持 `tools/_paths.py` 的 Python 工具解析。对直接文件编辑、`cat`、`cp`、`mkdir`、shell 重定向等普通文件操作，必须先运行 `uv run python tools/resolve_path_alias.py ...` 得到绝对路径，再使用绝对路径；禁止创建字面目录 `@configured/` 或 `@raw-root/`。
+- `@configured`、`@raw-root`、`@configured-sources-papers` 等别名只由支持 `tools/_paths.py` 的 Python 工具解析。对直接文件编辑、`cat`、`cp`、`mkdir`、shell 重定向等普通文件操作，必须先运行 `uv run python -X utf8 tools/resolve_path_alias.py ...` 得到绝对路径，再使用绝对路径；禁止创建字面目录 `@configured/` 或 `@raw-root/`。
 - 可选 MinerU 本地后端需显式启用：`uv sync --extra local`（首次会下载数 GB 模型权重）
 - 本项目没有测试套件（无 `tests/`、无 `test_*.py`），也没有 Python 代码的 lint/format 配置（无 ruff、black、mypy）；`tools/lint.py` 是 wiki 内容 linter，不是 Python 代码 linter
 
@@ -184,6 +185,7 @@ uv run python tools/research_wiki.py log '@configured' "ingest-light | added som
 ## 约束
 
 - **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和 `/ingest-local-pdf` 只可在 `wiki/sources/` 下添加 vault 可见 source 副本：PDF 只能转化为 `wiki/sources/papers/*.md`，不要把 PDF 放入 `wiki/`；notes/web 可复制到 `wiki/sources/notes/` 和 `wiki/sources/web/`。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
+- **skill 只读执行**：使用 skill 完成用户任务时，不得因为发现 skill 文档有缺陷就自行修改该 skill 或运行入口文件。正确做法是继续在可安全执行的范围内完成任务，并把发现的问题、风险和建议修改点报告给用户；只有当用户明确要求修改 skill/运行规范时，才可编辑 `i18n/*/skills/`、`CLAUDE.md`、`AGENTS.md` 等规范文件。
 - **用户可见 skill 参数属于用户**：`argument-hint` 中显示的 flag 和值属于用户命令，不是 agent 策略。不要仅凭仓库状态发明、翻转或删除这些参数。若用户省略某参数，只有 skill 文档明确说明可默认/推导时才推导，否则保持未设置或询问用户。
 - **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `wiki/sources/papers/<slug>.md`。
 - **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。

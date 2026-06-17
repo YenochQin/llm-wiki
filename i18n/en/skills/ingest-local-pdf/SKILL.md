@@ -39,6 +39,7 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 
 - Do not use Zotero as the content source here; selected content must still be the user-provided local PDF/prepared markdown. Zotero lookup in this skill is metadata-only, for BibTeX enrichment of the local PDF.
 - Do not write directly to `wiki/papers/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/people/` from this skill.
+- Do not generate paper `## Evidence Pack` content here. The downstream `/ingest` skill owns the fixed evidence-card template and must emit cards as `` `E1` ...: ^E1`` with prose citations using the literal Obsidian block link `[[#^E1]]`; the outer double brackets, leading `#`, and one literal space before the citation are mandatory.
 - Keep raw PDFs in their original location; only the prepared markdown and extracted assets belong under `wiki/sources/`.
 - If the directory contains mixed file types, ignore non-PDF files unless the user explicitly points at a prepared markdown file.
 

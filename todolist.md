@@ -1,0 +1,414 @@
+# Reingest todolist — Evidence Pack 覆盖度补全
+
+> 生成依据:`tools/grounding_lint.py` 的 `thin-evidence-pack` / `missing-evidence-pack` 检查(2026-06)。
+> 背景:旧版 ingest 规范只要求「at least one」证据卡,导致绝大多数论文页停在 3 张卡;
+> 新版已加入**覆盖度下限**(每个实质填写的解释性区段 + 每个生成的 concept/claim 各至少一张卡)。
+> 本清单是据此重新扫描得到的存量补全任务。
+
+读取 @todolist.md 这个文档然后按照单篇执行的方式执行这一篇
+
+## 范围与方法
+
+- **本文件只列需要 `/reingest` 的完整 ingest 页**(293 篇),按 importance 分级、按缺卡数(`miss`)降序。
+- **轻量页(`light-ingest`/`thesis-introduction`,355 篇)不在此列**:它们本就该薄,走 `/promote-light-ingest` 筛选后再决定是否升级,见文末。
+- 每项标注:缺失的用途卡(`Problem/Method/Results/Limitations/Concept/Claim ×N`),`miss` = 需补的最少卡数。
+- 单篇执行:`/reingest <slug>`;补完后重跑 `uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/<slug>.md" --json` 确认无 `thin-evidence-pack`。
+
+## P0 — 开创性/领域标准(importance 5,full ingest):5 篇
+
+- [x] **froesefischer_2006_Relativistic** (miss 11) — Relativistic energy levels, lifetimes, and transition probabilities for the sodium-like to argon-like sequences
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×2
+- [x] **huntemann_2016_SingleIon** (miss 11) — Single-Ion Atomic Clock with $3\times 10^{-18}$ Systematic Uncertainty
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×2
+- [x] **jonsson_2013_New** (miss 11) — New version: Grasp2K relativistic atomic structure package
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×2
+- [x] **saffman_2010_Quantum** (miss 9) — Quantum information with Rydberg atoms
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
+- [x] **katori_2003_Ultrastable** (miss 6) — Ultrastable optical clock with neutral atoms in an engineered light shift trap
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2
+
+## P1 — 有影响力(importance 4,full ingest):71 篇
+
+- [ ] **ishiyama_2026_Ordersofmagnitude** (miss 17) — Orders-of-magnitude improvement in precision spectroscopy of an inner-shell orbital clock transition in neutral ytterbium
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×11, Claim×2
+- [ ] **door_2025_Probing** (miss 16) — Probing new bosons and nuclear structure with ytterbium isotope shifts
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×7
+- [x] **windberger_2015_Identification** (miss 12) — Identification of the Predicted 5s-4f Level Crossing Optical Lines with Applications to Metrology and Searches for the Variation of Fundamental Constants
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4, Claim×4
+- [x] **indelicato_2007_QED** (miss 11) — QED and relativistic corrections in superheavy elements
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×2
+- [ ] **raeder_2018_probing-sizes-shapes** (miss 11) — Probing Sizes and Shapes of Nobelium Isotopes by Laser Spectroscopy
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×2
+- [ ] **beloy_2021_Frequency** (miss 10) — Frequency ratio measurements at 18-digit accuracy using an optical clock network
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4, Claim×2
+- [ ] **smits_2023_Pushing** (miss 10) — Pushing the limits of the periodic table — A review on atomic relativistic electronic structure theory and calculations for the superheavy elements
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4, Claim×2
+- [ ] **aravena_2016_Periodic** (miss 9) — Periodic trends in lanthanide compounds through the eyes of multireference ab initio theory
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
+- [ ] **filzinger_2023_Improved** (miss 9) — Improved Limits on the Coupling of Ultralight Bosonic Dark Matter to Photons from Optical Atomic Clock Comparisons
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
+- [ ] **grant_2007_Relativistic_ch6** (miss 9) — Relativistic Quantum Theory of Atoms and Molecules, Chapter 6: Complex Atoms
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5
+- [ ] **konig_2023_Surprising** (miss 9) — Surprising Charge-Radius Kink in the Sc Isotopes at N = 20
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
+- [ ] **miller_2019_Proton** (miss 9) — Proton superfluidity and charge radii in proton-rich calcium isotopes
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
+- [ ] **miyagi_2022_Converged** (miss 9) — Converged ab initio calculations of heavy nuclei
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
+- [ ] **barklem_2016_Excitation** (miss 8) — Excitation and charge transfer in low-energy hydrogen-atom collisions with neutral atoms: theory, comparisons, and application to Ca
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **bekker_2019_Detection** (miss 8) — Detection of the 5p – 4f orbital crossing and its optical clock transition in Pr9+
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **bilous_2024_Neuralnetwork** (miss 8) — Neural-network approach to running high-precision atomic computations
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
+- [ ] **deprince_2025_Kilonova** (miss 8) — Kilonova ejecta opacity inferred from new large-scale HFR atomic calculations in all elements between Ca (Z = 20) and Lr (Z = 103)
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
+- [ ] **dere_2023_CHIANTI** (miss 8) — CHIANTI—An Atomic Database for Emission Lines. XVII. Version 10.1: Revised Ionization and Recombination Rates and Other Updates
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
+- [ ] **domoto_2021_Signatures** (miss 8) — Signatures of r-process elements in kilonova spectra
+      - 缺:Problem×1, Method×1, Limitations×1, Concept×3, Claim×2
+- [ ] **froesefischer_2019_GRASP2018A** (miss 8) — GRASP2018—A Fortran 95 version of the General Relativistic Atomic Structure Package
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4
+- [ ] **gillanders_2025_Analysis** (miss 8) — Analysis of the JWST spectra of the kilonova AT 2023vfi accompanying GRB 230307A
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **hees_2020_Search** (miss 8) — Search for a variation of the fine structure constant around the supermassive black hole in our galactic center
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
+- [ ] **jerabek_2018_Electron** (miss 8) — Electron and Nucleon Localization Functions of Oganesson: Approaching the Thomas-Fermi Limit
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4
+- [ ] **kennedy_2020_Precision** (miss 8) — Precision metrology meets cosmology: improved constraints on ultralight dark matter from atom-cavity frequency comparisons
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
+- [ ] **kozlov_2018_Highly** (miss 8) — Highly charged ions: Optical clocks and applications in fundamental physics
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **lange_2021_Improved** (miss 8) — Improved Limits for Violations of Local Position Invariance from Atomic Clock Comparisons
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4
+- [ ] **miyazawa_2022_BoseEinstein** (miss 8) — Bose-Einstein Condensation of Europium
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **norcia_2021_Developments** (miss 8) — Developments in atomic control using ultracold magnetic lanthanides
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4
+- [ ] **safronova_2009_Development** (miss 8) — Development of a configuration-interaction plus all-order method for atomic calculations
+      - 缺:Problem×1, Results×1, Limitations×1, Concept×3, Claim×2
+- [ ] **verdebout_2013_partitioned** (miss 8) — A partitioned correlation function interaction approach for describing electron correlation in atoms
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **zhang_2022_Subrecoil** (miss 8) — Subrecoil Clock-Transition Laser Cooling Enabling Shallow Optical Lattice Clocks
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **clear_2026_Calculated** (miss 7) — Calculated oscillator strengths and transition probabilities of singly ionised nickel (Ni II)
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [ ] **ekman_2014_Validation** (miss 7) — Validation and Implementation of Uncertainty Estimates of Calculated Transition Rates
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [ ] **eliav_1996_Element** (miss 7) — Element 118: The First Rare Gas with an Electron Affinity
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
+- [ ] **giuliani_2019_Colloquium** (miss 7) — Colloquium: Superheavy elements: Oganesson and beyond
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [ ] **jonsson_2017_Multiconfigurationa** (miss 7) — Multiconfiguration Dirac-Hartree-Fock Calculations with Spectroscopic Accuracy: Applications to Astrophysics
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
+- [ ] **jonsson_2023_Introduction** (miss 7) — An Introduction to Relativistic Theory as Implemented in GRASP
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
+- [ ] **konig_2024_Nuclear** (miss 7) — Nuclear charge radii of silicon isotopes
+      - 缺:Problem×1, Results×1, Limitations×1, Concept×3, Claim×1
+- [ ] **kuhn_2022_New** (miss 7) — New Measurement Resolves Key Astrophysical Fe XVII Oscillator Strength Problem
+      - 缺:Method×1, Results×1, Limitations×1, Concept×3, Claim×1
+- [ ] **lis_2023_Midcircuit** (miss 7) — Midcircuit operations using the omg architecture in neutral atom arrays
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
+- [ ] **muni_2022_Optical** (miss 7) — Optical coherent manipulation of alkaline-earth circular Rydberg states
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [ ] **pershina_2015_Electronic** (miss 7) — Electronic structure and properties of superheavy elements
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [ ] **sanner_2019_Optical** (miss 7) — Optical clock comparison for Lorentz symmetry testing
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [ ] **sharma_2017_Semistochastic** (miss 7) — Semistochastic heat-bath configuration interaction method: selected configuration interaction with semistochastic perturbation theory
+      - 缺:Problem×1, Results×1, Limitations×1, Concept×2, Claim×2
+- [ ] **sneden_2016_Irongroup** (miss 7) — Iron-group abundances in the metal-poor main-sequence turnoff star HD 84937
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
+- [ ] **stroberg_2017_Nucleusdependent** (miss 7) — Nucleus-Dependent Valence-Space Approach to Nuclear Structure
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1, Claim×2
+- [ ] **stroberg_2019_Nonempirical** (miss 7) — Nonempirical interactions for the nuclear shell model: an update
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
+- [ ] **wu_2026_Atomic** (miss 7) — Atomic data benchmarked by large-scale multiconfiguration Dirac-Hartree-Fock calculations for beryllium
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
+- [ ] **zatsarinny_2013_Bspline** (miss 7) — The B-spline R-matrix method for atomic processes: application to atomic structure, electron collisions and photoionization
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1, Claim×2
+- [ ] **zhang_2023_Search** (miss 7) — Search for Ultralight Dark Matter with Spectroscopy of Radio-Frequency Atomic Transitions
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [ ] **coe_2018_Machine** (miss 6) — Machine learning configuration interaction
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2
+- [ ] **dzuba_1996_Combination** (miss 6) — Combination of the many-body perturbation theory with the configuration-interaction method
+      - 缺:Problem×1, Results×1, Limitations×1, Concept×3
+- [ ] **grant_2007_Relativistic_ch7** (miss 6) — Relativistic Quantum Theory of Atoms and Molecules — Chapter 7: Computation of Atomic Structures
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2
+- [ ] **greer_1995_Estimating** (miss 6) — Estimating full configuration interaction limits from a Monte Carlo selection of the expansion space
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1, Claim×1
+- [ ] **hagen_2014_Coupledcluster** (miss 6) — Coupled-cluster computations of atomic nuclei
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1, Claim×1
+- [ ] **holmes_2016_Heatbath** (miss 6) — Heat-bath configuration interaction: an efficient selected configuration interaction algorithm inspired by heat-bath sampling
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Claim×2
+- [ ] **ishiyama_2023_Observation** (miss 6) — Observation of an inner-shell orbital clock transition in neutral ytterbium atoms
+      - 缺:Problem×1, Results×1, Limitations×1, Concept×1, Claim×2
+- [ ] **laatiaoui_2020_Laser** (miss 6) — Laser Resonance Chromatography of Superheavy Elements
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2
+- [ ] **shabaev_2013_Model** (miss 6) — Model operator approach to the lamb shift calculations in relativistic many-electron atoms
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1, Claim×1
+- [ ] **si_2025_Graspg** (miss 6) — Graspg: An extension to Grasp2018 based on configuration state function generators
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2
+- [ ] **weeks_2021_Measurement** (miss 6) — Measurement of neutral gadolinium oscillator strengths using dual-comb absorption spectroscopy in laser-produced plasmas
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2
+- [ ] **domoto_2022_Lanthanide** (miss 5) — Lanthanide features in near-infrared spectra of kilonovae
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
+- [ ] **fritzsche_2012_ratip** (miss 5) — The RATIP program for relativistic calculations of atomic transition, ionization and recombination properties
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
+- [ ] **fuhr_2006_critical** (miss 5) — A Critical Compilation of Atomic Transition Probabilities for Neutral and Singly Ionized Iron
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
+- [ ] **hagen_2016_Neutron** (miss 5) — Neutron and weak-charge distributions of the 48Ca nucleus
+      - 缺:Problem×1, Limitations×1, Concept×3
+- [ ] **laatiaoui_2016_atom-time-laser** (miss 5) — Atom-at-a-time laser resonance ionization spectroscopy of nobelium
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
+- [ ] **miyagi_2020_initio** (miss 5) — Ab initio multishell valence-space Hamiltonians and the island of inversion
+      - 缺:Problem×1, Method×1, Limitations×1, Concept×2
+- [ ] **schriber_2016_Communication** (miss 5) — Communication: an adaptive configuration interaction approach for strongly correlated electrons with tunable accuracy
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
+- [ ] **zhang_2024_Variational** (miss 5) — Variational Monte Carlo configuration-interaction approach for multielectron atoms within the multiconfiguration Dirac-Fock framework
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
+- [ ] **berengut_2018_probing-new-long** (miss 4) — Probing new long-range interactions by isotope shift spectroscopy
+      - 缺:Problem×1, Method×1, Results×1, Limitations×1
+- [ ] **bilous_2023_DeepLearning** (miss 4) — Deep-Learning Approach for the Atomic Configuration Interaction Problem on Large Basis Sets
+      - 缺:Method×1, Results×1, Limitations×1, Concept×1
+
+## P2 — 领域标准(importance 3,full ingest):164 篇
+
+> 数量较多,按缺卡数降序;建议在 P0/P1 完成后分批处理。
+
+- [ ] **berengut_2025_Precision** (miss 14) — Precision isotope-shift spectroscopy for new physics searches and nuclear insights
+- [ ] **delzanna_2018_Solar** (miss 12) — Solar UV and X-ray spectral diagnostics
+- [ ] **cassidy_2016_Rates** (miss 10) — Rates of E1, E2, M1, and M2 transitions in Ni II
+- [ ] **gamrath_2018_MCDHF** (miss 10) — MCDHF calculations of isotope shifts in neutral antimony
+- [ ] **liu_2024_Presolar** (miss 10) — Presolar grains as probes of supernova nucleosynthesis
+- [ ] **ma_2024_Natural** (miss 10) — Natural Orbitals and Targeted Non-Orthogonal Orbital Sets for Atomic Hyperfine Structure Multiconfiguration Calculations
+- [ ] **bromley_2023_Electronimpact** (miss 9) — Electron-impact Excitation of Pt i–iii: The Importance of Metastables and Collision Processes in Neutron Star Merger and Laboratory Plasmas
+- [ ] **ding_2025_Challenges** (miss 9) — Challenges in Atomic Spectroscopy of Low-Ionisation-Stage Heavy Elements for Astrophysics
+- [ ] **flors_2023_Opacities** (miss 9) — Opacities of singly and doubly ionized neodymium and uranium for kilonova emission modeling
+- [ ] **fritzsche_2022_Application** (miss 9) — Application of Symmetry-Adapted Atomic Amplitudes
+- [ ] **froesefischer_2019_Electron** (miss 9) — Electron correlation in the lanthanides: 4f2 spectrum of Ce2+
+- [ ] **lackenby_2018_Atomic** (miss 9) — Atomic structure calculations of superheavy noble element oganesson $(Z=118)$
+- [ ] **lawler_2017_Laboratory** (miss 9) — Laboratory transition probabilities for studies of nucleosynthesis of Fe-group elements
+- [ ] **liu_2007_Atomic** (miss 9) — Atomic structure of the super-heavy element No I (Z=102)
+- [ ] **nahar_2024_Rmatrix** (miss 9) — R-matrix calculations for opacities: II. Photoionization and oscillator strengths of iron ions Fe xvii, Fe xviii and Fe xix
+- [ ] **papoulia_2021_initio** (miss 9) — Ab initio electronic factors of the A and B hyperfine structure constants for the 5s2 5p 6s 1,3Po1 states in Sn I
+- [ ] **pradhan_2024_Rmatrix** (miss 9) — R-matrix calculations for opacities: III. Plasma broadening of autoionizing resonances
+- [ ] **rehbehn_2023_Narrow** (miss 9) — Narrow and Ultranarrow Transitions in Highly Charged Xe Ions as Probes of Fifth Forces
+- [ ] **song_2024_Isotope** (miss 9) — Isotope shifts in electron affinities and in binding energies of Pb and hyperfine structure of 207Pb−
+- [ ] **bouazza_2012_Full** (miss 8) — Full hyperfine structure study of singly ionized tantalum
+- [ ] **casier_2026_Machine** (miss 8) — Machine learning assisted selective configuration interaction for accurate ground and excited state calculations
+- [ ] **clear_2022_Wavelengths** (miss 8) — Wavelengths and Energy Levels of Singly Ionized Nickel (Ni ii) Measured Using Fourier Transform Spectroscopy
+- [ ] **clementson_2024_Measurement** (miss 8) — Measurement and Flexible Atomic Code (FAC) Computation of Extreme Ultraviolet (EUV) Spectra of Eu
+- [ ] **coe_2019_Machine** (miss 8) — Machine Learning Configuration Interaction for ab Initio Potential Energy Curves
+- [ ] **eliav_2015_Electronic** (miss 8) — Electronic structure theory of the superheavy elements
+- [ ] **gaigalas_2011_Challenges** (miss 8) — Challenges of Theoretical Spectroscopy of Heavy and Superheavy Atoms and Ions
+- [ ] **gaigalas_2019_Extended** (miss 8) — Extended Calculations of Energy Levels and Transition Rates of Nd II-IV Ions for Application to Neutron Star Mergers
+- [ ] **gaigalas_2020_Energy** (miss 8) — Energy level structure and transition data of Er2+
+- [ ] **gaigalas_2026_Secondorder** (miss 8) — Second-Order Rayleigh–Schrödinger Perturbation Theory for the Grasp2018 Package
+- [ ] **grant_2022_GRASP** (miss 8) — GRASP: The Future?
+- [ ] **indelicato_2011_Are** (miss 8) — Are MCDF calculations 101% correct in the super-heavy elements range?
+- [ ] **jeong_2021_Active** (miss 8) — Active Learning Configuration Interaction for Excited-State Calculations of Polycyclic Aromatic Hydrocarbons
+- [ ] **kahl_2021_initio** (miss 8) — Ab initio calculations of the spectrum of lawrencium
+- [ ] **koike_2022_Zdependent** (miss 8) — Z-dependent crossing of excited-state energy levels in highly charged galliumlike lanthanide atomic ions
+- [ ] **ma_2026_Observation** (miss 8) — Observation of QED effects, breit interaction, and electron correlation in highly charged Au ions produced by a high-power laser
+- [ ] **malyshev_2022_ModelQED** (miss 8) — Model-QED operator for superheavy elements
+- [ ] **pradhan_2024_Rmatrixa** (miss 8) — R-matrix calculations for opacities: I. Methodology and computations
+- [ ] **rathi_2022_Extended** (miss 8) — Extended calculations of atomic structure parameters for Na-like Ar, Kr and Xe ions using relativistic MCDHF and MBPT methods
+- [ ] **si_2021_initio** (miss 8) — Ab initio multiconfiguration Dirac-Hartree-Fock calculations of the In and Tl electron affinities and their isotope shifts
+- [ ] **suzuki_2023_Detailed** (miss 8) — Detailed Analysis of Spectra from Ga-like Ions of Heavy Elements Observed in High-Temperature Plasmas
+- [ ] **yu_2024_Spinsqueezingenhanced** (miss 8) — Spin-squeezing-enhanced optical lattice clocks with 10^{-19}-level differential frequency stability at the averaging time of 1 s
+- [ ] **zhou_2023_Experimental** (miss 8) — Experimental branching fractions, transition probabilities, and oscillator strengths in Ni I
+- [ ] **berengut_2003_Isotopeshift** (miss 7) — Isotope-shift calculations for atoms with one valence electron
+- [ ] **borschevsky_2007_Predicted** (miss 7) — Predicted spectrum of atomic nobelium
+- [ ] **bothwell_2024_Prospective** (miss 7) — Prospective Optical Lattice Clocks in Neutral Atoms with Hyperfine Structure
+- [ ] **carvajalgallego_2022_Opacity** (miss 7) — Opacity calculations in four to nine times ionized Pr, Nd, and Pm atoms for the spectral analysis of kilonovae
+- [ ] **dalton_2023_Enhanced** (miss 7) — Enhanced Schiff and magnetic quadrupole moments in deformed nuclei and their connection to the search for axion dark matter
+- [ ] **dunleavy_2021_Electronimpact** (miss 7) — Electron-impact excitation of Ni II
+- [ ] **dzuba_2005_Calculation** (miss 7) — Calculation of the energy levels of Ge, Sn, Pb, and their ions in the V N − 4 approximation
+- [ ] **dzuba_2019_Fast** (miss 7) — Fast configuration-interaction calculations for nobelium and ytterbium
+- [ ] **dzuba_2020_Calculation** (miss 7) — Calculation of Polarizabilities for Atoms with Open Shells
+- [ ] **eustice_2023_Optical** (miss 7) — Optical telecommunications-band clock based on neutral titanium atoms
+- [ ] **fairhall_2023_QED** (miss 7) — QED radiative corrections to electric dipole amplitudes in heavy atoms
+- [ ] **fischer_2020_Numerical** (miss 7) — Numerical Procedures for Relativistic Atomic Structure Calculations
+- [ ] **fischer_2021_BSpline** (miss 7) — Towards B-Spline Atomic Structure Calculations
+- [ ] **fivet_2016_Radiative** (miss 7) — Radiative rates for forbidden M1 and E2 transitions of astrophysical interest in doubly ionized iron-peak elements
+- [ ] **fritzsche_2022_Level** (miss 7) — Level Structure and Properties of Open f-Shell Elements
+- [ ] **froesefischer_2023_Atomic** (miss 7) — Atomic Structure: Variational Wave Functions and Properties
+- [ ] **fuchs_2025_global** (miss 7) — Toward a global search for new physics with isotope shifts
+- [ ] **furmann_2005_New** (miss 7) — New levels and hyperfine structure evaluation in singly ionized praseodymium
+- [ ] **furmann_2011_Isotope** (miss 7) — Isotope shift and hyperfine structure in even configurations of neutral europium
+- [ ] **gaigalas_2024_Second** (miss 7) — Second order Rayleigh–Schrödinger perturbation theory for the Grasp2018 package: Core–core correlations
+- [ ] **geddes_2018_Saturatedconfigurationinteraction** (miss 7) — Saturated-configuration-interaction calculations for five-valent Ta and Db
+- [ ] **ginibre_1989_Fine** (miss 7) — Fine and hyperfine structures of singly ionized praseodymium: I. energy levels, hyperfine structures and Zeeman effect, classified lines
+- [ ] **gustafsson_2017_Combining** (miss 7) — Combining Multiconfiguration and Perturbation Methods: Perturbative Estimates of Core–Core Electron Correlation Contributions to Excitation Energies in Mg-Like Iron
+- [ ] **gustafsson_2017_MCDHF** (miss 7) — MCDHF and RCI calculations of energy levels, lifetimes and transition rates for 3l3l′, 3l4l′, and 3s5l states in Ca IX – As XXII and Kr XXV
+- [ ] **hansen_2023_Selfconsistent** (miss 7) — Self-consistent and detailed opacities from a non-equilibrium average-atom model
+- [ ] **jonsson_2016_Accurate** (miss 7) — Accurate multiconfiguration calculations of energy levels, lifetimes, and transition rates for the silicon isoelectronic sequence
+- [ ] **kahl_2019_Highprecision** (miss 7) — High-precision ab initio calculations of the spectrum of ${\mathrm{Lr}}^{+}$
+- [ ] **kozlov_2015_CIMBPT** (miss 7) — CI-MBPT: A package of programs for relativistic atomic calculations based on a method combining configuration interaction and many-body perturbation theory
+- [ ] **kramida_2022_Update** (miss 7) — Update of Atomic Data for the First Three Spectra of Actinium
+- [ ] **li_2023_Independently** (miss 7) — Independently Optimized Orbital Sets in GRASP—The Case of Hyperfine Structure in Li I
+- [ ] **li_2024_Hyperfine** (miss 7) — Hyperfine structure and isotope shift of neutral and singly ionized copper using Fourier transform spectroscopy
+- [ ] **liggins_2021_New** (miss 7) — New Ritz Wavelengths and Transition Probabilities of Parity-forbidden [Mn II] Lines of Astrophysical Interest
+- [ ] **liu_2022_Highly** (miss 7) — Highly Sensitive Measurement of a Megahertz rf Electric Field with a Rydberg-Atom Sensor
+- [ ] **liu_2023_Hyperfine** (miss 7) — Hyperfine structure and isotope shift for neutral and singly ionized rhenium using Fourier transform spectroscopy
+- [ ] **nasr_2023_Atomic** (miss 7) — Atomic data and expansion opacity calculations in two representative 4d transition elements, niobium and silver, of interest for kilonovae studies
+- [ ] **piron_2024_Atomic** (miss 7) — Atomic Models of Dense Plasmas, Applications, and Current Challenges
+- [ ] **ramanantoanina_2021_Electronic** (miss 7) — Electronic structure of Rf+ (Z=104) from ab initio calculations
+- [ ] **rano_2023_Efficient** (miss 7) — Efficient Machine Learning Configuration Interaction for Bond Breaking Problems
+- [ ] **safronova_2018_Atomic** (miss 7) — Atomic properties of actinide ions with particle-hole configurations
+- [ ] **safronova_2018_Nuclear** (miss 7) — Nuclear charge radii of $^{229}\mathrm{Th}$ from isotope and isomer shifts
+- [ ] **schiffmann_2020_Natural** (miss 7) — Natural orbitals in multiconfiguration calculations of hyperfine-structure parameters
+- [ ] **schiffmann_2022_Relativistic** (miss 7) — Relativistic radial electron density functions and natural orbitals from GRASP2018
+- [ ] **suresh_2023_Relativistic** (miss 7) — Relativistic calculation of electron impact excitation of tin: cross sections of importance in plasma modeling
+- [ ] **wang_2025_Theoretical** (miss 7) — Theoretical studies of bound configuration levels and their radiative lifetimes in Co-, Rh- and Ir-
+- [ ] **yu_2022_Atomic** (miss 7) — Atomic Structure of Nd9+ for Highly Charged Ion Clocks
+- [ ] **yu_2023_Highly** (miss 7) — Highly charged ion (HCI) clocks: Frontier candidates for testing variation of fine-structure constant
+- [ ] **zhang_2022_Benchmarking** (miss 7) — Benchmarking calculations of wavelengths and transition rates with spectroscopic accuracy for W xlviii through W lvi tungsten ions
+- [ ] **binello_1998_Atomic** (miss 6) — Atomic data from the IRON project - XXV. Electron impact excitation of fine-structure transitions in the ground configuration of Fe xii
+- [ ] **birnoschi_2022_Hyperion** (miss 6) — Hyperion: a new computational tool for relativistic ab initio hyperfine coupling
+- [ ] **blackwell-whitehead_2005_Hyperfine** (miss 6) — Hyperfine structure of the ground state in singly ionized manganese
+- [ ] **bouazza_2017_Full** (miss 6) — Full hyperfine structure analysis of singly ionized molybdenum
+- [ ] **chernysheva_2022_ATOM** (miss 6) — ATOM Program System and Computational Experiment
+- [ ] **cheung_2021_Scalable** (miss 6) — Scalable Codes for Precision Calculations of Properties of Complex Atomic Systems
+- [ ] **clear_2023_New** (miss 6) — New Ritz wavelengths and transition probabilities for parity-forbidden, singly ionized nickel [Ni II] lines of astrophysical interest
+- [ ] **dembczynski_1996_Remarks** (miss 6) — Remarks on the interpretation of very high-precision measurements of hyperfine-structure splittings in neutral and singly ionized complex atoms
+- [ ] **demidov_2023_BohrWeisskopf** (miss 6) — Bohr-Weisskopf effect in the potassium isotopes
+- [ ] **ding_2024_Spectrum** (miss 6) — Spectrum and energy levels of the high-lying singly excited configurations of Nd III
+- [ ] **dojic_2025_Selected** (miss 6) — Selected transition probabilities in singly ionized bismuth atoms
+- [ ] **dzuba_1998_Calculation** (miss 6) — Calculation of the energy levels of barium using B splines and a combined configuration-interaction and many-body-perturbation-theory method
+- [ ] **dzuba_2017_Combining** (miss 6) — Combining configuration interaction with perturbation theory for atoms with a large number of valence electrons
+- [ ] **flambaum_2023_Searching** (miss 6) — Searching for scalar field dark matter with hyperfine transitions in alkali atoms
+- [ ] **furmann_2001_Hyperfinestructure** (miss 6) — Hyperfine-structure measurements and new levels evaluation in singly ionized praseodymium
+- [ ] **gaigalas_2021_Angular** (miss 6) — Angular coefficients for symmetry-adapted configuration states in jj-coupling
+- [ ] **gaigalas_2024_Theoretical** (miss 6) — Theoretical investigation of energy levels and transitions for Ce III with applications to kilonova spectra
+- [ ] **greer_1995_Consistent** (miss 6) — Consistent treatment of correlation effects in molecular dissociation studies using randomly chosen configurations
+- [ ] **gurell_2009_FERRUM** (miss 6) — The FERRUM project: transition probabilities for forbidden lines in [Fe II] and experimental metastable lifetimes
+- [ ] **hartman_2015_FERRUM** (miss 6) — The FERRUM project: experimental lifetimes and transition probabilities from highly excited even 4d levels in Fe II
+- [ ] **hotokezaka_2022_Tungsten** (miss 6) — Tungsten versus Selenium as a potential source of kilonova nebular emission observed by Spitzer
+- [ ] **hu_2021_Accurate** (miss 6) — Accurate multiconfiguration calculations of energy levels, lifetimes, and transition rates for Ge XIX
+- [ ] **hur_2022_Evidence** (miss 6) — Evidence of Two-Source King Plot Nonlinearity in Spectroscopic Search for New Boson
+- [ ] **kozlov_2024_Basis** (miss 6) — Basis Set Calculations of Heavy Atoms
+- [ ] **kramida_2014_Assessing** (miss 6) — Assessing uncertainties of theoretical atomic transition probabilities with Monte Carlo random trials
+- [ ] **laatiaoui_2020_Exploiting** (miss 6) — Exploiting transport properties for the detection of optical pumping in heavy ions
+- [ ] **li_2023_FineTuning** (miss 6) — Fine-Tuning of Atomic Energies in Relativistic Multiconfiguration Calculations
+- [ ] **li_2023_Performance** (miss 6) — Performance Tests and Improvements on the rmcdhf and rci Programs of GRASP
+- [ ] **ma_2022_Hyperfine** (miss 6) — Hyperfine structure constants for neutral and singly ionized vanadium by Fourier transform spectroscopy data
+- [ ] **oleynichenko_2023_LIBGRPP** (miss 6) — LIBGRPP: A Library for the Evaluation of Molecular Integrals of the Generalized Relativistic Pseudopotential Operator over Gaussian Functions
+- [ ] **olukayode_2023_Revisited** (miss 6) — Revisited relativistic Dirac–Hartree–Fock X-ray scattering factors. I. Neutral atoms with Z = 2–118
+- [ ] **petrov_2023_Numerical** (miss 6) — Numerical evaluation of systematics in the experiment for electron electric dipole moment measurement in HfF+
+- [ ] **radziute_2020_Extended** (miss 6) — Extended calculations of energy levels and transition rates for singly ionized lanthanide elements. I. Pr–Gd
+- [ ] **roberts_2021_Hyperfine** (miss 6) — Hyperfine anomaly in heavy atoms and its role in precision atomic searches for new physics
+- [ ] **rossi_2015_Charge** (miss 6) — Charge radii of neutron-deficient $^{36}$K and $^{37}$K
+- [ ] **saloman_2017_Critically** (miss 6) — Critically evaluated energy levels, spectral lines, transition probabilities, and intensities of singly ionized vanadium (V ii)
+- [ ] **schiffmann_2021_Atomic** (miss 6) — Atomic Structure Calculations of Landé g Factors of Astrophysical Interest with Direct Applications for Solar Coronal Magnetometry
+- [ ] **tarana_2019_Rmatrix** (miss 6) — R-matrix calculations of electron collisions with a lithium atom at low energies
+- [ ] **verstraelen_2019_Search** (miss 6) — Search for octupole-deformed actinium isotopes using resonance ionization spectroscopy
+- [ ] **wang_2014_Experimental** (miss 6) — Experimental branching fractions, transition probabilities and oscillator strengths in Gd I and Gd II
+- [ ] **wang_2018_Energya** (miss 6) — Energy levels, lifetimes, and transition rates for P-like ions from Cr X to Zn XVI from large-scale relativistic multiconfiguration calculations
+- [ ] **wang_2024_Hyperfine** (miss 6) — Hyperfine structure measurements for neutral and singly ionized terbium by Fourier-transform spectroscopy
+- [ ] **wood_2012_Aberrationcorrected** (miss 6) — Aberration-corrected echelle spectrometer for measuring ultraviolet branching fractions of iron-group ions
+- [ ] **zhang_2022_Rydberg** (miss 6) — Rydberg Microwave-Frequency-Comb Spectrometer
+- [ ] **allehabi_2020_Theoretical** (miss 5) — Theoretical study of electronic structure of erbium and fermium
+- [ ] **banerjee_2022_Opacity** (miss 5) — Opacity of the Highly Ionized Lanthanides and the Effect on the Early Kilonova
+- [ ] **boualili_2021_Weak** (miss 5) — Weak correlation and strong relativistic effects on the hyperfine interaction in fluorine
+- [ ] **caliskan_2024_Targeted** (miss 5) — Targeted optimization in small-scale atomic structure calculations: application to Au I
+- [ ] **dzuba_2005_approximation** (miss 5) — V^{N-M} approximation for atomic calculations
+- [ ] **dzuba_2022_Effects** (miss 5) — Effects of gravity in extra dimensions in atomic phenomena
+- [ ] **farooq-smith_2016_Laser** (miss 5) — Laser and decay spectroscopy of the short-lived isotope 214Fr in the vicinity of the N=126 shell closure
+- [ ] **fritzsche_2005_accuracy** (miss 5) — On the accuracy of valence–shell computations for heavy and super–heavy elements
+- [ ] **gaigalas_2022_Program** (miss 5) — A Program Library for Computing Pure Spin–Angular Coefficients for One- and Two-Particle Operators in Relativistic Atomic Theory
+- [ ] **gaigalas_2024_Secondorder** (miss 5) — Second-order Rayleigh–Schrödinger perturbation theory for the GRASP2018 package: Core–valence correlations
+- [ ] **ghosh_2021_Configuration** (miss 5) — Configuration interaction trained by neural networks: application to model polyaromatic hydrocarbons
+- [ ] **goings__Reinforcement** (miss 5) — Reinforcement Learning Configuration Interaction
+- [ ] **greer_1998_Monte** (miss 5) — Monte Carlo Configuration Interaction
+- [ ] **kitoviene_2025_Theoretical** (miss 5) — Theoretical study of Th III energy levels and transitions for applications to kilonova spectra
+- [ ] **kozlov_2019_Mixed** (miss 5) — Mixed basis sets for atomic calculations
+- [ ] **kramida_2020_Isotope** (miss 5) — Isotope shifts in neutral and singly-ionized calcium
+- [ ] **lackenby_2018_Calculation** (miss 5) — Calculation of atomic spectra and transition amplitudes for the superheavy element Db (Z=105)
+- [ ] **naze_2014_Isotope** (miss 5) — Isotope shifts in beryllium-, boron-, carbon-, and nitrogen-like ions from relativistic configuration interaction calculations
+- [ ] **nilsson_2006_FERRUM** (miss 5) — The FERRUM project: improved experimental oscillator strengths in Cr II
+- [ ] **porsev_2022_Calculation** (miss 5) — Calculation of energies and hyperfine-structure constants of $^{233}\mathrm{U}^{+}$ and $^{233}\mathrm{U}$
+- [ ] **qu_2018_Assessing** (miss 5) — Assessing Gaussian Process Regression and Permutationally Invariant Polynomial Approaches To Represent High-Dimensional Potential Energy Surfaces
+- [ ] **radziute_2015_Extended** (miss 5) — Extended calculations of level and transition properties in the nitrogen isoelectronic sequence: Cr XVIII, Fe XX, Ni XXII, and Zn XXIV
+- [ ] **rynkun_2019_Theoretical** (miss 5) — Theoretical investigation of energy levels and transition data for S II, Cl III, Ar IV
+- [ ] **schriber_2017_Adaptive** (miss 5) — Adaptive configuration interaction for computing challenging electronic excited states with tunable accuracy
+- [ ] **wu_2023_Hyperfine** (miss 5) — Hyperfine structure and isotope shift of neutral and singly ionized europium by Fourier transform spectroscopy
+- [ ] **cheal_2010_Progress** (miss 4) — Progress in laser spectroscopy at radioactive ion beam facilities
+- [ ] **dzuba_2005_Calculationa** (miss 4) — Calculation of isotope shifts for cesium and francium
+- [ ] **kozlov_2022_Combination** (miss 4) — Combination of perturbation theory with the configuration-interaction method
+- [ ] **radziute_2021_Extended** (miss 4) — Extended calculations of energy levels and transition rates for singly ionized lanthanide elements. II. Tb–Yb
+- [ ] **salah_2024_Largescale** (miss 4) — Large-scale multiconfiguration Dirac-Hartree-Fock calculations of atomic data, Landé gJ-factors and hyperfine constants of the neutral Rn-211 isotope
+- [ ] **shi_2016_Unexpectedly** (miss 4) — Unexpectedly large difference of the electron density at the nucleus in the 4p ²P₁/₂,₃/₂ fine-structure doublet of Ca⁺
+
+## P3 — 有用(importance 2,full ingest):53 篇
+
+> 最低优先级;可在以上完成后再统一处理,或随其他维护顺带补。
+
+- [ ] bouazza_2013_Hyperfine (miss 9) — Hyperfine structure and isotope shift analysis of singly ionized titanium
+- [ ] tang_2025_Precision (miss 9) — Precision calculation of hyperfine-structure constants for extracting the nuclear quadrupole moment of $^{43}$Ca
+- [ ] vernon_2020_Background (miss 9) — Background atomic and nuclear physics
+- [ ] wasowicz_2005_Hyperfine (miss 9) — Hyperfine structure and isotope shift study in singly ionized lead
+- [ ] acharyulu_2014_Hyperfine (miss 8) — Hyperfine structure and isotope shift measurements of the 4f76s2(8S°7/2)–4f76s6p(8P9/2) 601.8154 nm transition in Eu I by laser induced atomic beam fluorescence spectroscopy
+- [ ] fischer_2022_Variational (miss 8) — Variational Methods for Atoms and the Virial Theorem
+- [ ] leck_2023_Convergence (miss 8) — Convergence of Atomic Data for Kilonova Modelling
+- [ ] moreno-diaz_2019_Theoretical (miss 8) — Theoretical transition probabilities, radiative lifetimes and Stark broadening parameters of singly ionized magnesium
+- [ ] puchalski_2010_Nuclear (miss 8) — Nuclear structure effects in the isotope shift with halo nuclei
+- [ ] allehabi_2021_Theoretical (miss 7) — Theoretical study of the electronic structure of hafnium (Hf, Z=72) and rutherfordium (Rf, Z=104) atoms and their ions: Energy levels and hyperfine-structure constants
+- [ ] engstrom_2014_FERRUM (miss 7) — The FERRUM project: experimental transition probabilities from highly excited even 5s levels in Cr ii
+- [ ] furmann_2014_Experimental (miss 7) — Experimental verification of isotope shift and hyperfine structure of some even parity levels of neutral Eu
+- [ ] harman_2007_Correlation (miss 7) — Correlation and quantum electrodynamic effects on the radiative lifetime and relativistic nuclear recoil in Ar13+ and Ar14+ ions
+- [ ] kodangil_2025_Experimental (miss 7) — Experimental transition probabilities of singly ionized cerium using laser-induced breakdown spectroscopy (LIBS)
+- [ ] kodangil_2026_Experimental (miss 7) — Experimental measurement of transition probabilities of neutral and singly ionized europium using laser-induced breakdown spectroscopy (LIBS)
+- [ ] maison_2024_Calculation (miss 7) — Calculation of forbidden transitions in doubly ionized neodymium (Nd III) of interest for kilonova nebular phase analysis
+- [ ] motoumba_2020_Calculations (miss 7) — Calculations of transition rates in erbium-like ions Lu IV, Hf V and Ta VI using the Ab initio MCDHF-RCI and semi-empirical HFR methods
+- [ ] mukai_2020_Ingascell (miss 7) — In-gas-cell laser resonance ionization spectroscopy of Ir 196, 197, 198
+- [ ] nezosi_2026_Study (miss 7) — Study of the hyperfine structure of Sr II, Ba I and Ba II: an MCDHF approach for modeling the low-lying levels
+- [ ] nortershauser_1998_Isotope (miss 7) — Isotope shifts and hyperfine structure in the 4s^2 1S0 -> 4s4p 1P1 -> 4s4d 1D2 transitions of stable calcium isotopes and calcium-41
+- [ ] persson_2018_Hyperfine (miss 7) — Hyperfine anomalies in Gd and Nd
+- [ ] roser_2024_Hyperfine (miss 7) — Hyperfine structure and isotope shifts of the (4s^2)^1S_0 → (4s4p)^1P_1 transition in atomic zinc
+- [ ] ruczkowski_2025_Fine (miss 7) — Fine- and hyperfine structure semi-empirical studies of singly ionized niobium. Odd-parity configurations system
+- [ ] usta_2017_Electric (miss 7) — Electric quadrupole transition parameters for singly ionized magnesium (Mg II)
+- [ ] atalay_2026_Relativistic (miss 6) — Relativistic multiconfiguration calculations of energy levels, transition rates and hyperfine constants in neutral indium
+- [ ] berengut_2025_Secondorder (miss 6) — Second-order hyperfine structure and its impact on searches for new physics using isotope-shift spectroscopy
+- [ ] chen_2025_Theoretical (miss 6) — Theoretical study of energy levels and transition rates in Al-like Mo XXX
+- [ ] gurell_2010_FERRUM (miss 6) — The FERRUM project: laboratory-measured transition probabilities for Cr II
+- [ ] koziol_2026_Rciq (miss 6) — Rci-q: an improved QED correction model for the Grasp2018 package
+- [ ] leefer_2009_Measurement (miss 6) — Measurement of hyperfine structure and isotope shifts in the Dy 421 nm transition
+- [ ] ramanantoanina_2022_Electronic (miss 6) — Electronic Structure of Lr+ (Z = 103) from Ab Initio Calculations
+- [ ] stefanska_2017_Hyperfine (miss 6) — Hyperfine structure of the odd-parity configuration 4f95d in singly ionized terbium
+- [ ] yamamoto_2023_dual (miss 6) — The dual King relation
+- [ ] ankush_2010_Fourier (miss 5) — Fourier transform high-resolution spectroscopic studies of Gd I: optical isotope shifts in the spectral region of 18700-20200 cm^{-1}
+- [ ] berengut_2020_Generalized (miss 5) — Generalized King linearity and new physics searches with isotope shifts
+- [ ] bieron_2023_Editorial (miss 5) — Editorial of the Special Issue "General Relativistic Atomic Structure Program—GRASP"
+- [ ] bilous_2025_neuralnetworkbased (miss 5) — A neural-network-based python package for performing large-scale atomic CI using pCI and other high-performance atomic codes
+- [ ] li_2023_Extended (miss 5) — Extended MCDHF calculations of energy levels and transition data for N i
+- [ ] ma_2024_Calculations (miss 5) — Calculations of cross sections for electron-impact double ionization of ions with electron number N ≤ 10 using two-step approaches
+- [ ] niki_1989_Hyperfine (miss 5) — Hyperfine structure and isotope shift measurements on gadolinium levels by laser-induced fluorescence spectroscopy
+- [ ] rupasinghe_2023_Measurement (miss 5) — Measurement of hyperfine constants and the isotope shift of rubidium 5P1/2 excited-state using saturated absorption spectroscopy
+- [ ] schiffmann_2021_Electronic (miss 5) — Electronic isotope shift factors for the Ir 5d⁷6s² ⁴F₉/₂ → (odd, J=9/2) line at 247.587 nm
+- [ ] schneider_2022_Generalizations (miss 5) — Generalizations of the R-Matrix Method to the Treatment of the Interaction of Short-Pulse Electromagnetic Radiation with Atoms
+- [ ] zatsarinny_2020_Benchmark (miss 5) — Benchmark calculations for photoionization of neutral iron
+- [ ] zheng_2025_Hyperfine (miss 5) — Hyperfine structure constants for neutral and singly ionized manganese using Fourier transform spectra
+- [ ] carette_2014_Theoretical (miss 4) — Theoretical study of the isotope effects on the detachment thresholds of Si⁻
+- [ ] hamilton_2023_Experimental (miss 4) — Experimental and theoretical study of dynamic polarizabilities in the 5S1/2-5D5/2 clock transition in rubidium-87 and determination of electric dipole matrix elements
+- [ ] lynch_2018_Laserspectroscopy (miss 4) — Laser-spectroscopy studies of the nuclear structure of neutron-rich radium
+- [ ] muller_2026_Splitting (miss 4) — Splitting isotope shift in the 1s2p 3P 0,1,2 fine-structure triplet in C4+ 12,13,14: experiment and theory
+- [ ] zhang_2025_Extended (miss 4) — Extended calculations of energy levels and transition properties for Sn XIV-XXI
+- [ ] atalay_2023_Extended (miss 3) — Extended relativistic multiconfiguration calculations of energy levels and transition properties in singly ionized tin
+- [ ] m_2026_ATOM (miss 3) — ATOM - system for studying the structure of atoms
+- [ ] marsh_2013_New (miss 3) — New developments of the in-source spectroscopy method at RILIS/ISOLDE
+
+## 单独轨道 — 轻量页(light-ingest,共 355 篇,不走 reingest)
+
+- 这些是 `/ingest-light` 录入的背景/引言文献,薄证据是设计预期,**不应**逐篇 reingest。
+- 处理方式:先跑 `/promote-light-ingest` 排出值得升级的子集,再对升级项用 `/ingest` 或 `/reingest`。
+- 其中 4 篇**完全没有 Evidence Pack**(linter 报 `missing-evidence-pack`),需优先检查是否录入异常:
+  - [ ] garcia_2025_Artificial — Artificial intelligence-driven optimization of gaussian orbital expansions via evolutionary computing: applications to confined atoms and molecules
+  - [ ] gning_2023_Photoionization — Photoionization study of neutral chlorine atom
+  - [ ] mohan_2023_Robust — Robust control and optimal rydberg states for neutral atom two-qubit gates
+  - [ ] reinschmidt_2024_Reinforcement — Reinforcement learning in cold atom experiments
+
+---
+
+**汇总**:full-ingest 待补 293 篇(P0 5 / P1 71 / P2 164 / P3 53);light 轨道 355 篇另行处理。

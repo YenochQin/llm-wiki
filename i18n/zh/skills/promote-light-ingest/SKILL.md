@@ -88,6 +88,7 @@ Only when the user explicitly supplies `--apply <paper-slug>` or separately says
    ```
 3. Use the candidate's `source_slug` from the scanner output, not the paper page slug if they differ. `/reingest` accepts a prepared source path or PDF; `papers/<slug>` is only the existing page identity checked during matching.
 4. Preserve `thesis-introduction`, role tags, and `[[thesis-introduction-literature]]` links during the full reingest. Promotion adds graph/deep-analysis structure; it should not erase the writing-purpose context.
+5. The promoted page's regenerated `## Evidence Pack` must use the fixed `/reingest` and `/ingest` card template: `` `E1` <UseLabel> — <short label> ...: ^E1`` with prose citations using the literal Obsidian block link `[[#^E1]]`. The outer double brackets, leading `#`, and one literal space before the citation are mandatory; do not accept `[#^E1]`, `[[^E1]]`, `#^E1`, `word[[#^E1]]`, legacy `[!E1]` markers, or cards that start with `^E1`.
 
 Never auto-apply the whole shortlist.
 

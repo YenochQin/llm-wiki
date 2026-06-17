@@ -43,6 +43,7 @@ If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias
 
 - Do not use Zotero as the content source here; selected content must still be the user-provided local PDF/prepared markdown. Zotero lookup in this skill is metadata-only, for BibTeX enrichment of the local PDF.
 - Do not write directly to `wiki/papers/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/people/` from this skill.
+- Do not generate paper `## Evidence Pack` content here. The downstream `/ingest` skill owns the fixed evidence-card template and must emit cards as `` `E1` ...: ^E1`` with prose citations using the literal Obsidian block link `[[#^E1]]`; the outer double brackets, leading `#`, and one literal space before the citation are mandatory.
 - Keep raw PDFs in their original location; only the prepared markdown and extracted assets belong under the configured wiki source directory.
 - Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured-sources-papers`.
 - If the directory contains mixed file types, ignore non-PDF files unless the user explicitly points at a prepared markdown file.

@@ -103,7 +103,15 @@ Requirements:
 
 - Frontmatter includes normal paper fields plus tags containing `thesis-introduction`, the selected role, and `light-ingest`.
 - `paper_type`, `research_modes`, and `research_object_tags` should be filled conservatively when clear; otherwise use `other` / `[]` / `[]` rather than inventing.
-- Body sections stay light: Problem, Key idea, Research classification, Introduction use, Evidence notes, Limitations, BibTeX, Related.
+- Body sections stay light: Evidence Pack, Problem, Key idea, Research classification, Introduction use, Evidence notes, Limitations, BibTeX, Related.
+- `## Evidence Pack` must be the first body section and must use this exact fixed card shape, replacing placeholders only:
+
+  ```markdown
+  - `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+    > exact source fragment
+  ```
+
+  Keep the readable id at the start as `` `E1` `` and the Obsidian block id at the end as `^E1`; prose cites cards with the literal Obsidian block-link string `[[#^E1]]`. The outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never use invalid citation forms such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, or legacy `[!E1]`; never start a card with `^E1`, and never replace `` `E1` `` with `^E1`.
 - `## Introduction use` must include the selected primary role and the reason this paper belongs in that role. Mention secondary roles there only when useful.
 - `## Related` must include `[[{target-summary}]]` unless `--depth paper-only`.
 - Do not create new concept/claim/people pages. Link existing pages only when clearly useful.

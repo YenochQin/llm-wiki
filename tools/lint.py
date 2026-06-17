@@ -441,6 +441,10 @@ def check_broken_links(
 
         for match in WIKILINK_RE.finditer(content):
             target = match.group(1).strip()
+            # Intra-file references (block anchors ^…, heading anchors) are not
+            # cross-file wikilinks — skip them.
+            if target.startswith("#"):
+                continue
             if target in pages:
                 incoming.setdefault(target, set()).add(slug)
             else:

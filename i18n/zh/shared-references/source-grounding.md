@@ -40,6 +40,14 @@ Before drafting any interpretive prose, build a short evidence set, then draft
    - a link to the source (prepared markdown link, wiki `[[slug]]`, or fetched URL)
    - the section/table/figure/equation label when available
    - **one short exact quote** in the original language — not a paraphrase
+   - for paper `## Evidence Pack` cards, this exact Markdown shape:
+
+     ```markdown
+     - `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+       > exact source fragment
+     ```
+
+     Replace placeholders only. Keep the readable id at the start as `` `E1` `` and the Obsidian block id at the end as `^E1`; prose cites cards with the literal Obsidian block-link string `[[#^E1]]`. The outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never use invalid citation forms such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, or legacy `[!E1]`; never start a card with `^E1`, and never replace `` `E1` `` with `^E1`.
 2. Draft methods, results, definitions, claim evidence, and comparisons **only**
    from these cards.
 3. **Cover what you draft.** The evidence set must scale with the content it

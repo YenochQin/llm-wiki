@@ -75,7 +75,16 @@ Required current paper fields include:
 
 Body sections to regenerate:
 
-`## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## Related`
+`## Evidence Pack` / `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## Related`
+
+Regenerate `## Evidence Pack` as the first body section, using the exact `/ingest` Evidence Pack card shape:
+
+```markdown
+- `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+  > exact source fragment
+```
+
+This shape is fixed. Replace placeholders only. Keep the readable id at the start as `` `E1` `` and the Obsidian block id at the end as `^E1`; regenerated prose cites cards with the literal Obsidian block-link string `[[#^E1]]`. The outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never use invalid citation forms such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, or legacy `[!E1]`; never start a card with `^E1`, and never replace `` `E1` `` with `^E1`.
 
 Use the retained bibliography in the prepared markdown to resolve inline references where useful. Do not cite references not present in either the bibliography or metadata lookup.
 

@@ -171,9 +171,11 @@ Before drafting any interpretive paper/concept/claim prose, build a **source Evi
    ```markdown
    ## Evidence Pack
 
-   - `E1` ([prepared markdown](../sources/papers/<source-slug>.md), <source section>):
-     > short exact source fragment
+   - `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+     > exact source fragment
    ```
+
+   This Markdown shape is fixed. Replace placeholders only; do not change marker order or punctuation. The readable evidence id stays at the start as `` `E1` ``, and the Obsidian block id goes at the end of the same bullet header as `^E1`. Subsequent prose must cite evidence with the literal Obsidian block-link string `[[#^E1]]`; the outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never write invalid variants such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, `- ^E1 Problem — ...`, or legacy `[!E1]`, and never replace `` `E1` `` with `^E1`.
 
 If the prepared source is too poor to extract evidence cards, stop the ingest and report a source-quality blocker instead of generating a wiki page from memory.
 

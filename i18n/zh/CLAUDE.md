@@ -32,6 +32,7 @@
 - 需要可复制的页面起始模板时，使用 `docs/templates/`；根目录不放模板库
 - 需要 graph 派生文件、`index.md` 或 `log/` 细节时，打开 `docs/runtime-support-files.en.md`
 - `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
+- 执行某个 skill 时必须把该 skill 文档视为只读运行规范：如果发现 skill 描述、模板、命令或约束有问题，可以在汇报中指出并建议修改；除非用户明确要求“修改/修复/更新 skill”，否则不得在执行该 skill 的过程中自行编辑 `skills/`、`i18n/*/skills/`、`CLAUDE.md` 或 `AGENTS.md`
 - `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
 - `skills/` 是 `setup.sh` 创建的符号链接，指向 `i18n/{lang}/skills/`；修改 skill 内容应编辑 `i18n/` 下的原件
 
@@ -184,6 +185,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 ## 约束
 
 - **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和 `/ingest-local-pdf` 只可在 `wiki/sources/` 下添加 vault 可见 source 副本：PDF 只能转化为 `wiki/sources/papers/*.md`，不要把 PDF 放入 `wiki/`；notes/web 可复制到 `wiki/sources/notes/` 和 `wiki/sources/web/`。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
+- **skill 只读执行**：使用 skill 完成用户任务时，不得因为发现 skill 文档有缺陷就自行修改该 skill 或运行入口文件。正确做法是继续在可安全执行的范围内完成任务，并把发现的问题、风险和建议修改点报告给用户；只有当用户明确要求修改 skill/运行规范时，才可编辑 `i18n/*/skills/`、`CLAUDE.md`、`AGENTS.md` 等规范文件。
 - **用户可见 skill 参数属于用户**：`argument-hint` 中显示的 flag 和值属于用户命令，不是 agent 策略。不要仅凭仓库状态发明、翻转或删除这些参数。若用户省略某参数，只有 skill 文档明确说明可默认/推导时才推导，否则保持未设置或询问用户。
 - **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `wiki/sources/papers/<slug>.md`。
 - **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。

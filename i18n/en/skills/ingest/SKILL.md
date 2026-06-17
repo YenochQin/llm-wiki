@@ -135,6 +135,17 @@ Raw persistence rule: never copy or duplicate a file already under `@configured-
 
 Open `docs/runtime-page-templates.en.md` for the paper template. Fill every required frontmatter field; leave `cited_by` empty for now (step 5 backfills it).
 
+Before drafting interpretive prose, build `## Evidence Pack` as the first body section using this exact fixed card shape:
+
+```markdown
+## Evidence Pack
+
+- `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+  > exact source fragment
+```
+
+Replace placeholders only; do not change marker order or punctuation. The readable evidence id stays at the start as `` `E1` ``, and the Obsidian block id goes at the end of the same bullet header as `^E1`. Subsequent prose must cite evidence with the literal Obsidian block-link string `[[#^E1]]`; the outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never write invalid variants such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, `- ^E1 Problem — ...`, or legacy `[!E1]`, and never replace `` `E1` `` with `^E1`.
+
 Before writing, run a **shape check** on the frontmatter you are about to emit — no more than this:
 
 - every required key is present and non-empty, including `paper_type`
@@ -144,7 +155,7 @@ Before writing, run a **shape check** on the frontmatter you are about to emit �
 
 The shape check is intentionally narrow. Backlink symmetry, dangling-node detection, and cross-entity consistency are `/check`'s job, not this skill's.
 
-Body sections to populate: Problem, Key idea, Method, Results, Limitations, Open questions, My take, Related.
+Body sections to populate: Evidence Pack, Problem, Key idea, Method, Results, Limitations, Open questions, My take, Related.
 
 For mathematical or technical papers, keep important equations in LaTeX. Use `$...$` for inline math and `$$...$$` for display math. PDF-derived prepared sources should already have passed `tools/repair_latex_math.py`; if a copied formula is still visibly broken, repair the math span itself instead of carrying OCR-spaced commands such as `\ alpha`, `_ {i}`, `^ {2}`, or `\left (` into the page. Do not use code fences for equations or `\(` `\)` notation.
 
