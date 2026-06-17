@@ -161,7 +161,12 @@ Before drafting any interpretive paper/concept/claim prose, build a **source Evi
 2. Evidence cards must be exact-source first. Do not replace them with an LLM summary of the source.
 3. Draft paper `## Method`, `## Results`, `## Limitations`, concept definitions, and claim evidence only from these cards. If no evidence card supports a detail, write `unclear`, omit it, or put the uncertainty under `## Open questions`; do not use model memory to fill the gap.
 4. High-risk statements require direct card support: numbers, units, signs, sample sizes, dataset names, benchmark comparisons, causality, mechanism, "first", "best", "SOTA", necessary/sufficient wording, and broad generalizations.
-5. Put the Evidence Pack into the paper page as the first body section:
+5. **Coverage floor — do not stop at a round default.** The card count must cover everything the pack feeds, scaling with the paper's substance and the number of downstream entities; a uniform minimum like exactly three cards is a laziness smell, not a target. The floor is:
+   - one card for each interpretive section you actually populate with substantive (non-`unclear`, non-empty) content — `Problem`, `Method`, `Results`, `Limitations`;
+   - one `Concept`-use card for each concept page this ingest creates or materially edits;
+   - one `Claim`-use card for each claim this ingest generates.
+   If the source genuinely cannot support a section, write `unclear` or move it to `## Open questions` — that section then needs no card. A rich, importance ≥ 4 paper that yields several concepts and claims should have well more than three cards; if yours has exactly three, re-check whether you under-extracted.
+6. Put the Evidence Pack into the paper page as the first body section:
 
    ```markdown
    ## Evidence Pack
@@ -283,7 +288,7 @@ If the ingest falls below the normal minimum viable output (paper + concept/upda
 
 **Self-check** (run before finalizing the report):
 1. `@configured/papers/{slug}.md` exists and frontmatter YAML parses.
-2. The paper page contains `## Evidence Pack` with at least one exact excerpt linked to existing prepared markdown.
+2. The paper page contains `## Evidence Pack` linked to existing prepared markdown, and it meets the coverage floor: one card per populated interpretive section (`Problem`/`Method`/`Results`/`Limitations`), plus one card per generated concept and per generated claim. A pack that stops at exactly three cards on a substantive paper is a thin-pack smell — re-extract before finalizing.
 3. Run the source-grounding gate on every touched paper/concept/claim file:
 
    ```shell

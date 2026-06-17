@@ -12,6 +12,8 @@ Purpose:
 Checks:
     - Paper pages have ## Evidence Pack with prepared markdown links and source
       excerpts.
+    - Evidence Pack meets the coverage floor: at least one card per populated
+      interpretive section (warn-level, non-blocking).
     - Concept pages have ## Source excerpts with exact blockquotes.
     - Claim evidence includes source files/anchors that resolve to wiki sources.
     - Quoted excerpts are found exactly in linked prepared sources.
@@ -52,6 +54,15 @@ BLOCKQUOTE_RE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
 SOURCE_ANCHOR_RE = re.compile(r"source_anchor\s*:", re.IGNORECASE)
 SOURCE_FILE_RE = re.compile(r"source_file\s*:", re.IGNORECASE)
 EVIDENCE_ID_RE = re.compile(r"`E\d+`")
+EVIDENCE_ID_TOKEN_RE = re.compile(r"`(E\d+)`")
+EVIDENCE_CARD_RE = re.compile(
+    r"(?ms)^[ \t]*-\s+`E\d+`.*?(?=^[ \t]*-\s+`E\d+`|\Z)"
+)
+
+# Interpretive paper sections each populated section should be backed by at
+# least one Evidence Pack card. See the coverage floor in the /ingest skill.
+INTERPRETIVE_SECTIONS = ("Problem", "Method", "Results", "Limitations")
+EVIDENCE_USE_LABELS = (*INTERPRETIVE_SECTIONS, "Concept", "Claim")
 
 
 @dataclass(frozen=True)
@@ -199,7 +210,60 @@ def _check_source_quotes(
     return issues
 
 
-def _check_paper(wiki_dir: Path, page_path: Path, content: str) -> list[GroundingIssue]:
+def _is_populated_section(content: str, heading: str) -> bool:
+    """A section counts as populated when it has substantive prose beyond a bare
+    `unclear` / `N/A` placeholder."""
+    body = _normalize_text(_extract_section(content, heading))
+    if len(body) < 40:
+        return False
+    stripped = body.lower().strip(" .;:-")
+    return stripped not in {"unclear", "n/a", "na", "none", "tbd"}
+
+
+def _check_evidence_pack_coverage(
+    wiki_dir: Path,
+    page_path: Path,
+    content: str,
+    section: str,
+    rel: str,
+    context: dict[str, list[tuple[Path, str]]] | None = None,
+) -> list[GroundingIssue]:
+    """Warn (non-blocking) when the Evidence Pack falls below the coverage floor:
+    at least one card per populated interpretive section, plus cards for selected
+    generated concepts/claims tied to this paper. This catches thin packs that
+    stop at a uniform round count regardless of the paper's substance."""
+    if not EVIDENCE_ID_TOKEN_RE.search(section):
+        return []
+    available = _evidence_use_counts(section)
+    required = _required_evidence_use_counts(wiki_dir, page_path, content, section, context)
+    missing = {
+        label: needed - available.get(label, 0)
+        for label, needed in required.items()
+        if needed > available.get(label, 0)
+    }
+    if missing:
+        missing_text = ", ".join(f"{label} x{count}" for label, count in missing.items())
+        return [
+            GroundingIssue(
+                "warn",
+                "thin-evidence-pack",
+                rel,
+                (
+                    "Evidence Pack is missing required use coverage: "
+                    f"{missing_text}. Add at least one matching card per populated "
+                    "section, plus per selected generated concept/claim."
+                ),
+            )
+        ]
+    return []
+
+
+def _check_paper(
+    wiki_dir: Path,
+    page_path: Path,
+    content: str,
+    context: dict[str, list[tuple[Path, str]]] | None = None,
+) -> list[GroundingIssue]:
     rel = _relative_file(page_path, wiki_dir)
     section = _extract_section(content, "Evidence Pack")
     if not section:
@@ -221,6 +285,9 @@ def _check_paper(wiki_dir: Path, page_path: Path, content: str) -> list[Groundin
                 "Evidence Pack entries must include evidence ids like `E1` or explicit source_file fields.",
             )
         )
+    issues.extend(
+        _check_evidence_pack_coverage(wiki_dir, page_path, content, section, rel, context)
+    )
     return issues
 
 
@@ -269,17 +336,121 @@ def _check_claim(wiki_dir: Path, page_path: Path, content: str) -> list[Groundin
     return issues
 
 
+def _frontmatter_metadata(content: str) -> dict:
+    try:
+        post = frontmatter.loads(content)
+    except Exception:
+        return {}
+    return post.metadata if isinstance(post.metadata, dict) else {}
+
+
+def _paper_slug(page_path: Path, content: str) -> str:
+    metadata = _frontmatter_metadata(content)
+    slug = metadata.get("slug")
+    return str(slug) if slug else page_path.stem
+
+
+def _prepared_source_paths(wiki_dir: Path, page_path: Path, section: str) -> set[Path]:
+    source_paths: set[Path] = set()
+    for link in PREPARED_LINK_RE.findall(section):
+        source_path = _resolve_markdown_link(page_path, link)
+        try:
+            source_path.relative_to(wiki_dir.resolve())
+        except ValueError:
+            continue
+        source_paths.add(source_path)
+    return source_paths
+
+
+def _linked_prepared_source_paths(wiki_dir: Path, page_path: Path, content: str) -> set[Path]:
+    source_paths: set[Path] = set()
+    for link in PREPARED_LINK_RE.findall(content):
+        source_path = _resolve_markdown_link(page_path, link)
+        try:
+            source_path.relative_to(wiki_dir.resolve())
+        except ValueError:
+            continue
+        source_paths.add(source_path)
+    return source_paths
+
+
+def _claim_mentions_paper(content: str, paper_slug: str) -> bool:
+    metadata = _frontmatter_metadata(content)
+    source_papers = metadata.get("source_papers", [])
+    if isinstance(source_papers, str):
+        source_papers = [source_papers]
+    if isinstance(source_papers, list) and paper_slug in {str(item) for item in source_papers}:
+        return True
+    for item in metadata.get("evidence", []) if isinstance(metadata.get("evidence"), list) else []:
+        if isinstance(item, dict) and str(item.get("source", "")) == paper_slug:
+            return True
+    return False
+
+
+def _selected_context(selected_pages: Sequence[tuple[Path, str]]) -> dict[str, list[tuple[Path, str]]]:
+    context: dict[str, list[tuple[Path, str]]] = {"concepts": [], "claims": []}
+    for page_path, content in selected_pages:
+        kind = page_path.parent.name
+        if kind in context:
+            context[kind].append((page_path, content))
+    return context
+
+
+def _evidence_use_counts(section: str) -> dict[str, int]:
+    counts = {label: 0 for label in EVIDENCE_USE_LABELS}
+    for match in EVIDENCE_CARD_RE.finditer(section):
+        first_line = match.group(0).splitlines()[0]
+        for label in EVIDENCE_USE_LABELS:
+            if re.search(rf"\b{re.escape(label)}\b", first_line, re.IGNORECASE):
+                counts[label] += 1
+                break
+    return counts
+
+
+def _required_evidence_use_counts(
+    wiki_dir: Path,
+    page_path: Path,
+    content: str,
+    section: str,
+    context: dict[str, list[tuple[Path, str]]] | None,
+) -> dict[str, int]:
+    required = {label: 0 for label in EVIDENCE_USE_LABELS}
+    for heading in INTERPRETIVE_SECTIONS:
+        if _is_populated_section(content, heading):
+            required[heading] = 1
+    if not context:
+        return required
+
+    paper_sources = _prepared_source_paths(wiki_dir, page_path, section)
+    if paper_sources:
+        for concept_path, concept_content in context.get("concepts", []):
+            concept_sources = _linked_prepared_source_paths(wiki_dir, concept_path, concept_content)
+            if paper_sources & concept_sources:
+                required["Concept"] += 1
+
+    paper_slug = _paper_slug(page_path, content)
+    for _claim_path, claim_content in context.get("claims", []):
+        if _claim_mentions_paper(claim_content, paper_slug):
+            required["Claim"] += 1
+    return required
+
+
 def lint(wiki_dir: Path, only: Sequence[str] | None = None) -> list[GroundingIssue]:
     wiki_dir = wiki_dir.resolve()
     only = only or []
     issues: list[GroundingIssue] = []
+    selected_pages: list[tuple[Path, str]] = []
     for page_path in _all_markdown_pages(wiki_dir):
         if not _matches_only(page_path, wiki_dir, only):
             continue
         content = page_path.read_text(encoding="utf-8")
+        selected_pages.append((page_path, content))
+
+    context = _selected_context(selected_pages)
+    for page_path, content in selected_pages:
         kind = page_path.parent.name
         if kind == "papers":
-            issues.extend(_check_paper(wiki_dir, page_path, content))
+            issues.extend(_check_paper(wiki_dir, page_path, content, context))
         elif kind == "concepts":
             issues.extend(_check_concept(wiki_dir, page_path, content))
         elif kind == "claims":

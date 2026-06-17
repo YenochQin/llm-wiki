@@ -91,7 +91,7 @@ mode=report-only
 
 ### Step 2: Run the hallucination grounding gate
 
-Before doing interpretive source-to-wiki judgment, run the same mechanical source-grounding gate used by `/ingest` on the selected batch. This catches common LLM-fabrication failure modes early: paper pages without `## Evidence Pack`, concept pages without exact `## Source excerpts`, quoted excerpts that cannot be found in prepared markdown, dead prepared-source links, and claim evidence without `source_anchor`.
+Before doing interpretive source-to-wiki judgment, run the same mechanical source-grounding gate used by `/ingest` on the selected batch. This catches common LLM-fabrication failure modes early: paper pages without `## Evidence Pack`, thin Evidence Packs that fall below the coverage floor (flagged `warn`-level `thin-evidence-pack` — a uniform three-card pack on a substantive paper usually means under-extraction), concept pages without exact `## Source excerpts`, quoted excerpts that cannot be found in prepared markdown, dead prepared-source links, and claim evidence without `source_anchor`.
 
 Build one scoped command with every selected page as an `--only` argument:
 

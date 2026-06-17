@@ -70,6 +70,24 @@
 
 论文正文必须包含 `## Research classification`，分别说明：属于理论/计算/实验中的哪些方向；每个方向具体用了什么理论、计算方案或实验流程；研究对象是什么。无法从文献中确定时写 `unclear`，不要编造。
 
+### 论文证据包与防幻觉规范
+
+每个由 skill 生成或重写的 `papers/{slug}.md` 必须在解释性正文前包含 `## Evidence Pack`。
+
+- Evidence Pack 必须只由 canonical prepared source（通常是 `wiki/sources/papers/{source-slug}.md`）抽取。
+- 每条 evidence card 必须包含证据 id（如 `E1`）、prepared markdown 链接、源章节/图表/公式位置（可用时）、一段简短原文 blockquote，以及该卡的用途标签（`Problem`/`Method`/`Results`/`Limitations`/`Concept`/`Claim` 之一）。
+- **覆盖度下限**：Evidence Pack 的卡片数量必须覆盖它所支撑的全部内容，不得停在一个固定的最小值（例如恰好三张是偷懒信号，不是目标）。下限是——页面实质填写（非 `unclear`、非空）的每个解释性区段 `Problem`、`Method`、`Results`、`Limitations` 各至少一张对应用途的卡；本次写入/重写生成的每个 concept 页各至少一张 `Concept` 卡；每条生成的 claim 各至少一张 `Claim` 卡。卡片数应随论文信息量和下游实体数量增长。若某区段源文确实无法支撑，写 `unclear` 或移入 `## Open questions`，该区段不需要卡。
+- `## Method`、`## Results`、`## Limitations`、概念定义和 claim evidence 只能使用 Evidence Pack 或 `## Source excerpts` 中可追溯的事实。
+- 数字、单位、符号、样本量、数据集名、机制/因果、SOTA/first/best、necessary/sufficient 等高风险表述必须有直接原文证据。
+- 证据不足时写 `unclear`、省略，或放入 `## Open questions`；禁止用模型记忆补全。
+- 写入或重写 paper/concept/claim 后，必须对 touched files 运行 scoped grounding gate：
+
+```shell
+uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "concepts/{slug}.md" --only "claims/{slug}.md" --json
+```
+
+若出现 red issue，必须先修复或停止并报告 source-quality blocker，不得把它降级为普通 warning。
+
 ### BibTeX 存放规范
 
 `papers/{slug}.md` 的 YAML frontmatter 不得包含 `bibtex` 字段。BibTeX 属于正文内容，必须放在 `## BibTeX` 小节中的 fenced code block：

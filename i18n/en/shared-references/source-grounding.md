@@ -40,10 +40,14 @@ Before drafting any interpretive prose, build a short evidence set, then draft
    - **one short exact quote** in the original language — not a paraphrase
 2. Draft methods, results, definitions, claim evidence, and comparisons **only**
    from these cards.
-3. If no card supports a detail, you have three honest options — pick one, never
+3. **Cover what you draft.** The evidence set must scale with the content it
+   feeds — one card per interpretive section you populate and per generated
+   concept/claim — not collapse to a fixed minimum. A uniform round count (e.g.
+   exactly three cards on a substantive source) is a laziness smell; re-extract.
+4. If no card supports a detail, you have three honest options — pick one, never
    invent: write `unclear`, omit the detail, or move it under an
    `## Open questions` / "needs verification" heading.
-4. Do not replace exact quotes with an LLM summary "for brevity." The quote is
+5. Do not replace exact quotes with an LLM summary "for brevity." The quote is
    the anti-hallucination anchor.
 
 If the source is too poor to extract evidence cards, **stop and report a

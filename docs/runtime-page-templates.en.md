@@ -43,6 +43,8 @@ Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research 
 
 Every card must link to an existing `wiki/sources/papers/{source-slug}.md` prepared source and include an exact blockquote that occurs in that source. Subsequent `## Method`, `## Results`, `## Limitations`, and claim-generating statements may only use facts supported by these cards. If the source does not support a detail, write `unclear` or move it to `## Open questions`; do not fill gaps from model memory.
 
+**Coverage floor.** The pack is not satisfied by a single card or by a fixed round number (a uniform three-card pack across substantive papers is a laziness smell). Provide at least one card per interpretive section you actually populate (`Problem`, `Method`, `Results`, `Limitations`), plus one card per generated concept page and per generated claim. The card count scales with the paper's substance; a section the source cannot support takes `unclear` instead of a card.
+
 BibTeX must not be stored in YAML frontmatter. When Zotero/Crossref metadata provides a BibTeX entry, write it in the paper body under `## BibTeX` as a fenced code block:
 
 ````markdown

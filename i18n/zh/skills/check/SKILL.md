@@ -102,7 +102,7 @@ The automated tool checks:
    - experiments: title, slug, status, target_claim, hypothesis, tags
    - claims: title, slug, status, confidence, tags, source_papers, evidence
 4. **Concept source grounding**: every concept page has `## Source excerpts`, prepared markdown links under `wiki/sources/papers/`, and at least one blockquoted original fragment
-5. **Paper source grounding**: generated paper pages have `## Evidence Pack` entries linked to prepared markdown with exact source excerpts
+5. **Paper source grounding**: generated paper pages have `## Evidence Pack` entries linked to prepared markdown with exact source excerpts, and the pack meets the coverage floor (a card per populated interpretive section plus per generated concept/claim, not a thin fixed-three pack); `grounding_lint.py` flags thin packs as a `warn`-level `thin-evidence-pack`
 6. **Claim source grounding**: claim evidence items include a `source_anchor` or explicit source-anchor marker
 
 ### Step 3: Field Value Validation (automated coverage)
