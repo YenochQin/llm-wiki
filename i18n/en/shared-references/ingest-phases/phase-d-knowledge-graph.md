@@ -6,7 +6,7 @@
 >
 > **`/ingest-light`**: skip this phase's claims, people, and semantic edges by default.
 >
-> **`/reingest`**: run this phase as *entity migration* — append/qualify/supersede, never delete a page or an old evidence entry; mark obsolete entities stale where the schema allows.
+> **`/reingest`**: run this phase as *entity migration* and *template migration* — append/qualify/supersede, never delete a page or an old evidence entry; mark obsolete entities stale where the schema allows. Do not skip an entity merely because its prose is source-faithful; first audit whether it matches the current template/schema.
 
 ## Purpose
 
@@ -16,7 +16,7 @@ Connect the paper into the reusable knowledge graph: concepts, claims, people, p
 
 1. **Dedup before create.** For each candidate concept/claim, call `find-similar-concept` / `find-similar-claim` first and apply the decision rule in `dedup-policy.md` (default = merge; create only with a clear distinction, within the per-paper limit).
 2. **Concepts**: fill all mandatory sections (template §concepts + quality floor), including `## Source excerpts` (≥2 substantively different exact excerpts when the source covers the concept in multiple passages) and a research-direction connection sentence in `## My understanding` (or a one-line scoped reason / `_no research-direction anchor file found_`).
-3. **Claims**: structured provenance YAML only (invariants §7 / template §claims); fill all mandatory sections; keep `confidence` conservative.
+3. **Claims**: structured provenance YAML only (invariants §7 / template §claims); fill all mandatory sections; keep `confidence` conservative. In `/reingest`, every connected claim must be audited against the current claim template before it can be marked "no edit": required frontmatter keys, slug-only `source_papers` / `evidence[].source`, complete evidence fields (`source_anchor`, `type`, `strength`, `source_section`, `detail`), Evidence Pack id-only anchors, and all required body sections. Template/schema drift is sufficient reason to edit, even when the claim statement is already supported by the refreshed paper.
 4. **People**: create only for importance ≥ 4; otherwise append to existing author pages.
 5. **Reverse links**: every forward link writes its reverse in the same turn, per the cross-reference matrix. Foundations are terminal (no reverse).
 6. **Paper-to-paper edges + citations** (skip in INIT MODE): `fetch_literature.py references|citations`; add a `cites` row for each reference resolving to an existing paper; add a semantic edge only on a clear source cue (type per `cross-references.md`, with `--confidence` + `--evidence`); backfill `cited_by`.
@@ -29,6 +29,7 @@ Connect the paper into the reusable knowledge graph: concepts, claims, people, p
 - find-similar-* called for every new concept/claim: ✓/✗
 - concepts touched: <n> (all mandatory sections + ≥2 source excerpts where warranted): ✓/✗
 - claims touched: <n> (structured provenance YAML; conservative confidence): ✓/✗
+- /reingest only: every connected claim template-audited; stale claim templates migrated or listed with blocker: ✓/✗ / n.a.
 - importance≥4 ⇒ ≥1 claim, else exception named: ✓/✗ / n.a.
 - people created only if importance≥4: ✓/✗
 - every forward link has its reverse this turn (INIT MODE: edges only): ✓/✗
