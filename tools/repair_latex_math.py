@@ -7,7 +7,9 @@ not get rewritten accidentally.
 
 Purpose:
     Fix common MinerU/OCR spacing artifacts inside LaTeX math while preserving
-    prose, code fences, inline code, and BibTeX.
+    prose, code fences, inline code, and BibTeX. Math delimiters are normalized
+    so Obsidian sees formulas as $formula$ and $$formula$$, without padding
+    between the dollar delimiter and the formula body.
 
 Inputs:
     Markdown files or directories. Runtime aliases such as
@@ -186,6 +188,13 @@ def _apply(pattern: str, repl: str, text: str, flags: int = 0) -> tuple[str, int
     return updated, count
 
 
+def _strip_math_body_padding(body: str) -> tuple[str, int]:
+    stripped = body.strip()
+    if stripped == body or stripped == "":
+        return body, 0
+    return stripped, 1
+
+
 def _repair_math_body_once(body: str) -> tuple[str, int]:
     replacements = 0
     repaired = body
@@ -275,6 +284,8 @@ def _repair_math_body(body: str) -> tuple[str, int]:
         total_replacements += replacements
         if replacements == 0:
             break
+    repaired, replacements = _strip_math_body_padding(repaired)
+    total_replacements += replacements
     return repaired, total_replacements
 
 
