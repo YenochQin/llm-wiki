@@ -103,7 +103,7 @@ For each connected entity:
 1. Compare the old entity statement against the regenerated source and bibliography-backed evidence.
 2. Migrate when there is a substantive mismatch or missing precision:
    - **Concepts**: update Definition, Source excerpts, Variants, Known limitations, Open problems, aliases, related_concepts, and `date_updated`; keep `key_papers`. `## Source excerpts` must include short exact original-language blockquotes linked to the refreshed prepared markdown (`../sources/papers/<source-slug>.md`, derived from `canonical_ingest_path` or prepared frontmatter `sourceSlug`).
-   - **Claims**: update Statement, Evidence summary, Conditions and scope, Counter-evidence, `confidence`, `status`, and `date_updated`; append new evidence or counter-evidence rather than deleting old entries.
+   - **Claims**: update Statement, Evidence summary, Conditions and scope, Counter-evidence, `confidence`, `status`, and `date_updated`; append new evidence or counter-evidence rather than deleting old entries. Claim YAML provenance must remain structured: `source_papers` and `evidence[].source` are paper slugs only, and `evidence[].source_anchor` is the Evidence Pack id only (`E1`, not `^E1`, `[[#^E1]]`, or `[[paper-slug#^E1]]`).
    - **People**: update affiliation, research areas, recent work, collaborators, and key papers when the regenerated metadata/source gives clearer information.
 3. If a new concept/claim is needed, run `find-similar-concept` or `find-similar-claim` before creating it. Prefer merging/migrating over creating duplicates.
 4. For every paper → concept / claim / person link written in the regenerated page, ensure the reverse link/evidence exists.

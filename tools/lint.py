@@ -90,6 +90,8 @@ BIBTEX_ALLOWED_FIELDS = {
     "doi",
 }
 
+CLAIM_PROVENANCE_OBSIDIAN_MARKERS = ("[[", "]]", "#", "^")
+
 
 class LintIssue:
     def __init__(
@@ -445,6 +447,12 @@ def check_broken_links(
             # cross-file wikilinks — skip them.
             if target.startswith("#"):
                 continue
+            # Obsidian cross-file heading/block links resolve through the page
+            # slug before '#'. The anchor itself is not a separate wiki page.
+            if "#" in target:
+                target = target.split("#", 1)[0].strip()
+                if not target:
+                    continue
             if target in pages:
                 incoming.setdefault(target, set()).add(slug)
             else:
@@ -459,6 +467,73 @@ def check_broken_links(
                 )
 
     return issues, incoming
+
+
+def _has_obsidian_provenance_syntax(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (list, tuple, set)):
+        return any(_has_obsidian_provenance_syntax(item) for item in value)
+    if isinstance(value, dict):
+        return any(_has_obsidian_provenance_syntax(item) for item in value.values())
+    text = str(value)
+    return any(marker in text for marker in CLAIM_PROVENANCE_OBSIDIAN_MARKERS)
+
+
+def check_claim_provenance_shape(
+    wiki_dir: Path, pages: dict[str, Path]
+) -> list[LintIssue]:
+    """Keep claim frontmatter provenance machine-readable, not Obsidian syntax."""
+    issues = []
+    for _slug, fpath in pages.items():
+        if fpath.parent.name != "claims":
+            continue
+        content = fpath.read_text(encoding="utf-8")
+        rel = str(fpath.relative_to(wiki_dir))
+        fm = extract_frontmatter(content)
+
+        source_papers = fm.get("source_papers", [])
+        if _has_obsidian_provenance_syntax(source_papers):
+            issues.append(
+                LintIssue(
+                    "🔴",
+                    "invalid-claim-provenance",
+                    rel,
+                    "source_papers must contain paper slugs only, not Obsidian wikilinks or block anchors",
+                    suggestion="Use source_papers: [paper-slug] and put the Evidence Pack id in evidence[].source_anchor",
+                )
+            )
+
+        evidence = fm.get("evidence", [])
+        if not isinstance(evidence, list):
+            continue
+        for idx, item in enumerate(evidence, start=1):
+            if not isinstance(item, dict):
+                continue
+            source = item.get("source")
+            source_anchor = item.get("source_anchor")
+            if _has_obsidian_provenance_syntax(source):
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "invalid-claim-provenance",
+                        rel,
+                        f"evidence[{idx}].source must be a paper slug only, not an Obsidian link or anchor",
+                        suggestion="Use source: paper-slug and source_anchor: E1",
+                    )
+                )
+            if _has_obsidian_provenance_syntax(source_anchor):
+                issues.append(
+                    LintIssue(
+                        "🔴",
+                        "invalid-claim-provenance",
+                        rel,
+                        f"evidence[{idx}].source_anchor must be an Evidence Pack id like E1, not ^E1 or [[#^E1]]",
+                        suggestion="Use source_anchor: E1",
+                    )
+                )
+
+    return issues
 
 
 def check_orphan_pages(
@@ -1099,6 +1174,7 @@ def lint(wiki_dir: Path) -> list[LintIssue]:
     issues.extend(check_missing_fields(wiki_dir, pages))
     issues.extend(check_paper_classification(wiki_dir, pages))
     issues.extend(check_concept_source_excerpts(wiki_dir, pages))
+    issues.extend(check_claim_provenance_shape(wiki_dir, pages))
     link_issues, incoming = check_broken_links(wiki_dir, pages)
     issues.extend(link_issues)
     issues.extend(check_orphan_pages(wiki_dir, pages, incoming))

@@ -224,11 +224,14 @@ status: proposed          # proposed | weakly_supported | supported | challenged
 confidence: 0.5           # 0.0-1.0
 tags: []
 domain: ""
-source_papers: []
+source_papers:
+  - paper-slug            # slug only; no [[...]], no #^anchor
 evidence:
-  - source: ""
+  - source: paper-slug    # slug only; no [[...]], no #^anchor
+    source_anchor: E1     # Evidence Pack id only: E1, E2, ...
     type: supports        # supports | contradicts | tested_by | invalidates
     strength: moderate    # weak | moderate | strong
+    source_section: ""    # source section / figure / table label when useful
     detail: ""
 conditions: ""
 date_proposed: YYYY-MM-DD
@@ -237,3 +240,5 @@ date_updated: YYYY-MM-DD
 ```
 
 Body sections: `## Statement` / `## Evidence summary` / `## Conditions and scope` / `## Counter-evidence` / `## Linked ideas` / `## Open questions`
+
+Claim YAML provenance is data, not Obsidian display syntax. `source_papers` and `evidence[].source` must contain paper slugs only. `evidence[].source_anchor` must contain the Evidence Pack id only (`E1`, not `^E1`, `[[#^E1]]`, or `[[paper#^E1]]`). Put rendered links, if needed, in body prose only.

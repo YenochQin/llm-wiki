@@ -29,59 +29,59 @@
 
 ## P1 — 有影响力(importance 4,full ingest):71 篇
 
-- [ ] **ishiyama_2026_Ordersofmagnitude** (miss 17) — Orders-of-magnitude improvement in precision spectroscopy of an inner-shell orbital clock transition in neutral ytterbium
+- [x] **ishiyama_2026_Ordersofmagnitude** (miss 17) — Orders-of-magnitude improvement in precision spectroscopy of an inner-shell orbital clock transition in neutral ytterbium
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×11, Claim×2
-- [ ] **door_2025_Probing** (miss 16) — Probing new bosons and nuclear structure with ytterbium isotope shifts
+- [x] **door_2025_Probing** (miss 16) — Probing new bosons and nuclear structure with ytterbium isotope shifts
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×7
 - [x] **windberger_2015_Identification** (miss 12) — Identification of the Predicted 5s-4f Level Crossing Optical Lines with Applications to Metrology and Searches for the Variation of Fundamental Constants
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4, Claim×4
 - [x] **indelicato_2007_QED** (miss 11) — QED and relativistic corrections in superheavy elements
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×2
-- [ ] **raeder_2018_probing-sizes-shapes** (miss 11) — Probing Sizes and Shapes of Nobelium Isotopes by Laser Spectroscopy
+- [x] **raeder_2018_probing-sizes-shapes** (miss 11) — Probing Sizes and Shapes of Nobelium Isotopes by Laser Spectroscopy
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5, Claim×2
-- [ ] **beloy_2021_Frequency** (miss 10) — Frequency ratio measurements at 18-digit accuracy using an optical clock network
+- [x] **beloy_2021_Frequency** (miss 10) — Frequency ratio measurements at 18-digit accuracy using an optical clock network
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4, Claim×2
-- [ ] **smits_2023_Pushing** (miss 10) — Pushing the limits of the periodic table — A review on atomic relativistic electronic structure theory and calculations for the superheavy elements
+- [x] **smits_2023_Pushing** (miss 10) — Pushing the limits of the periodic table — A review on atomic relativistic electronic structure theory and calculations for the superheavy elements
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4, Claim×2
-- [ ] **aravena_2016_Periodic** (miss 9) — Periodic trends in lanthanide compounds through the eyes of multireference ab initio theory
+- [x] **aravena_2016_Periodic** (miss 9) — Periodic trends in lanthanide compounds through the eyes of multireference ab initio theory
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
-- [ ] **filzinger_2023_Improved** (miss 9) — Improved Limits on the Coupling of Ultralight Bosonic Dark Matter to Photons from Optical Atomic Clock Comparisons
+- [x] **filzinger_2023_Improved** (miss 9) — Improved Limits on the Coupling of Ultralight Bosonic Dark Matter to Photons from Optical Atomic Clock Comparisons
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
-- [ ] **grant_2007_Relativistic_ch6** (miss 9) — Relativistic Quantum Theory of Atoms and Molecules, Chapter 6: Complex Atoms
+- [x] **grant_2007_Relativistic_ch6** (miss 9) — Relativistic Quantum Theory of Atoms and Molecules, Chapter 6: Complex Atoms
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×5
-- [ ] **konig_2023_Surprising** (miss 9) — Surprising Charge-Radius Kink in the Sc Isotopes at N = 20
+- [x] **konig_2023_Surprising** (miss 9) — Surprising Charge-Radius Kink in the Sc Isotopes at N = 20
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
-- [ ] **miller_2019_Proton** (miss 9) — Proton superfluidity and charge radii in proton-rich calcium isotopes
+- [x] **miller_2019_Proton** (miss 9) — Proton superfluidity and charge radii in proton-rich calcium isotopes
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
-- [ ] **miyagi_2022_Converged** (miss 9) — Converged ab initio calculations of heavy nuclei
+- [x] **miyagi_2022_Converged** (miss 9) — Converged ab initio calculations of heavy nuclei
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×2
-- [ ] **barklem_2016_Excitation** (miss 8) — Excitation and charge transfer in low-energy hydrogen-atom collisions with neutral atoms: theory, comparisons, and application to Ca
+- [x] **barklem_2016_Excitation** (miss 8) — Excitation and charge transfer in low-energy hydrogen-atom collisions with neutral atoms: theory, comparisons, and application to Ca
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
-- [ ] **bekker_2019_Detection** (miss 8) — Detection of the 5p – 4f orbital crossing and its optical clock transition in Pr9+
+- [x] **bekker_2019_Detection** (miss 8) — Detection of the 5p – 4f orbital crossing and its optical clock transition in Pr9+
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
-- [ ] **bilous_2024_Neuralnetwork** (miss 8) — Neural-network approach to running high-precision atomic computations
+- [x] **bilous_2024_Neuralnetwork** (miss 8) — Neural-network approach to running high-precision atomic computations
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
-- [ ] **deprince_2025_Kilonova** (miss 8) — Kilonova ejecta opacity inferred from new large-scale HFR atomic calculations in all elements between Ca (Z = 20) and Lr (Z = 103)
+- [x] **deprince_2025_Kilonova** (miss 8) — Kilonova ejecta opacity inferred from new large-scale HFR atomic calculations in all elements between Ca (Z = 20) and Lr (Z = 103)
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
-- [ ] **dere_2023_CHIANTI** (miss 8) — CHIANTI—An Atomic Database for Emission Lines. XVII. Version 10.1: Revised Ionization and Recombination Rates and Other Updates
+- [x] **dere_2023_CHIANTI** (miss 8) — CHIANTI—An Atomic Database for Emission Lines. XVII. Version 10.1: Revised Ionization and Recombination Rates and Other Updates
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
-- [ ] **domoto_2021_Signatures** (miss 8) — Signatures of r-process elements in kilonova spectra
+- [x] **domoto_2021_Signatures** (miss 8) — Signatures of r-process elements in kilonova spectra
       - 缺:Problem×1, Method×1, Limitations×1, Concept×3, Claim×2
-- [ ] **froesefischer_2019_GRASP2018A** (miss 8) — GRASP2018—A Fortran 95 version of the General Relativistic Atomic Structure Package
+- [x] **froesefischer_2019_GRASP2018A** (miss 8) — GRASP2018—A Fortran 95 version of the General Relativistic Atomic Structure Package
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4
-- [ ] **gillanders_2025_Analysis** (miss 8) — Analysis of the JWST spectra of the kilonova AT 2023vfi accompanying GRB 230307A
+- [x] **gillanders_2025_Analysis** (miss 8) — Analysis of the JWST spectra of the kilonova AT 2023vfi accompanying GRB 230307A
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
-- [ ] **hees_2020_Search** (miss 8) — Search for a variation of the fine structure constant around the supermassive black hole in our galactic center
+- [x] **hees_2020_Search** (miss 8) — Search for a variation of the fine structure constant around the supermassive black hole in our galactic center
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
 - [ ] **jerabek_2018_Electron** (miss 8) — Electron and Nucleon Localization Functions of Oganesson: Approaching the Thomas-Fermi Limit
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4
-- [ ] **kennedy_2020_Precision** (miss 8) — Precision metrology meets cosmology: improved constraints on ultralight dark matter from atom-cavity frequency comparisons
+- [x] **kennedy_2020_Precision** (miss 8) — Precision metrology meets cosmology: improved constraints on ultralight dark matter from atom-cavity frequency comparisons
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3, Claim×1
-- [ ] **kozlov_2018_Highly** (miss 8) — Highly charged ions: Optical clocks and applications in fundamental physics
+- [x] **kozlov_2018_Highly** (miss 8) — Highly charged ions: Optical clocks and applications in fundamental physics
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
-- [ ] **lange_2021_Improved** (miss 8) — Improved Limits for Violations of Local Position Invariance from Atomic Clock Comparisons
+- [x] **lange_2021_Improved** (miss 8) — Improved Limits for Violations of Local Position Invariance from Atomic Clock Comparisons
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4
-- [ ] **miyazawa_2022_BoseEinstein** (miss 8) — Bose-Einstein Condensation of Europium
+- [x] **miyazawa_2022_BoseEinstein** (miss 8) — Bose-Einstein Condensation of Europium
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×2
 - [ ] **norcia_2021_Developments** (miss 8) — Developments in atomic control using ultracold magnetic lanthanides
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×4

@@ -220,7 +220,21 @@ Follow `references/dedup-policy.md`. In short:
 5. For every paper with importance ≥ 4, create or update at least one claim. A missing `claims/` layer for a high-importance paper is a failed ingest unless the source is purely bibliographic, editorial, or otherwise has no defensible claim; record that exception in the log and final report. The "at most N" entity limits in the Constraints section are upper bounds, not targets — zero claims for an importance ≥ 4 paper violates this floor.
 6. For every concept page created or materially edited, add or refresh `## Source excerpts` with at least **two substantively different excerpts** per concept page when the source covers the concept in multiple passages. Each excerpt must be an exact original-language blockquote linked to that paper's actual prepared MinerU markdown (`../sources/papers/<source-slug>.md`, derived from `canonical_ingest_path` or prepared frontmatter `sourceSlug`). If the source contains formulas or precise definitions for the concept, include a short formula/definition excerpt rather than only paraphrase. Do not cherry-pick a generic opening sentence — the excerpts should collectively demonstrate the concept's formal structure. If the prepared markdown is missing, record `prepared markdown: missing` and the fallback source used.
 7. For concept pages, fill the reusable-knowledge sections, not just a definition: `## Intuition`, `## Formal notation`, `## Variants`, `## Comparison`, `## When to use`, `## Known limitations`, `## Open problems`, `## Key papers`, and `## My understanding`. **All listed sections are mandatory** — omit none silently. If a section truly does not apply, write a one-line scoped reason. `## Comparison` must include a compact table when two or more variants, neighboring concepts, or methods are worth contrasting. `## When to use` must give concrete applicability conditions (quantitative thresholds, physical regimes, specific task types), not purely qualitative "use when working with [topic]" formulations. `## Formal notation` must use `$`/`$$` LaTeX notation, never code fences or `\(` `\)`. `## My understanding` must include **at least one concrete connection sentence** tying the concept to the user's active research direction(s) declared in `@configured/Summary/research-direction.md` — e.g. how the concept appears in that direction, what role it plays (descriptor feature, computational bottleneck, validation benchmark, …). Only omit the connection if the source paper genuinely cannot defend one; in that case write a one-line scoped reason instead of forcing a generic tie-in. If the anchor file is absent, write a synthesis in the maintainer's voice and add `_no research-direction anchor file found_` on its own line.
-8. For claim pages, include `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. Every frontmatter `evidence` item must include a `source_anchor` field naming the supporting Evidence Pack id or prepared-source location, or its `detail` must contain an explicit `source_anchor:` marker. Keep confidence conservative: reserve ≥0.85 for claims with direct, strong evidence and clear scope; avoid wording like "necessary and sufficient" unless the paper proves exactly that.
+8. For claim pages, include `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. Claim frontmatter must use this exact provenance shape, replacing placeholders only:
+
+   ```yaml
+   source_papers:
+     - <paper-slug>
+   evidence:
+     - source: <paper-slug>
+       source_anchor: E1
+       type: supports
+       strength: moderate
+       source_section: "<source section>"
+       detail: "<short factual paraphrase>"
+   ```
+
+   Claim YAML is structured data, not Obsidian display syntax. `source_papers` and `evidence[].source` must contain paper slugs only; `evidence[].source_anchor` must contain the Evidence Pack id only (`E1`, `E2`, ...). Never put `[[...]]`, `#`, `^`, `[[#^E1]]`, or `[[paper-slug#^E1]]` in claim YAML. If body prose needs a rendered link, write it outside YAML using the paper page and evidence id deliberately. Keep confidence conservative: reserve ≥0.85 for claims with direct, strong evidence and clear scope; avoid wording like "necessary and sufficient" unless the paper proves exactly that.
 
 ### Step 5: Paper-to-paper edges and `cited_by`
 
