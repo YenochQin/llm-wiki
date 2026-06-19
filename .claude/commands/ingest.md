@@ -1,6 +1,6 @@
 ---
 description: Ingest one paper into llm-wiki.
-argument-hint: "[--zotero-root <dir>] (--title <str>|--doi <doi>|--item-key <key>) [--discover]"
+argument-hint: "[--zotero-root <dir>] (--title <str>| --doi <doi>) [--discover]"
 ---
 
 Read and follow @skills/ingest/SKILL.md exactly.

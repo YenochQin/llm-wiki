@@ -109,12 +109,12 @@
       - 缺:Method×1, Results×1, Limitations×1, Concept×3, Claim×1
 - [ ] **lis_2023_Midcircuit** (miss 7) — Midcircuit operations using the omg architecture in neutral atom arrays
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
-- [ ] **muni_2022_Optical** (miss 7) — Optical coherent manipulation of alkaline-earth circular Rydberg states
-      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [x] **muni_2022_Optical** (miss 7 → 0) — Optical coherent manipulation of alkaline-earth circular Rydberg states
+      - 补全: Evidence Pack 13卡(Problem×2, Method×3, Results×3, Limitations×2, Concept×2, Claim×1)已覆盖全部区段; 修复claim source_anchor E1→E13
 - [ ] **pershina_2015_Electronic** (miss 7) — Electronic structure and properties of superheavy elements
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
-- [ ] **sanner_2019_Optical** (miss 7) — Optical clock comparison for Lorentz symmetry testing
-      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
+- [x] **sanner_2019_Optical** (miss 7 → 0) — Optical clock comparison for Lorentz symmetry testing
+      - 补全: Evidence Pack 13卡(Problem×2, Method×3, Results×3, Limitations×2, Concept×2, Claim×1); 修复claim source_anchor格式
 - [ ] **sharma_2017_Semistochastic** (miss 7) — Semistochastic heat-bath configuration interaction method: selected configuration interaction with semistochastic perturbation theory
       - 缺:Problem×1, Results×1, Limitations×1, Concept×2, Claim×2
 - [ ] **sneden_2016_Irongroup** (miss 7) — Iron-group abundances in the metal-poor main-sequence turnoff star HD 84937
@@ -125,8 +125,8 @@
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
 - [ ] **wu_2026_Atomic** (miss 7) — Atomic data benchmarked by large-scale multiconfiguration Dirac-Hartree-Fock calculations for beryllium
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×3
-- [ ] **zatsarinny_2013_Bspline** (miss 7) — The B-spline R-matrix method for atomic processes: application to atomic structure, electron collisions and photoionization
-      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1, Claim×2
+- [x] **zatsarinny_2013_Bspline** (miss 7 → 0) — The B-spline R-matrix method for atomic processes
+      - 补全: Evidence Pack 12卡(Problem×1, Method×3, Results×3, Limitations×1, Concept×2, Claim×2); 修复2个claim的YAML(source_papers wikilink→slug, source_anchor格式, +source_section, +conditions)
 - [ ] **zhang_2023_Search** (miss 7) — Search for Ultralight Dark Matter with Spectroscopy of Radio-Frequency Atomic Transitions
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×2, Claim×1
 - [ ] **coe_2018_Machine** (miss 6) — Machine learning configuration interaction

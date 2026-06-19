@@ -123,7 +123,7 @@ Parallel local ingest contract:
 - create each worktree from `BASE_COMMIT`, not from the already checked-out `BASE_BRANCH`
 - subagent prompts must use **relative paths only**, and the subagent's shell working directory must be the worktree path (`$WT_PATH`), not the main repository root
 - execute `/ingest-local-pdf` for exactly one handed-off source path; do not bypass `/ingest-local-pdf`
-- every downstream `/ingest-local-pdf` -> `/ingest` paper page must use the fixed `## Evidence Pack` card template owned by `/ingest`: `` `E1` <UseLabel> — <short label> ...: ^E1`` with prose citations using the literal Obsidian block link `[[#^E1]]`. The outer double brackets, leading `#`, and one literal space before the citation are mandatory; do not let init subagent prompts invent alternate markers such as `[#^E1]`, `[[^E1]]`, `#^E1`, `word[[#^E1]]`, `- ^E1 ...`, or `[!E1]`.
+- every downstream `/ingest-local-pdf` -> `/ingest` paper page must use the fixed `## Evidence Pack` card shape and citation syntax defined once in `docs/runtime-page-templates.en.md` §papers (forbidden-variant list included there). Do not let init subagent prompts restate or invent alternate markers.
 - in INIT MODE, consume the handed-off canonical path exactly as provided
 - skip `fetch_literature.py citations`
 - skip `fetch_literature.py references`

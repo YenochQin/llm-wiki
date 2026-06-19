@@ -6,147 +6,62 @@ argument-hint: "<local-pdf-or-wiki/sources/papers/*.md> [--paper-only] [--update
 
 # /reingest
 
-Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `mineru-md` source. Use this when the PDF→markdown adapter changed, the paper template changed, or the previous ingest was incomplete. By default, `/reingest` also audits and migrates affected `concepts`, `claims`, and `people` pages. `--update-entities` is now the default behavior and can be treated as a backward-compatible no-op. Use `--paper-only` only when the user explicitly wants to skip entity migration.
+Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `mineru-md` source. Use this when the PDF→markdown adapter changed, the paper template changed, or the previous ingest was incomplete. `/reingest` runs the **same phase pipeline as `/ingest`** with the deltas below, and **after each phase prints that phase's Gate block**. Entity migration (`--update-entities`) is the default; `--paper-only` disables it.
+
+## Phases (run in order; print each Gate, applying the reingest deltas)
+
+- Phase A — `.claude/skills/shared-references/ingest-phases/phase-a-source-identity.md`
+- Phase B — `.claude/skills/shared-references/ingest-phases/phase-b-evidence-pack.md`
+- Phase C — `.claude/skills/shared-references/ingest-phases/phase-c-paper-page.md`
+- Phase D — `.claude/skills/shared-references/ingest-phases/phase-d-knowledge-graph.md` (run as **entity migration**)
+- Phase E — `.claude/skills/shared-references/ingest-phases/phase-e-navigation-finalize.md`
+
+Phase B re-extracts cards from the refreshed source and prints Gate B before Phase C rewrites `## Evidence Pack` as the first body section.
+
+## Always-on references
+
+- `.claude/skills/shared-references/ingest-invariants.md` — path / Zotero / slug / LaTeX / wikilink / BibTeX / edge rules
+- `docs/runtime-page-templates.en.md` — page shape + Evidence Pack card shape (single source of truth)
+- `.claude/skills/shared-references/source-grounding.md` — anti-hallucination discipline
 
 ## Scope
 
-`/reingest` updates the paper page, its canonical prepared source, and affected knowledge entities. It is not a reset:
+`/reingest` updates the paper page, its canonical prepared source, and affected knowledge entities. It is **not a reset**:
 
-- raw files under `raw/papers/`, `raw/notes/`, `raw/web/` remain read-only.
-- `wiki/sources/papers/<source-slug>.md` may be overwritten via `tools/prepare_paper_source.py --overwrite`; `<source-slug>` uses the sanitized Zotero citation key when available, otherwise `author_year_veryshorttitle`, but the output directory and MinerU cache root must be passed explicitly.
-- When refreshing or overwriting prepared source markdown, preserve portable Zotero provenance: if the PDF is under a Zotero data directory `storage/`, the prepared frontmatter `source` must be `${Zotero data directory}/storage/<attachment-key>/<file>.pdf`, not the generating machine's absolute path.
-- entity migration is enabled by default; `--update-entities` does not need to be provided.
-- `--paper-only` disables entity migration for this run.
-- existing concept/claim/people pages must be reviewed and migrated when the regenerated source makes an old definition, claim status, confidence, evidence detail, alias, author metadata, or research-area summary stale or incomplete.
-- entity migration may edit frontmatter and body text, but must preserve provenance: do not delete old evidence entries; qualify, supersede, or add counter-evidence instead.
-- never delete concept/claim/people pages during reingest. If an entity appears obsolete, mark it as stale/deprecated where the schema supports it and report it.
-- `wiki/graph/*` is updated only through `tools/research_wiki.py`.
-- user-created custom sections in the old paper page should be preserved unless the user explicitly asks for a full rewrite.
+- `raw/papers|notes|web` remain read-only.
+- `wiki/sources/papers/<source-slug>.md` may be overwritten via `tools/prepare_paper_source.py --overwrite`. When overwriting, preserve portable Zotero provenance: a PDF under a Zotero `storage/` must yield frontmatter `source` = `${Zotero data directory}/storage/<attachment-key>/<file>.pdf`, never the generating machine's absolute path.
+- Entity migration is enabled by default; `--paper-only` disables it for this run.
+- Never delete concept/claim/people pages. Append/qualify/supersede; mark obsolete entities stale where the schema supports it and report them. Never delete old evidence entries.
+- Preserve user-created custom sections unless the user asks for a full rewrite.
+- `--item-key` is not a user-facing paper selector (invariants §2). Match the existing paper from prepared `paperSlug`/`sourceSlug`, DOI, title, or page path.
 
-## Workflow
+## Phase deltas
 
-**Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
+### Phase A delta — refresh source + match existing page
+- If input is a PDF, prepare with `--overwrite` (carry `--citation-key`/`--authors`/`--year`; `--title` only when confidently recovered). If input is a prepared `*.md`, use it directly. For DOI/title-only Zotero refresh, follow invariants §2.
+- Resolve the **existing** paper page (slug per invariants §3). Look it up:
+  ```shell
+  uv run python -X utf8 tools/research_wiki.py find '@configured' papers --slug "<slug>"
+  ```
+  (`find`'s second positional arg is an entity directory like `papers`; do not pass `papers/<slug>`.) If the page does **not** exist, stop and suggest `/ingest`; never silently create a new page.
+- Read the existing page and preserve `cited_by`, stable identity not in the new source (`external_ids`, `code_url`, curated `importance` rationale), existing `## Related` links still valid, and any non-template custom section.
 
-Run commands from the repository root.
+### Phase C delta — write to the existing page
+Regenerate analysis into the existing page (do not create a new one), regenerating `## Evidence Pack` first. Use the retained bibliography to resolve inline references; do not cite references absent from bibliography/metadata.
 
-```shell
-uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
-```
+### Phase D delta — entity migration (skip if `--paper-only`)
+Review entities connected to the old or regenerated page: pages in old/new `## Related`; concepts whose `key_papers` include this paper; claims whose `source_papers`/`evidence[].source` include it; linked people; graph neighbors (`tools/research_wiki.py neighbors '@configured' papers/<slug>`). For each, compare old statement vs regenerated source and migrate on substantive mismatch:
+- **Concepts**: update Definition, Source excerpts (exact excerpts linked to refreshed prepared markdown), Variants, Known limitations, Open problems, aliases, related_concepts, `date_updated`; keep `key_papers`.
+- **Claims**: update Statement/Evidence/Conditions/Counter-evidence/`confidence`/`status`/`date_updated`; **append** new evidence/counter-evidence, do not delete old. Provenance YAML stays structured (invariants §7).
+- **People**: refresh affiliation/areas/recent work/collaborators/key papers.
+- New concept/claim → `find-similar-*` first; prefer migrating over creating duplicates. Ensure reverse links/evidence for every regenerated link. Add semantic edges with `add-edge` (invariants §8). Do not auto-remove old edges; report ones the regenerated page no longer supports as "possibly stale".
 
-### Step 1: Resolve and refresh source
-
-1. If input is a PDF, run:
-
-   ```shell
-   uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <pdf-path> [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] --overwrite
-   ```
-
-   Pass `--title` only when confidently recovered from the PDF itself or an existing trusted paper page. Pass `--citation-key` when Zotero/Better BibTeX provides one; otherwise pass authors/year/title so the source filename falls back to `author_year_veryshorttitle`.
-2. If input is a prepared `wiki/sources/papers/*.md`, use it directly.
-3. Stop if the prep manifest has `usable: false`; report warnings verbatim.
-
-### Step 2: Match existing paper
-
-1. Read the prepared markdown frontmatter title and generate slug:
-
-   ```shell
-   uv run python -X utf8 tools/research_wiki.py slug "<title>"
-   ```
-
-2. If `wiki/papers/{slug}.md` does not exist, stop and suggest `/ingest`; do not silently create a new paper page.
-3. Read the existing paper page and preserve:
-   - `cited_by`
-   - stable identity metadata not present in the new source (`external_ids`, `code_url`, manually curated `importance` rationale)
-   - existing `## Related` links unless the regenerated analysis still includes them elsewhere
-   - any non-template custom section (sections other than Problem, Key idea, Research classification, Method, Results, Limitations, Open questions, My take, Related)
-
-### Step 3: Regenerate paper analysis
-
-Follow `/ingest` Step 2-4, but write to the existing paper page instead of creating a new one.
-
-Required current paper fields include:
-
-- `paper_type`: one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, `other`
-- `research_modes`: one or more of `theory`, `computation`, `experiment`
-- `theory_tags`
-- `computation_tags`
-- `experiment_tags`
-- `research_object_tags`
-
-Body sections to regenerate:
-
-`## Evidence Pack` / `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## Related`
-
-Regenerate `## Evidence Pack` as the first body section, using the exact `/ingest` Evidence Pack card shape:
-
-```markdown
-- `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
-  > exact source fragment
-```
-
-This shape is fixed. Replace placeholders only. Keep the readable id at the start as `` `E1` `` and the Obsidian block id at the end as `^E1`; regenerated prose cites cards with the literal Obsidian block-link string `[[#^E1]]`. The outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never use invalid citation forms such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, or legacy `[!E1]`; never start a card with `^E1`, and never replace `` `E1` `` with `^E1`.
-
-Use the retained bibliography in the prepared markdown to resolve inline references where useful. Do not cite references not present in either the bibliography or metadata lookup.
-
-### Step 4: Audit and migrate entities
-
-Unless `--paper-only` is explicitly set, review all existing entities connected to the old or regenerated paper page:
-
-- pages linked in old/new `## Related`
-- concepts whose `key_papers` includes this paper
-- claims whose `source_papers` or `evidence[].source` includes this paper
-- people pages linked from the paper or already listing it under `## Key papers`
-- graph neighbors from `tools/research_wiki.py neighbors '@configured' papers/<slug>`
-
-For each connected entity:
-
-1. Compare the old entity statement against the regenerated source and bibliography-backed evidence.
-2. Migrate when there is a substantive mismatch or missing precision:
-   - **Concepts**: update Definition, Source excerpts, Variants, Known limitations, Open problems, aliases, related_concepts, and `date_updated`; keep `key_papers`. `## Source excerpts` must include short exact original-language blockquotes linked to the refreshed prepared markdown (`../sources/papers/<source-slug>.md`, derived from `canonical_ingest_path` or prepared frontmatter `sourceSlug`).
-   - **Claims**: update Statement, Evidence summary, Conditions and scope, Counter-evidence, `confidence`, `status`, and `date_updated`; append new evidence or counter-evidence rather than deleting old entries. Claim YAML provenance must remain structured: `source_papers` and `evidence[].source` are paper slugs only, and `evidence[].source_anchor` is the Evidence Pack id only (`E1`, not `^E1`, `[[#^E1]]`, or `[[paper-slug#^E1]]`).
-   - **People**: update affiliation, research areas, recent work, collaborators, and key papers when the regenerated metadata/source gives clearer information.
-3. If a new concept/claim is needed, run `find-similar-concept` or `find-similar-claim` before creating it. Prefer merging/migrating over creating duplicates.
-4. For every paper → concept / claim / person link written in the regenerated page, ensure the reverse link/evidence exists.
-5. Add new semantic edges with `tools/research_wiki.py add-edge`; it deduplicates existing edges. The first argument after `add-edge` must be `'@configured'`; never start an edge command with `add-edge --from`. Always use named flags: `--from`, `--to`, `--type`, and `--evidence`. For paper-concept and paper-paper semantic edges, also include `--confidence high|medium|low`.
-6. Add bibliographic citations only when a reference resolves to an existing wiki paper and is truly cited by the source.
-
-Do not remove old graph edges automatically. If the regenerated page or migrated entities no longer support an old edge, report it as “possibly stale” for `/check` or user review.
-
-### Step 5: Rebuild and validate
-
-Run:
-
-```shell
-uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
-uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
-uv run python -X utf8 tools/research_wiki.py rebuild-open-questions '@configured'
-uv run python -X utf8 tools/lint.py --wiki-dir '@configured'
-uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/<slug>.md" --only "concepts/<touched-concept>.md" --only "claims/<touched-claim>.md" --json
-uv run python -X utf8 tools/research_wiki.py log '@configured' "reingest | refreshed papers/<slug> | updated: <list>"
-```
-
-Run `grounding_lint.py` only for touched `papers/`, `concepts/`, and `claims/` pages. Remove placeholder `--only` arguments for entity types that were not touched. If lint fails, fix deterministic issues in the same turn unless doing so would delete user-authored content. If `grounding_lint.py` reports any `level: red` issue, fix the source-grounding issue before reporting success; do not downgrade it to a warning.
-
-## Source grounding
-
-This skill regenerates durable paper/entity content, so it follows the shared **Source Grounding Discipline** — see `.claude/skills/shared-references/source-grounding.md`.
-
-- Regenerated paper interpretation must be drafted from evidence cards extracted from the prepared MinerU source, not model memory.
-- Concept `## Source excerpts` and claim evidence entries must preserve exact source anchors when migrated.
-- Every touched `papers/`, `concepts/`, or `claims/` page must pass the scoped `grounding_lint.py` gate in Step 5 before final reporting.
+### Phase E delta — rebuild + validate
+Run `rebuild-index`, `rebuild-context-brief`, `rebuild-open-questions`, then scoped `lint.py` and `grounding_lint.py --only` on touched `papers/`/`concepts/`/`claims/`, then `log "reingest | refreshed papers/<slug> | updated: <list>"`. Fix any `grounding_lint` `level: red` before reporting; fix deterministic `lint` issues unless that would delete user-authored content.
 
 ## Report
 
-Summarize:
-
-- prepared source refreshed path and warnings
-- paper page updated
-- entity migration summary: concepts/claims/people reviewed, updated, created, or marked stale
-- graph edges/citations added
-- stale relationships or ambiguous old links that need review
-- lint and grounding_lint result
-
-Close with:
+Summarize: refreshed source path + warnings; paper page updated; entity migration summary (reviewed/updated/created/marked-stale); edges/citations added; stale or ambiguous old links needing review; lint + grounding_lint result. Close with:
 
 ```text
 Wiki: reingested papers/<slug> | updated: <list> | lint: <summary>

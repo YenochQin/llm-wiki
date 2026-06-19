@@ -6,149 +6,82 @@ argument-hint: "[--zotero-root <dir>] (--title <str>| --doi <doi>| <prepared-sou
 
 # /ingest-light
 
-> 中文运行提示：除非用户特别要求英文输出，执行本 skill 时请用中文向用户汇报；命令、路径、YAML 字段、slug、frontmatter key 和 wikilink 语法保持原样。
+> 中文运行提示：除非用户特别要求英文输出，执行本 skill 时请用中文向用户汇报；命令、路径、YAML 字段、slug、frontmatter key 和 wikilink 语法保持原样。下面保留英文规范作为精确操作说明。
 
 > 内容语言提醒：写入正式 wiki 页面时遵守 `AGENTS.md` 的正式页面语言规范；除非用户明确要求中文，页面正文默认使用英文，source excerpts 保持原语言。
 
-Light ingest is for papers whose main purpose is dissertation-introduction or background narrative support. It creates a useful paper page and connects it to a writing-purpose Summary page, but it does **not** default to creating concepts, claims, people pages, or semantic graph edges.
+Light ingest is for papers whose main purpose is dissertation-introduction or background narrative support. It creates a useful paper page and connects it to a writing-purpose Summary page, but does **not** default to creating concepts, claims, people pages, or semantic graph edges. Use `/ingest` instead when the paper is core evidence for reusable concepts/claims.
 
-Use `/ingest` instead when the paper is core evidence for reusable concepts/claims or should become part of the main research graph.
+It reuses the shared ingest pipeline but runs a reduced subset, **printing each phase's Gate block** as it goes:
+
+- **Phase A** — `.claude/skills/shared-references/ingest-phases/phase-a-source-identity.md` (resolve + prepare + identity)
+- **Phase B** — `.claude/skills/shared-references/ingest-phases/phase-b-evidence-pack.md` (light Evidence Pack; concepts/claims counts are 0 unless this run explicitly touches them)
+- **Light paper page** — this skill's own light variant (below + `references/light-paper-page.md`); Evidence Pack still required per `docs/runtime-page-templates.en.md`
+- **Summary update** — `references/summary-update.md`
+- **Finalize** — index + log + scoped lint (Phase E, reduced)
+
+Phase D (concepts/claims/people/semantic edges) is **skipped by default**.
 
 ## References
 
-- `references/light-paper-page.md` — required paper-page shape and tags for light ingest.
-- `references/role-selection.md` — choose the primary introduction role when the user did not specify one or when the role is ambiguous.
+- `references/light-paper-page.md` — required light paper-page shape and tags.
+- `references/role-selection.md` — choose the primary introduction role when unspecified/ambiguous.
 - `references/summary-update.md` — how to update `wiki/Summary/<target-summary>.md`.
-- `/ingest` references may be consulted for Zotero PDF preprocessing and BibTeX rules, especially `../ingest/references/pdf-preprocessing.md`.
-
-Open `docs/runtime-page-templates.en.md` before writing the paper page frontmatter.
+- `.claude/skills/shared-references/ingest-invariants.md` — path / Zotero / slug / LaTeX / wikilink / BibTeX rules.
+- `.claude/skills/ingest/references/pdf-preprocessing.md` — Zotero PDF preprocessing (Phase A).
 
 ## Inputs
 
-- Zotero-backed lookup by `--doi <doi>` or `--title <str>`, optionally with `--zotero-root <dir>`.
-- Prepared source path only when handed off from `/ingest-local-pdf`, `/init`, or explicitly provided by the user.
-- `--role` controls why the paper is in the introduction corpus:
-  - `background`: broad motivation or domain context.
-  - `method-foundation`: method/theory/platform foundation.
-  - `benchmark`: experimental or reference-data comparison.
-  - `application`: astrophysics, plasma, laser spectroscopy, clocks, nuclear-structure, databases.
-  - `gap-evidence`: missing data, disagreement, incomplete assignments, or data-quality need.
-  - `review-context`: survey/review/book/chapter used for framing.
-- `--depth light` is the default: create/update a light paper page and target Summary.
-- `--depth paper-only` creates/updates the paper page but does not add the paper to the target Summary.
-- `--target-summary` defaults to `thesis-introduction-literature`.
-
-Do not accept `--item-key` as a user-facing selector. Internal Zotero metadata enrichment may call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` only after DOI/title lookup selected an unambiguous candidate.
-
-Never pass DOI or title directly to `tools/fetch_zotero_metadata.py`; that helper only accepts `--item-key` (or `--ping`). For DOI/title-based Zotero lookup, first run `tools/find_zotero_pdf.py --doi <doi>` or `--title "<title>"`, select an unambiguous candidate, then call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>`.
-
-If the user omits `--role`, read `references/role-selection.md`, infer one primary role from the paper metadata/source, and state the role choice and one-sentence rationale in the final report. If the role cannot be inferred from available information, ask the user instead of guessing.
+- Zotero lookup by `--doi`/`--title` (optionally `--zotero-root`), or a prepared source path handed off from `/ingest-local-pdf`, `/init`, or the user. Zotero discipline (incl. `--item-key` internal-only) is in invariants §2.
+- `--role` ∈ `background | method-foundation | benchmark | application | gap-evidence | review-context`. If omitted/ambiguous, infer one primary role per `references/role-selection.md` and state the choice + one-sentence rationale in the report; if it cannot be inferred, ask the user.
+- `--depth light` (default): create/update the light paper page **and** the target Summary. `--depth paper-only`: paper page only.
+- `--target-summary` (default `thesis-introduction-literature`).
 
 ## Outputs
 
-For Python tools, pass aliases such as `@configured` and `@configured-sources-papers` directly. For direct file reads/writes through editor tools, first resolve the alias with `tools/resolve_path_alias.py` and then use the absolute path. Never create literal directories named `@configured` or `@raw-root`.
-
-- `<resolved-wiki-root>/papers/{slug}.md` — CREATE or UPDATE as a light paper page.
-- `<resolved-wiki-root>/sources/papers/{source-slug}.md` — created when a Zotero PDF must be prepared through `tools/prepare_paper_source.py`.
-- `<resolved-wiki-root>/Summary/{target-summary}.md` — UPDATE unless `--depth paper-only`.
-- `<resolved-wiki-root>/index.md` — rebuild or append through `tools/research_wiki.py rebuild-index`.
-- `<resolved-wiki-root>/log/` — append via `tools/research_wiki.py log`.
-
-No default writes to:
-
-- `<resolved-wiki-root>/concepts/`
-- `<resolved-wiki-root>/claims/`
-- `<resolved-wiki-root>/people/`
-- `<resolved-wiki-root>/graph/edges.jsonl`
-- `<resolved-wiki-root>/graph/citations.jsonl`
+- `<wiki-root>/papers/{slug}.md` — light paper page (CREATE/UPDATE).
+- `<wiki-root>/sources/papers/{source-slug}.md` — when a Zotero PDF must be prepared.
+- `<wiki-root>/Summary/{target-summary}.md` — UPDATE unless `--depth paper-only`.
+- `<wiki-root>/index.md` (rebuild/append) and `<wiki-root>/log/` (append).
+- **No default writes** to `concepts/`, `claims/`, `people/`, `graph/edges.jsonl`, `graph/citations.jsonl`.
 
 ## Workflow
 
-**Pre-condition**: run from the repository root and use runtime path aliases. Do not hard-code `wiki/`, `raw/`, or external vault paths.
+**Pre-condition**: run from repo root; path/environment discipline in invariants §1.
 
 ```shell
 uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
-uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@configured-sources-papers'
 ```
 
-If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
-
-Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured`, `@configured-sources`, and `@configured-sources-papers`.
-Never pass `@configured/...` or `@raw-root/...` to direct file editing tools or plain shell commands such as `cat`, `cp`, `mkdir`, or redirection. They do not resolve aliases and will create literal directories in the code repository.
-
-### Step 1: Resolve and prepare source
-
-1. If the input is a prepared `@configured-sources-papers/*.md`, read it directly.
-2. If the input is DOI/title, follow the Zotero lookup/preparation flow from `/ingest` Step 1:
-   - call `tools/find_zotero_pdf.py` with `--doi` or `--title`;
-   - select only an unambiguous candidate with exactly one existing PDF attachment;
-   - set `<selected-pdf-path>` to the candidate's `best_attachment.path` when present, otherwise its single `pdf_paths[0]`;
-   - fetch Zotero metadata with internal `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` when available; do not call `tools/fetch_zotero_metadata.py --doi` or `--title`, which are not supported CLI options;
-   - run `tools/prepare_paper_source.py` with explicit `--source <selected-pdf-path>`, `--output-dir '@configured-sources-papers'`, and `--cache-root '@mineru-cache'`.
-3. Preserve Zotero `metadata.paper_slug` or prepared frontmatter `paperSlug` as the paper slug. Use `tools/research_wiki.py paper-slug` only when no citation key is available.
-4. Stop if preparation reports `usable: false`. Do not read `full.md`, MinerU cache files, or other intermediate cache artifacts as a substitute canonical source. A non-empty MinerU cache with `usable: false` means the adapter/filtering layer needs to be fixed or the failure must be reported to the user.
-
-Correct preparation command shape:
-
-```shell
-uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<selected-pdf-path>' [--title '<zotero-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year "<year>"] [--bibtex "$BIBTEX"]
-```
-
-Use single quotes around Zotero-derived PDF paths and metadata values in shell commands. Some Zotero filenames contain `$` or TeX math such as `$$^{143-147}$$`; double quotes allow Bash to expand `$$` into the process id and corrupt the path.
-
-Never pass Zotero `item_key` to `tools/prepare_paper_source.py`. `item_key` is only for `tools/fetch_zotero_metadata.py`; MinerU preparation requires a real local PDF path via `--source`. Never pass `.mineru-cache` as `--cache-root`; use `@mineru-cache`, which resolves to `.checkpoints/mineru-cache`.
-
-### Step 2: Create or update the light paper page
-
-Follow `references/light-paper-page.md`.
-If `--role` was omitted or ambiguous, follow `references/role-selection.md` before writing.
-
-Requirements:
-
-- Frontmatter includes normal paper fields plus tags containing `thesis-introduction`, the selected role, and `light-ingest`.
-- `paper_type`, `research_modes`, and `research_object_tags` should be filled conservatively when clear; otherwise use `other` / `[]` / `[]` rather than inventing.
-- Body sections stay light: Evidence Pack, Problem, Key idea, Research classification, Introduction use, Evidence notes, Limitations, BibTeX, Related.
-- `## Evidence Pack` must be the first body section and must use this exact fixed card shape, replacing placeholders only:
-
-  ```markdown
-  - `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
-    > exact source fragment
-  ```
-
-  Keep the readable id at the start as `` `E1` `` and the Obsidian block id at the end as `^E1`; prose cites cards with the literal Obsidian block-link string `[[#^E1]]`. The outer double brackets `[[...]]`, leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Never use invalid citation forms such as `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, or legacy `[!E1]`; never start a card with `^E1`, and never replace `` `E1` `` with `^E1`.
-- `## Introduction use` must include the selected primary role and the reason this paper belongs in that role. Mention secondary roles there only when useful.
-- `## Related` must include `[[{target-summary}]]` unless `--depth paper-only`.
-- Do not create new concept/claim/people pages. Link existing pages only when clearly useful.
-
-If `<resolved-wiki-root>/papers/{slug}.md` already exists, update only light-ingest metadata/sections that are missing or stale. Do not overwrite a full `/ingest` page with a lighter page.
-
-### Step 3: Update the target Summary
-
-Skip this step for `--depth paper-only`.
-
-Follow `references/summary-update.md`.
-
-Add the paper under a role-based subsection in `<resolved-wiki-root>/Summary/{target-summary}.md`, preserving existing prose. If the target Summary does not exist, create it using the Summary template with a concise scope and the required sections.
-
-### Step 4: Navigation and log
-
-Run:
-
-```shell
-uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
-uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | added papers/<slug> | role=<role> | target=Summary/<target-summary>"
-```
-
-### Step 5: Scoped verification
-
-Run scoped lint only on touched files:
-
-```shell
-uv run python -X utf8 tools/lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "Summary/{target-summary}.md"
-```
-
-Do not report unrelated full-wiki lint debt.
+1. **Phase A** — resolve + prepare the source and settle identity, per the phase file. Stop if `usable: false`; do not read MinerU cache intermediates as a substitute. Print Gate A.
+2. **Phase B** — extract the light Evidence Pack from the prepared source and print Gate B. Use the shared phase, with the light page's populated interpretive sections as the coverage target; concept/claim counts are `0` unless this run explicitly updates existing concept/claim pages.
+3. **Light paper page** — follow `references/light-paper-page.md`:
+   - Frontmatter = normal paper fields + tags containing `thesis-introduction`, the selected role, and `light-ingest`. Fill `paper_type`/`research_modes`/`research_object_tags` conservatively, else `other`/`[]`/`[]`.
+   - Light body sections: `## Evidence Pack` (first, per template), `## Problem`, `## Key idea`, `## Research classification`, `## Introduction use`, `## Evidence notes`, `## Limitations`, `## BibTeX`, `## Related`.
+   - `## Introduction use` states the primary role and why this paper belongs in it.
+   - `## Related` includes `[[{target-summary}]]` unless `--depth paper-only`.
+   - Do not create concept/claim/people pages; link existing pages only when clearly useful. If the page already exists, update only missing/stale light metadata — never overwrite a full `/ingest` page with a lighter one.
+   - Print Gate C (template shape check + scoped `grounding_lint --only` on the paper page; fix red).
+4. **Summary update** (skip for `--depth paper-only`) — follow `references/summary-update.md`: add the paper under a role-based subsection in `Summary/{target-summary}.md`, preserving prose; create the Summary from template if absent.
+5. **Finalize** —
+   ```shell
+   uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
+   uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | added papers/<slug> | role=<role> | target=Summary/<target-summary>"
+   uv run python -X utf8 tools/lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "Summary/{target-summary}.md"
+   ```
+   Print this reduced Gate E before reporting:
+   ```text
+   [Gate E-light] final
+   1. papers/{slug}.md exists & frontmatter YAML parses: ✓/✗
+   2. Evidence Pack meets light coverage floor (populated sections; concepts/claims n.a. unless touched): ✓/✗
+   3. scoped grounding_lint/lint has no blocking issue on touched files: ✓/✗
+   4. Summary/{target-summary}.md updated or --depth paper-only: ✓/✗ / n.a.
+   5. current weekly log has a [today] entry under ## ingest-light: ✓/✗
+   6. index.md includes the light paper: ✓/✗
+   7. all pages use $/$$ LaTeX only and slug-only wikilinks: ✓/✗
+   ```
+   Report scoped results only; do not surface full-wiki lint debt.
 
 ## Upgrade path
 
-If a light-ingested paper later becomes core evidence, run `/ingest` or `/reingest` on the same paper slug and explicitly upgrade it to full graph participation. Preserve `thesis-introduction` tags and the Summary link unless the user asks to remove them.
+If a light-ingested paper later becomes core evidence, run `/ingest` or `/reingest` on the same slug to upgrade it to full graph participation. Preserve `thesis-introduction` tags and the Summary link unless the user asks to remove them. See `/promote-light-ingest` to find candidates.

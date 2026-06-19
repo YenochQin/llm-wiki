@@ -41,7 +41,11 @@ Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research 
   > exact source fragment
 ```
 
-This is the only valid Evidence Pack card header shape. Keep both markers: the readable evidence id stays at the start as `` `E1` ``, and the Obsidian block id goes at the very end of the same bullet header as `^E1`. Never start a card with `^E1`, and never replace `` `E1` `` with `^E1`. Subsequent prose cites the card with the literal Obsidian block-link string `[[#^E1]]`; the outer double brackets `[[...]]`, the leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`. Invalid citation forms include `[#^E1]`, `[[^E1]]`, `#^E1`, `^E1`, and `[!E1]`.
+> **Single source of truth.** This block is the *only* canonical definition of the Evidence Pack card shape and its citation syntax for the whole repo. Skills and references must point here (`docs/runtime-page-templates.en.md` §papers) instead of restating the ASCII shape or the forbidden-variant list. If this spec changes, it changes here only.
+
+This is the only valid Evidence Pack card header shape. Keep both markers: the readable evidence id stays at the start as `` `E1` ``, and the Obsidian block id goes at the very end of the same bullet header as `^E1`. Never start a card with `^E1`, and never replace `` `E1` `` with `^E1`. Subsequent prose cites the card with the literal Obsidian block-link string `[[#^E1]]`; the outer double brackets `[[...]]`, the leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`.
+
+**Forbidden citation/marker variants** (canonical list — none of these may appear on any generated page): `[#^E1]`, `[[^E1]]`, `#^E1`, bare `^E1` as a citation, `word[[#^E1]]` (missing the space), `- ^E1 ...` (card starting with the block id), and legacy `[!E1]`.
 
 Every card must link to an existing `wiki/sources/papers/{source-slug}.md` prepared source and include an exact blockquote that occurs in that source. Subsequent `## Method`, `## Results`, `## Limitations`, and claim-generating statements may only use facts supported by these cards. If the source does not support a detail, write `unclear` or move it to `## Open questions`; do not fill gaps from model memory.
 
