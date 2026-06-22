@@ -29,18 +29,18 @@
 - [x] **ding_2025_Challenges** (miss 9) — Challenges in Atomic Spectroscopy of Low-Ionisation-Stage Heavy Elements for Astrophysics
 - [x] **flors_2023_Opacities** (miss 9) — Opacities of singly and doubly ionized neodymium and uranium for kilonova emission modeling
 - [x] **fritzsche_2022_Application** (miss 9) — Application of Symmetry-Adapted Atomic Amplitudes
-- [ ] **froesefischer_2019_Electron** (miss 9) — Electron correlation in the lanthanides: 4f2 spectrum of Ce2+
-- [ ] **lackenby_2018_Atomic** (miss 9) — Atomic structure calculations of superheavy noble element oganesson $(Z=118)$
-- [ ] **lawler_2017_Laboratory** (miss 9) — Laboratory transition probabilities for studies of nucleosynthesis of Fe-group elements
-- [ ] **liu_2007_Atomic** (miss 9) — Atomic structure of the super-heavy element No I (Z=102)
-- [ ] **nahar_2024_Rmatrix** (miss 9) — R-matrix calculations for opacities: II. Photoionization and oscillator strengths of iron ions Fe xvii, Fe xviii and Fe xix
-- [ ] **papoulia_2021_initio** (miss 9) — Ab initio electronic factors of the A and B hyperfine structure constants for the 5s2 5p 6s 1,3Po1 states in Sn I
-- [ ] **pradhan_2024_Rmatrix** (miss 9) — R-matrix calculations for opacities: III. Plasma broadening of autoionizing resonances
-- [ ] **rehbehn_2023_Narrow** (miss 9) — Narrow and Ultranarrow Transitions in Highly Charged Xe Ions as Probes of Fifth Forces
-- [ ] **song_2024_Isotope** (miss 9) — Isotope shifts in electron affinities and in binding energies of Pb and hyperfine structure of 207Pb−
-- [ ] **bouazza_2012_Full** (miss 8) — Full hyperfine structure study of singly ionized tantalum
-- [ ] **casier_2026_Machine** (miss 8) — Machine learning assisted selective configuration interaction for accurate ground and excited state calculations
-- [ ] **clear_2022_Wavelengths** (miss 8) — Wavelengths and Energy Levels of Singly Ionized Nickel (Ni ii) Measured Using Fourier Transform Spectroscopy
+- [x] **froesefischer_2019_Electron** (miss 9) — Electron correlation in the lanthanides: 4f2 spectrum of Ce2+
+- [x] **lackenby_2018_Atomic** (miss 9) — Atomic structure calculations of superheavy noble element oganesson $(Z=118)$
+- [x] **lawler_2017_Laboratory** (miss 9) — Laboratory transition probabilities for studies of nucleosynthesis of Fe-group elements
+- [x] **liu_2007_Atomic** (miss 9) — Atomic structure of the super-heavy element No I (Z=102)
+- [x] **nahar_2024_Rmatrix** (miss 9) — R-matrix calculations for opacities: II. Photoionization and oscillator strengths of iron ions Fe xvii, Fe xviii and Fe xix
+- [x] **papoulia_2021_initio** (miss 9) — Ab initio electronic factors of the A and B hyperfine structure constants for the 5s2 5p 6s 1,3Po1 states in Sn I
+- [x] **pradhan_2024_Rmatrix** (miss 9) — R-matrix calculations for opacities: III. Plasma broadening of autoionizing resonances
+- [x] **rehbehn_2023_Narrow** (miss 9) — Narrow and Ultranarrow Transitions in Highly Charged Xe Ions as Probes of Fifth Forces
+- [x] **song_2024_Isotope** (miss 9) — Isotope shifts in electron affinities and in binding energies of Pb and hyperfine structure of 207Pb−
+- [x] **bouazza_2012_Full** (miss 8) — Full hyperfine structure study of singly ionized tantalum
+- [x] **casier_2026_Machine** (miss 8) — Machine learning assisted selective configuration interaction for accurate ground and excited state calculations
+- [x] **clear_2022_Wavelengths** (miss 8) — Wavelengths and Energy Levels of Singly Ionized Nickel (Ni ii) Measured Using Fourier Transform Spectroscopy
 - [ ] **clementson_2024_Measurement** (miss 8) — Measurement and Flexible Atomic Code (FAC) Computation of Extreme Ultraviolet (EUV) Spectra of Eu
 - [ ] **coe_2019_Machine** (miss 8) — Machine Learning Configuration Interaction for ab Initio Potential Energy Curves
 - [ ] **eliav_2015_Electronic** (miss 8) — Electronic structure theory of the superheavy elements
