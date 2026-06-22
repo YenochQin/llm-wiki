@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepare one local paper source for `/ingest`.
 
-Drop-in replacement for OmegaWiki's tex-fetching prep step. This version routes
+Drop-in replacement for LLMWiki's tex-fetching prep step. This version routes
 every local PDF through the MinerU pipeline (lifted from `pdf-source-scripts/`)
 and emits a structured markdown file that `/ingest` consumes directly.
 
@@ -24,7 +24,7 @@ Cache layout (kept across runs for cheap re-prep):
         manifest.json           synthesized from the block list
         images/                 figure/table crops referenced by the .md
 
-CLI (preserves OmegaWiki's contract — `/ingest` invocations are unchanged):
+CLI (preserves LLMWiki's contract — `/ingest` invocations are unchanged):
 
     python3 tools/prepare_paper_source.py \\
         --raw-root raw \\
@@ -65,9 +65,9 @@ import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
+import _mineru
 import frontmatter
 from _cli_io import configure_utf8_stdio
-import _mineru
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths, resolve_runtime_path
 from repair_latex_math import repair_latex_math
 
@@ -117,15 +117,31 @@ JOURNAL_NAME_HINTS = (
 )
 
 KEEP_UNNUMBERED = {
-    "abstract", "keywords", "summary", "introduction",
-    "background", "main", "methods", "method", "materials and methods",
-    "results", "results and discussion", "discussion",
-    "conclusion", "conclusions", "highlights",
-    "references", "reference", "bibliography", "literature cited",
+    "abstract",
+    "keywords",
+    "summary",
+    "introduction",
+    "background",
+    "main",
+    "methods",
+    "method",
+    "materials and methods",
+    "results",
+    "results and discussion",
+    "discussion",
+    "conclusion",
+    "conclusions",
+    "highlights",
+    "references",
+    "reference",
+    "bibliography",
+    "literature cited",
 }
 
 _ROMAN_RE = r"(?:M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))"
-NUMBERED_HEADING_RE = re.compile(r"^\s*((?:\d+(?:\.\d+)*)|(?:" + _ROMAN_RE + r"))\.?\s+[A-Za-z]")
+NUMBERED_HEADING_RE = re.compile(
+    r"^\s*((?:\d+(?:\.\d+)*)|(?:" + _ROMAN_RE + r"))\.?\s+[A-Za-z]"
+)
 IMG_RE = re.compile(r"!\[([^\]]*)\]\(images/([^)]+)\)")
 FIGURE_LABEL_RE = re.compile(r"\b(Figure|Fig\.?|Table)\s*\d+\b", re.IGNORECASE)
 AUTHOR_INITIAL_RE = re.compile(r"\b[A-Z]\.\s*[A-Z]")
@@ -139,14 +155,31 @@ BIBTEX_FIELD_RE = re.compile(
     re.MULTILINE,
 )
 TITLE_STOP_WORDS = {
-    "a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of",
-    "on", "or", "the", "to", "using", "via", "with",
+    "a",
+    "an",
+    "and",
+    "as",
+    "at",
+    "by",
+    "for",
+    "from",
+    "in",
+    "into",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "using",
+    "via",
+    "with",
 }
 
 
 # ---------------------------------------------------------------------------
 # YAML rendering for the markdown frontmatter
 # ---------------------------------------------------------------------------
+
 
 def _yaml_scalar(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
@@ -200,6 +233,7 @@ def _render_yaml(items: dict) -> str:
 # ---------------------------------------------------------------------------
 # Heading classifiers
 # ---------------------------------------------------------------------------
+
 
 def _matches_any(text: str, patterns: list[str]) -> bool:
     return any(re.match(p, text, re.IGNORECASE) for p in patterns)
@@ -275,7 +309,9 @@ def _looks_like_plain_document_title(text: str) -> bool:
         or _looks_like_furniture(h)
     ):
         return False
-    if h.startswith("!") or re.match(r"^(?:doi|pacs|received|published)\b", h, re.IGNORECASE):
+    if h.startswith("!") or re.match(
+        r"^(?:doi|pacs|received|published)\b", h, re.IGNORECASE
+    ):
         return False
     words = [w for w in re.split(r"\s+", h) if any(c.isalpha() for c in w)]
     return len(words) >= 2
@@ -333,6 +369,7 @@ def _cover_title_heading_matches(heading: str, title: str) -> bool:
 # Manifest synthesis (from MinerU content_list block list)
 # ---------------------------------------------------------------------------
 
+
 def _normalize_cover_blocks(blocks: list[dict]) -> list[dict]:
     out: list[dict] = []
     i = 0
@@ -367,10 +404,12 @@ def _normalize_cover_blocks(blocks: list[dict]) -> list[dict]:
                 if not (bj.get("text_level") == 1 and (bj.get("page_idx") or 0) == 0):
                     break
                 tj = (bj.get("text") or "").strip()
-                if (_is_journal_name(tj)
-                        or _is_real_heading(tj)
-                        or _looks_like_author(tj)
-                        or _looks_like_furniture(tj)):
+                if (
+                    _is_journal_name(tj)
+                    or _is_real_heading(tj)
+                    or _looks_like_author(tj)
+                    or _looks_like_furniture(tj)
+                ):
                     break
                 fragments.append(tj)
                 j += 1
@@ -391,7 +430,9 @@ def _synthesize_manifest(md_path: Path, json_path: Path) -> dict:
     full_md = md_path.read_text(encoding="utf-8")
     blocks = _normalize_cover_blocks(raw_blocks)
 
-    total_pages = (max((b.get("page_idx", 0) or 0) for b in blocks) + 1) if blocks else 0
+    total_pages = (
+        (max((b.get("page_idx", 0) or 0) for b in blocks) + 1) if blocks else 0
+    )
 
     sections: list[dict] = []
     all_figures: list[dict] = []
@@ -404,18 +445,24 @@ def _synthesize_manifest(md_path: Path, json_path: Path) -> dict:
             if not heading:
                 continue
             cur_section_heading = heading
-            sections.append({
-                "heading": heading,
-                "page": int(block.get("page_idx", 0) or 0),
-                "figures": [],
-                "tables": [],
-            })
+            sections.append(
+                {
+                    "heading": heading,
+                    "page": int(block.get("page_idx", 0) or 0),
+                    "figures": [],
+                    "tables": [],
+                }
+            )
         elif block.get("type") == "image":
             img_path = block.get("img_path") or ""
             if not img_path:
                 continue
             cap_list = block.get("img_caption") or block.get("image_caption") or []
-            caption = " ".join(cap_list).strip() if isinstance(cap_list, list) else str(cap_list)
+            caption = (
+                " ".join(cap_list).strip()
+                if isinstance(cap_list, list)
+                else str(cap_list)
+            )
             m = FIGURE_LABEL_RE.search(caption)
             if m:
                 label = m.group(0)
@@ -432,12 +479,14 @@ def _synthesize_manifest(md_path: Path, json_path: Path) -> dict:
             }
             all_figures.append(entry)
             if sections:
-                sections[-1]["figures"].append({
-                    "label": label,
-                    "path": img_path,
-                    "caption": caption,
-                    "page": page,
-                })
+                sections[-1]["figures"].append(
+                    {
+                        "label": label,
+                        "path": img_path,
+                        "caption": caption,
+                        "page": page,
+                    }
+                )
 
     return {
         "sections": sections,
@@ -457,12 +506,15 @@ def _normalize_cache(cache_dir: Path, md_path: Path, json_path: Path) -> None:
 
     if not manifest.exists() or manifest.stat().st_mtime < json_path.stat().st_mtime:
         data = _synthesize_manifest(md_path, json_path)
-        manifest.write_text(json.dumps(data, ensure_ascii=False, indent=None), encoding="utf-8")
+        manifest.write_text(
+            json.dumps(data, ensure_ascii=False, indent=None), encoding="utf-8"
+        )
 
 
 # ---------------------------------------------------------------------------
 # Markdown adapter: full.md + manifest -> structured wiki source
 # ---------------------------------------------------------------------------
+
 
 def _detect_title(manifest: dict) -> str:
     for sec in manifest.get("sections", [])[:8]:
@@ -513,7 +565,11 @@ def _transform_markdown(
                 continue
 
             # Title heading in papers without explicit section headings (e.g. PRL)
-            if in_cover and title_norm and _cover_title_heading_matches(heading_text, detected_title):
+            if (
+                in_cover
+                and title_norm
+                and _cover_title_heading_matches(heading_text, detected_title)
+            ):
                 in_cover = False
                 if not title_emitted:
                     out.append(f"# {heading_text}")
@@ -522,7 +578,9 @@ def _transform_markdown(
                 skip_body = False
                 continue
 
-            is_content = _is_numbered(heading_text) or _is_allowed_unnumbered(heading_text)
+            is_content = _is_numbered(heading_text) or _is_allowed_unnumbered(
+                heading_text
+            )
 
             if in_cover and not is_content:
                 skip_body = True
@@ -542,7 +600,9 @@ def _transform_markdown(
                 skip_body = True
                 continue
 
-            if not _is_numbered(heading_text) and not _is_allowed_unnumbered(heading_text):
+            if not _is_numbered(heading_text) and not _is_allowed_unnumbered(
+                heading_text
+            ):
                 out.append("")
                 out.append(f"**{heading_text}**")
                 out.append("")
@@ -593,15 +653,19 @@ def _build_section_index(manifest: dict) -> list[dict]:
         h = (sec.get("heading", "") or "").strip()
         if not h or _heading_is_junk(h) or _heading_is_cutoff(h) or _is_journal_name(h):
             continue
-        out.append({
-            "heading": _normalize_heading_text(h),
-            "page": int(sec.get("page", 0) or 0),
-            "figures": len(sec.get("figures", []) or []),
-        })
+        out.append(
+            {
+                "heading": _normalize_heading_text(h),
+                "page": int(sec.get("page", 0) or 0),
+                "figures": len(sec.get("figures", []) or []),
+            }
+        )
     return out
 
 
-def _build_figures_index(manifest: dict, used_images: set[str], slug: str) -> list[dict]:
+def _build_figures_index(
+    manifest: dict, used_images: set[str], slug: str
+) -> list[dict]:
     figures: list[dict] = []
     for fig in manifest.get("allFigures", []) or []:
         path = fig.get("path", "") or ""
@@ -609,13 +673,15 @@ def _build_figures_index(manifest: dict, used_images: set[str], slug: str) -> li
         if not name or name not in used_images:
             continue
         caption = re.sub(r"\s+", " ", (fig.get("caption", "") or "").strip())
-        figures.append({
-            "label": fig.get("label", ""),
-            "page": int(fig.get("page", 0) or 0),
-            "section": fig.get("section", ""),
-            "path": f"assets/{slug}/{name}",
-            "caption": caption[:500],
-        })
+        figures.append(
+            {
+                "label": fig.get("label", ""),
+                "page": int(fig.get("page", 0) or 0),
+                "section": fig.get("section", ""),
+                "path": f"assets/{slug}/{name}",
+                "caption": caption[:500],
+            }
+        )
     return figures
 
 
@@ -677,7 +743,12 @@ def _upsert_bibtex_body(text: str, bibtex: str = "") -> str:
         post = frontmatter.loads(text)
     except Exception:
         body_bibtex = bibtex.strip()
-        return text if not body_bibtex else BIBTEX_SECTION_RE.sub("", text).rstrip() + _format_bibtex_section(body_bibtex)
+        return (
+            text
+            if not body_bibtex
+            else BIBTEX_SECTION_RE.sub("", text).rstrip()
+            + _format_bibtex_section(body_bibtex)
+        )
 
     metadata = dict(post.metadata)
     fm_bibtex = str(metadata.pop("bibtex", "") or "").strip()
@@ -703,7 +774,9 @@ def _repair_prepared_text(text: str) -> tuple[str, dict[str, int | bool]]:
     metadata["latexRepairReplacements"] = int(report.replacements)
     metadata["latexRepairConvertedDelimiters"] = int(report.converted_delimiters)
     metadata["latexRepairMathSpans"] = int(report.math_spans)
-    return frontmatter.dumps(frontmatter.Post(repaired_body, **metadata)).rstrip() + "\n", report.as_dict()
+    return frontmatter.dumps(
+        frontmatter.Post(repaired_body, **metadata)
+    ).rstrip() + "\n", report.as_dict()
 
 
 def _latex_warning(report: dict[str, int | bool]) -> str:
@@ -716,7 +789,11 @@ def _latex_warning(report: dict[str, int | bool]) -> str:
 
 def _safe_source_slug_part(value: str, *, separator: str = "-") -> str:
     """Return a filesystem-safe source slug component."""
-    text = unicodedata.normalize("NFKD", value.strip().lower()).encode("ascii", "ignore").decode("ascii")
+    text = (
+        unicodedata.normalize("NFKD", value.strip().lower())
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     text = re.sub(r"\\[a-zA-Z]+\*?", " ", text)
     text = text.replace("$", " ")
     text = re.sub(r"[{}\\^]", " ", text)
@@ -727,7 +804,11 @@ def _safe_source_slug_part(value: str, *, separator: str = "-") -> str:
 
 def _safe_citation_key(value: str) -> str:
     """Normalize a Zotero/Better BibTeX citation key for use as a file stem."""
-    text = unicodedata.normalize("NFKD", value.strip()).encode("ascii", "ignore").decode("ascii")
+    text = (
+        unicodedata.normalize("NFKD", value.strip())
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     if not text:
         return ""
     text = re.sub(r"\\[a-zA-Z]+\*?", "", text)
@@ -758,7 +839,9 @@ def _first_author_from_bibtex(bibtex: str) -> str:
 
 
 def _author_token(authors: str, bibtex: str) -> str:
-    first_author = (authors or "").split(",", 1)[0].strip() or _first_author_from_bibtex(bibtex)
+    first_author = (authors or "").split(",", 1)[
+        0
+    ].strip() or _first_author_from_bibtex(bibtex)
     if not first_author:
         return "unknown"
     if "," in first_author:
@@ -770,16 +853,24 @@ def _author_token(authors: str, bibtex: str) -> str:
 
 
 def _year_token(year: str, bibtex: str) -> str:
-    match = re.search(r"\d{4}", str(year or "")) or re.search(r"\d{4}", _bibtex_field(bibtex, "year"))
+    match = re.search(r"\d{4}", str(year or "")) or re.search(
+        r"\d{4}", _bibtex_field(bibtex, "year")
+    )
     return match.group(0) if match else "nodate"
 
 
 def _very_short_title(title: str, bibtex: str, max_words: int = 3) -> str:
     title_text = title.strip() or _bibtex_field(bibtex, "title")
-    title_text = unicodedata.normalize("NFKD", title_text).encode("ascii", "ignore").decode("ascii")
+    title_text = (
+        unicodedata.normalize("NFKD", title_text)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     tokens = [
         token
-        for token in re.split(r"[^A-Za-z0-9]+", re.sub(r"\\[a-zA-Z]+\*?", " ", title_text).lower())
+        for token in re.split(
+            r"[^A-Za-z0-9]+", re.sub(r"\\[a-zA-Z]+\*?", " ", title_text).lower()
+        )
         if len(token) >= 2 and token not in TITLE_STOP_WORDS
     ]
     return "-".join(tokens[:max_words]) or "untitled"
@@ -806,6 +897,7 @@ def _source_slug(
 # ---------------------------------------------------------------------------
 # Top-level pipeline
 # ---------------------------------------------------------------------------
+
 
 def _sha16_of_file(path: Path, max_bytes: int = 4 * 1024 * 1024) -> str:
     h = hashlib.sha256()
@@ -838,7 +930,9 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
         return False
 
 
-def _reject_repo_wiki_output(parser: argparse.ArgumentParser, output_dir: Path, paths) -> None:
+def _reject_repo_wiki_output(
+    parser: argparse.ArgumentParser, output_dir: Path, paths
+) -> None:
     repo_wiki = (paths.project_root / "wiki").resolve()
     configured_wiki = paths.wiki_root.resolve()
     if configured_wiki != repo_wiki and _is_relative_to(output_dir, repo_wiki):
@@ -870,7 +964,9 @@ def prepare(
     Returns the manifest `/ingest` consumes.
     """
     warnings: list[str] = []
-    output_dir = _source_output_dir(raw_root, wiki_root=wiki_root, output_dir=output_dir)
+    output_dir = _source_output_dir(
+        raw_root, wiki_root=wiki_root, output_dir=output_dir
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     display_root = project_root or _project_root(raw_root)
 
@@ -942,8 +1038,11 @@ def prepare(
                 "prepared_path": display_path(out_path, display_root),
                 "ingest_format": "mineru-md",
                 "title": existing_front.get("title") or title,
-                "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
-                "warnings": [f"prepared source already exists; reusing: {out_path}"] + latex_warnings,
+                "abstract_excerpt": _build_abstract_excerpt(
+                    _strip_frontmatter(existing_text)
+                ),
+                "warnings": [f"prepared source already exists; reusing: {out_path}"]
+                + latex_warnings,
                 "usable": True,
             }
         return {
@@ -951,7 +1050,9 @@ def prepare(
             "prepared_path": display_path(out_path, display_root),
             "ingest_format": "mineru-md",
             "title": title,
-            "abstract_excerpt": _build_abstract_excerpt(_strip_frontmatter(existing_text)),
+            "abstract_excerpt": _build_abstract_excerpt(
+                _strip_frontmatter(existing_text)
+            ),
             "warnings": [
                 f"prepared source collision: another source already uses this title/slug: {display_path(out_path, display_root)}",
                 "Rerun with --overwrite only after confirming replacement with the user.",
@@ -959,13 +1060,17 @@ def prepare(
             "usable": False,
         }
 
-    body, dropped, skipped_sections, latex_report = _transform_markdown(full_md, slug, title)
+    body, dropped, skipped_sections, latex_report = _transform_markdown(
+        full_md, slug, title
+    )
     if latex_report.get("changed"):
         warnings.append(_latex_warning(latex_report))
 
     if not body.strip():
         return {
-            "canonical_ingest_path": display_path(output_dir / f"{slug}.md", display_root),
+            "canonical_ingest_path": display_path(
+                output_dir / f"{slug}.md", display_root
+            ),
             "prepared_path": None,
             "ingest_format": "mineru-md",
             "title": title,
@@ -1001,7 +1106,9 @@ def prepare(
         front["paperSlug"] = key
     if latex_report.get("changed"):
         front["latexRepairReplacements"] = int(latex_report.get("replacements", 0) or 0)
-        front["latexRepairConvertedDelimiters"] = int(latex_report.get("converted_delimiters", 0) or 0)
+        front["latexRepairConvertedDelimiters"] = int(
+            latex_report.get("converted_delimiters", 0) or 0
+        )
         front["latexRepairMathSpans"] = int(latex_report.get("math_spans", 0) or 0)
     if skipped_sections:
         front["skippedSectionHeadings"] = skipped_sections
@@ -1014,7 +1121,12 @@ def prepare(
     if figures:
         front["figures"] = figures
 
-    document = _render_yaml(front) + "\n\n" + body.rstrip() + _format_bibtex_section(bibtex_override)
+    document = (
+        _render_yaml(front)
+        + "\n\n"
+        + body.rstrip()
+        + _format_bibtex_section(bibtex_override)
+    )
     out_path.write_text(document, encoding="utf-8")
 
     print(
@@ -1066,8 +1178,13 @@ def prepare_paper_source(
     )
     result.setdefault("candidate_id", _local_candidate_id(path, raw_root))
     result.setdefault("source_kind", "paper")
-    result.setdefault("source_path", _project_relative(path, raw_root, project_root=project_root))
-    result.setdefault("resolved_source_path", _project_relative(path, raw_root, project_root=project_root))
+    result.setdefault(
+        "source_path", _project_relative(path, raw_root, project_root=project_root)
+    )
+    result.setdefault(
+        "resolved_source_path",
+        _project_relative(path, raw_root, project_root=project_root),
+    )
     result.setdefault("canonical_read_path", result.get("canonical_ingest_path", ""))
     result.setdefault("original_format", path.suffix.lower().lstrip(".") or "file")
     return result
@@ -1082,7 +1199,9 @@ def _local_candidate_id(path: Path, raw_root: Path) -> str:
     return f"local:{slug or path.stem.lower()}"
 
 
-def _project_relative(path: Path, raw_root: Path, project_root: Path | None = None) -> str:
+def _project_relative(
+    path: Path, raw_root: Path, project_root: Path | None = None
+) -> str:
     if project_root is not None:
         return display_path(path, project_root)
     try:
@@ -1127,33 +1246,74 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--raw-root", default=None,
-                        help="Raw source root used for source resolution. Accepts @raw-root. Defaults to config/paths.json or ./raw.")
-    parser.add_argument("--wiki-root", default=None,
-                        help="Optional wiki vault root for path display/config resolution. Accepts @wiki-root; does not replace --output-dir.")
-    parser.add_argument("--output-dir", required=True,
-                        help="Explicit directory for prepared paper markdown output, e.g. @configured-sources-papers.")
-    parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path,
-                        help="Path config JSON (default: config/paths.json).")
-    parser.add_argument("--source", required=True, type=Path,
-                        help="Path to a local PDF to prepare.")
-    parser.add_argument("--title", default="",
-                        help="Confident agent-recovered title. Used verbatim when set.")
-    parser.add_argument("--bibtex", default="",
-                        help="Derived Zotero BibTeX string to persist in the prepared source body under ## BibTeX.")
-    parser.add_argument("--citation-key", default="",
-                        help="Preferred Zotero/Better BibTeX citation key for the prepared source filename.")
-    parser.add_argument("--authors", default="",
-                        help="Author string used for fallback source filename author_year_veryshorttitle.")
-    parser.add_argument("--year", default="",
-                        help="Publication year used for fallback source filename author_year_veryshorttitle.")
-    parser.add_argument("--cache-root", required=True,
-                        help="Explicit MinerU cache root for OCR intermediate outputs. Accepts @mineru-cache.")
-    parser.add_argument("--language", default="en", help="Document language for MinerU.")
-    parser.add_argument("--backend", default="api", choices=("api", "local"),
-                        help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).")
-    parser.add_argument("--overwrite", action="store_true",
-                        help="Replace an existing wiki/sources/papers/<source-slug>.md after user confirmation.")
+    parser.add_argument(
+        "--raw-root",
+        default=None,
+        help="Raw source root used for source resolution. Accepts @raw-root. Defaults to config/paths.json or ./raw.",
+    )
+    parser.add_argument(
+        "--wiki-root",
+        default=None,
+        help="Optional wiki vault root for path display/config resolution. Accepts @wiki-root; does not replace --output-dir.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Explicit directory for prepared paper markdown output, e.g. @configured-sources-papers.",
+    )
+    parser.add_argument(
+        "--paths-config",
+        default=DEFAULT_CONFIG_PATH,
+        type=Path,
+        help="Path config JSON (default: config/paths.json).",
+    )
+    parser.add_argument(
+        "--source", required=True, type=Path, help="Path to a local PDF to prepare."
+    )
+    parser.add_argument(
+        "--title",
+        default="",
+        help="Confident agent-recovered title. Used verbatim when set.",
+    )
+    parser.add_argument(
+        "--bibtex",
+        default="",
+        help="Derived Zotero BibTeX string to persist in the prepared source body under ## BibTeX.",
+    )
+    parser.add_argument(
+        "--citation-key",
+        default="",
+        help="Preferred Zotero/Better BibTeX citation key for the prepared source filename.",
+    )
+    parser.add_argument(
+        "--authors",
+        default="",
+        help="Author string used for fallback source filename author_year_veryshorttitle.",
+    )
+    parser.add_argument(
+        "--year",
+        default="",
+        help="Publication year used for fallback source filename author_year_veryshorttitle.",
+    )
+    parser.add_argument(
+        "--cache-root",
+        required=True,
+        help="Explicit MinerU cache root for OCR intermediate outputs. Accepts @mineru-cache.",
+    )
+    parser.add_argument(
+        "--language", default="en", help="Document language for MinerU."
+    )
+    parser.add_argument(
+        "--backend",
+        default="api",
+        choices=("api", "local"),
+        help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace an existing wiki/sources/papers/<source-slug>.md after user confirmation.",
+    )
     raw_args = sys.argv[1:]
     if any(arg == "--item-key" or arg.startswith("--item-key=") for arg in raw_args):
         parser.error(
@@ -1164,17 +1324,31 @@ def main() -> None:
     args = parser.parse_args()
 
     base_paths = load_paths(config_path=args.paths_config)
-    raw_root = resolve_runtime_path(args.raw_root, base_paths, role="--raw-root") if args.raw_root else base_paths.raw_root
-    wiki_root = resolve_runtime_path(args.wiki_root, base_paths, role="--wiki-root") if args.wiki_root else base_paths.wiki_root
-    paths = load_paths(config_path=args.paths_config, wiki_root=wiki_root, raw_root=raw_root)
+    raw_root = (
+        resolve_runtime_path(args.raw_root, base_paths, role="--raw-root")
+        if args.raw_root
+        else base_paths.raw_root
+    )
+    wiki_root = (
+        resolve_runtime_path(args.wiki_root, base_paths, role="--wiki-root")
+        if args.wiki_root
+        else base_paths.wiki_root
+    )
+    paths = load_paths(
+        config_path=args.paths_config, wiki_root=wiki_root, raw_root=raw_root
+    )
     output_dir = resolve_runtime_path(args.output_dir, paths, role="--output-dir")
     cache_root = resolve_runtime_path(args.cache_root, paths, role="--cache-root")
     if output_dir == Path("/sources/papers") or str(output_dir).startswith("/sources/"):
-        parser.error("--output-dir resolved under /sources; pass @configured-sources-papers or an absolute wiki path.")
+        parser.error(
+            "--output-dir resolved under /sources; pass @configured-sources-papers or an absolute wiki path."
+        )
     _reject_repo_wiki_output(parser, output_dir, paths)
     legacy_cache = (paths.project_root / ".mineru-cache").resolve()
     if cache_root == legacy_cache:
-        parser.error("--cache-root resolved to legacy .mineru-cache; pass @mineru-cache so cache files go under .checkpoints/mineru-cache.")
+        parser.error(
+            "--cache-root resolved to legacy .mineru-cache; pass @mineru-cache so cache files go under .checkpoints/mineru-cache."
+        )
     source = _resolve_source_path(args.source, paths.raw_root, paths.project_root)
     result = prepare(
         pdf=source,

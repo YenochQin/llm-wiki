@@ -2,7 +2,7 @@
 
 > Personal LLM-maintained research wiki. Powered by Claude Code.
 > This file is the wiki's runtime entry point: defines page structure, link conventions, and workflow constraints.
-> Adapted from OmegaWiki's workflow with the PDF preprocessing layer swapped to MinerU.
+> Adapted from LLMWiki's workflow with the PDF preprocessing layer swapped to MinerU.
 
 > **Maintenance note**: Managed under `i18n/`. Edit `i18n/en/CLAUDE.md` (not the active copy at the root). Run `./setup.sh --lang <current>` to sync.
 

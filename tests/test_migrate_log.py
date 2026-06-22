@@ -3,7 +3,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
 import migrate_log
@@ -16,7 +15,7 @@ class MigrateLogTests(unittest.TestCase):
 
 - Paper: zhang_2024_Variational
 - Edges: 4
-# OmegaWiki Log
+# LLMWiki Log
 ## [2026-05-16] check --fix | repaired lint issues
 """
         )
@@ -33,13 +32,15 @@ class MigrateLogTests(unittest.TestCase):
             ],
         )
         self.assertEqual(entries[1].skill, "check")
-        self.assertEqual(entries[1].lines, ["[2026-05-16] --fix | repaired lint issues"])
+        self.assertEqual(
+            entries[1].lines, ["[2026-05-16] --fix | repaired lint issues"]
+        )
 
     def test_migrate_log_groups_by_week_and_skill(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "log.md").write_text(
-                """# OmegaWiki Log
+                """# LLMWiki Log
 
 ## [2026-05-14] ingest | added paper A
 ## [2026-05-12] ingest-light | added paper B
@@ -86,10 +87,7 @@ class MigrateLogTests(unittest.TestCase):
         middle = "=" * 7
         right = ">" * 7
         entries, warnings = migrate_log.parse_legacy_log(
-            f"## [2026-06-03] discover | mode=wiki\n"
-            f"{left}\n"
-            f"{middle}\n"
-            f"{right}\n"
+            f"## [2026-06-03] discover | mode=wiki\n{left}\n{middle}\n{right}\n"
         )
 
         self.assertEqual(len(entries), 1)
@@ -108,7 +106,9 @@ class MigrateLogTests(unittest.TestCase):
             log_dir = root / "log"
             log_dir.mkdir()
             (log_dir / "2026-06-01.md").write_text("# log\n", encoding="utf-8")
-            (log_dir / "2026-06-15.md").write_text("daily-looking file\n", encoding="utf-8")
+            (log_dir / "2026-06-15.md").write_text(
+                "daily-looking file\n", encoding="utf-8"
+            )
             (log_dir / "notes.md").write_text("not a weekly log\n", encoding="utf-8")
 
             dry_run = migrate_log.rename_old_weekly_logs(root, dry_run=True)
@@ -116,7 +116,12 @@ class MigrateLogTests(unittest.TestCase):
 
             self.assertEqual(
                 dry_run["renamed"],
-                [{"from": str(log_dir / "2026-06-01.md"), "to": str(log_dir / "2026-06-w1.md")}],
+                [
+                    {
+                        "from": str(log_dir / "2026-06-01.md"),
+                        "to": str(log_dir / "2026-06-w1.md"),
+                    }
+                ],
             )
             self.assertEqual(result["status"], "ok")
             self.assertFalse((log_dir / "2026-06-01.md").exists())
@@ -135,7 +140,12 @@ class MigrateLogTests(unittest.TestCase):
 
             self.assertEqual(
                 result["renamed"],
-                [{"from": str(log_dir / "2026-06-w1.log"), "to": str(log_dir / "2026-06-w1.md")}],
+                [
+                    {
+                        "from": str(log_dir / "2026-06-w1.log"),
+                        "to": str(log_dir / "2026-06-w1.md"),
+                    }
+                ],
             )
             self.assertFalse((log_dir / "2026-06-w1.log").exists())
             self.assertTrue((log_dir / "2026-06-w1.md").exists())

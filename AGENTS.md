@@ -1,105 +1,71 @@
-# llm-wiki — 运行时规范
+# llm-wiki — Runtime Schema
 
-> 个人研究 wiki，由 Codex 维护。
-> 本文件是 wiki 的运行入口：定义页面结构、链接约定和工作流约束。
-> 工作流改编自 OmegaWiki，PDF 预处理层已替换为 MinerU。
+> Personal LLM-maintained research wiki. Powered by Codex.
+> This file is the wiki's runtime entry point: defines page structure, link conventions, and workflow constraints.
+> Adapted from LLMWiki's workflow with the PDF preprocessing layer swapped to MinerU.
 
-> **维护说明**：本文件由 `i18n/` 管理。请编辑 `i18n/zh/AGENTS.md`，不要直接编辑仓库根目录的激活副本。运行 `./setup.sh --lang zh` 同步。
-
----
-
-## 仓库布局
-
-只有需要完整目录树时才打开 `docs/runtime-directory-structure.en.md`。
-
-请优先记住这张心智地图：
-
-### `wiki/` 是主要产品界面
-
-- `wiki/index.md` 是所有 wiki 页面的目录
-- `wiki/log/` 存放按周拆分、只追加的活动日志
-- `wiki/papers/` 存放论文总结
-- `wiki/concepts/`、`wiki/topics/`、`wiki/foundations/` 存放可复用知识结构
-- `wiki/people/`、`wiki/ideas/`、`wiki/experiments/`、`wiki/claims/` 存放研究者、假设、实验和断言
-- `wiki/Summary/` 存放领域级综合
-- `wiki/outputs/` 存放生成产物
-- `wiki/graph/` 是派生状态，不要手动编辑
-
-### 格式守卫
-
-- 起草或修复 wiki 页面结构、YAML、正文区段前，先打开 `docs/runtime-page-templates.en.md`
-- **公式格式强制要求**：无论是在生成 wiki 内容的过程中，还是在使用 llm-wiki 对话的过程中，输出的行内 LaTeX 公式一律使用 `$...$` 包围，行间 LaTeX 公式一律使用 `$$...$$` 包围。
-- 需要可复制的页面起始模板时，使用 `docs/templates/`；根目录不放模板库
-- 需要 graph 派生文件、`index.md` 或 `log/` 细节时，打开 `docs/runtime-support-files.en.md`
-- `SKILL.md` 是每个 skill 的即时入口；大型 skill 可能还会在自身目录下提供按需参考文件
-- 执行某个 skill 时必须把该 skill 文档视为只读运行规范：如果发现 skill 描述、模板、命令或约束有问题，可以在汇报中指出并建议修改；除非用户明确要求“修改/修复/更新 skill”，否则不得在执行该 skill 的过程中自行编辑 `skills/`、`i18n/*/skills/`、`CLAUDE.md` 或 `AGENTS.md`
-- `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
-
-### 正式页面语言规范
-
-- 正式 wiki 页面默认使用英文写作，尤其是 `wiki/papers/`、`wiki/concepts/`、`wiki/claims/`、`wiki/experiments/`、`wiki/Summary/` 等可复用研究资产。
-- 除非用户明确要求中文，生成或重写正式页面正文时使用英文；用户对话、运行汇报、`wiki/log/`、临时 notes 和个人草稿可使用中文。
-- 中文论文或中文资料可以保留中文标题、术语和必要说明，但分析性正文仍优先英文；关键术语可在首次出现时给出中英文对照。
-- `## Source excerpts`、blockquote、BibTeX、标题、作者名和原始元数据保持 source 原语言和原始拼写，不为满足正文语言规范而翻译。
-
-### `raw/` 和 `config/`
-
-- `raw/papers/`、`raw/notes/`、`raw/web/` 是用户拥有的输入
-- `wiki/sources/papers/` 存放 MinerU 转化后的论文 markdown（PDF 原件仍留在 `raw/papers/`）
-- `wiki/sources/notes/`、`wiki/sources/web/` 存放复制到 vault 中的 notes 和 web markdown/text
-- `config/` 存放环境模板（`.env.example`、`settings.local.json.example`、`paths.json.example`）
-- `config/paths.json` 可用 `profiles.macos/windows/linux` 配置不同系统的外部 wiki vault 和 raw source 绝对路径；这是本机私有配置，不提交
+> **Maintenance note**: Managed under `i18n/`. Edit `i18n/en/AGENTS.md` (not the active copy at the root). Run `./setup.sh --lang <current>` to sync.
 
 ---
 
-## 9 种页面类型
+## Repository Layout
 
-`papers`、`concepts`、`topics`、`people`、`ideas`、`experiments`、`claims`、`Summary`、`foundations`。
+Open `docs/runtime-directory-structure.en.md` only when you need the full repo tree.
 
-页面模板见 `docs/runtime-page-templates.en.md`；graph、index、log 参考见 `docs/runtime-support-files.en.md`。
+Keep this mental map in immediate context:
 
-### 论文分析分类规范
+### `wiki/` is the main product surface
 
-每个 `papers/{slug}.md` 必须先完成研究类型和研究对象分类：
+- `wiki/index.md` is the catalog of all wiki pages
+- `wiki/log/` stores weekly activity logs maintained by `tools/research_wiki.py log`
+- `wiki/papers/` holds paper summaries
+- `wiki/concepts/`, `wiki/topics/`, and `wiki/foundations/` hold reusable knowledge structure
+- `wiki/people/`, `wiki/ideas/`, `wiki/experiments/`, and `wiki/claims/` hold research actors, hypotheses, tests, and assertions
+- `wiki/Summary/` holds area-level syntheses
+- `wiki/outputs/` holds generated artifacts
+- `wiki/graph/` is derived state; do not edit it manually
 
-- `paper_type`：标记文献形态，使用 `paper`、`review`、`book`、`degree_thesis`、`preprint`、`report`、`chapter`、`dataset`、`other` 之一。注意这和 `research_modes` 不同：综述论文应写 `paper_type: review`，但 `research_modes` 仍按其分析/综合的证据类型选择。
-- `research_modes`：从 `theory`、`computation`、`experiment` 中选择一个或多个。综述论文按其分析/综合的证据类型选择，不要只写 `review`。
-- `theory_tags`：列出使用、比较或检验的具体理论、模型、机制或分析框架。
-- `computation_tags`：列出采用的计算/模拟/统计/机器学习/数据分析方案；没有则为空列表。
-- `experiment_tags`：列出观测、实验、样品分析、仪器、任务或实验流程；没有则为空列表。
-- `research_object_tags`：列出研究对象，例如材料、天体、系统、样品、人群、模型对象或数据集。
+### Formatting guardrail
 
-论文正文必须包含 `## Research classification`，分别说明：属于理论/计算/实验中的哪些方向；每个方向具体用了什么理论、计算方案或实验流程；研究对象是什么。无法从文献中确定时写 `unclear`，不要编造。
+- Open `docs/runtime-page-templates.en.md` before drafting or repairing wiki page structure, YAML, or body sections
+- For copyable page starter templates, use `docs/templates/`; do not keep a root-level template library
+- Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log/` format
+- `SKILL.md` is the immediate entrypoint for a skill; some larger skills may also provide local on-demand reference files under their skill directory
+- Treat skill documents as read-only runtime specifications while executing a skill: if you discover a problem in a skill description, template, command, or constraint, report it and suggest the needed change; unless the user explicitly asks to modify/fix/update the skill, do not edit `skills/`, `i18n/*/skills/`, `CLAUDE.md`, or `AGENTS.md` during that skill run
+- `/init` is the first concrete example of this pattern: read `skills/init/SKILL.md` first, then open `skills/init/references/*` only when needed
 
-### 论文证据包与防幻觉规范
+### `raw/` and `config/`
 
-每个由 skill 生成或重写的 `papers/{slug}.md` 必须在解释性正文前包含 `## Evidence Pack`。
+- `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned inputs
+- `wiki/sources/papers/` stores MinerU-converted paper markdown; source PDFs stay in `raw/papers/`
+- `wiki/sources/notes/` and `wiki/sources/web/` store vault-visible copies of notes and web markdown/text
+- `config/` holds environment templates (`.env.example`, `settings.local.json.example`, `paths.json.example`)
+- `config/paths.json` may use `profiles.macos/windows/linux` to connect this code repository to OS-specific external wiki vault and raw source directories; it is machine-local and not committed
 
-- Evidence Pack 必须只由 canonical prepared source（通常是 `wiki/sources/papers/{source-slug}.md`）抽取。
-- 每条 evidence card 必须包含证据 id（如 `E1`）、prepared markdown 链接、源章节/图表/公式位置（可用时）、一段简短原文 blockquote，以及该卡的用途标签（`Problem`/`Method`/`Results`/`Limitations`/`Concept`/`Claim` 之一）。
-- 每条 evidence card 的 Markdown 形状固定，只替换占位符，不改变标记顺序：
+---
 
-```markdown
-- `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
-  > exact source fragment
-```
+## 9 Page Types
 
-  可读 evidence id 必须保留在开头的 `` `E1` ``，Obsidian block id 必须放在同一条 bullet header 的末尾 `^E1`。正文引用必须使用完整的 Obsidian block-link 字面量 `[[#^E1]]`；外层双方括号 `[[...]]`、开头井号 `#`、以及引用前的一个字面空格都不能少。必须写成 `... finding [[#^E1]]`，禁止贴着前一个词写成 `... finding[[#^E1]]`。禁止写成 `[#^E1]`、`[[^E1]]`、`#^E1`、`^E1`、`[!E1]`，也禁止写成 `- ^E1 Problem — ...` 或用 `^E1` 替换 `` `E1` ``。
-- **覆盖度下限**：Evidence Pack 的卡片数量必须覆盖它所支撑的全部内容，不得停在一个固定的最小值（例如恰好三张是偷懒信号，不是目标）。下限是——页面实质填写（非 `unclear`、非空）的每个解释性区段 `Problem`、`Method`、`Results`、`Limitations` 各至少一张对应用途的卡；本次写入/重写生成的每个 concept 页各至少一张 `Concept` 卡；每条生成的 claim 各至少一张 `Claim` 卡。卡片数应随论文信息量和下游实体数量增长。若某区段源文确实无法支撑，写 `unclear` 或移入 `## Open questions`，该区段不需要卡。
-- `## Method`、`## Results`、`## Limitations`、概念定义和 claim evidence 只能使用 Evidence Pack 或 `## Source excerpts` 中可追溯的事实。
-- 数字、单位、符号、样本量、数据集名、机制/因果、SOTA/first/best、necessary/sufficient 等高风险表述必须有直接原文证据。
-- 证据不足时写 `unclear`、省略，或放入 `## Open questions`；禁止用模型记忆补全。
-- 写入或重写 paper/concept/claim 后，必须对 touched files 运行 scoped grounding gate：
+`papers`, `concepts`, `topics`, `people`, `ideas`, `experiments`, `claims`, `Summary`, `foundations`.
 
-```shell
-uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "concepts/{slug}.md" --only "claims/{slug}.md" --json
-```
+Open `docs/runtime-page-templates.en.md` for page templates and `docs/runtime-support-files.en.md` for graph/index/log references.
 
-若出现 red issue，必须先修复或停止并报告 source-quality blocker，不得把它降级为普通 warning。
+### Paper Analysis Classification
 
-### BibTeX 存放规范
+Every `papers/{slug}.md` must first classify the paper by research direction and research object:
 
-`papers/{slug}.md` 的 YAML frontmatter 不得包含 `bibtex` 字段。BibTeX 属于正文内容，必须放在 `## BibTeX` 小节中的 fenced code block：
+- `paper_type`: classify the source form as one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`. This is separate from `research_modes`: review articles should use `paper_type: review`, while `research_modes` still reflects the evidence types being analyzed or synthesized.
+- `research_modes`: choose one or more of `theory`, `computation`, `experiment`. For review papers, classify by the evidence types being analyzed/synthesized; do not use `review` as a mode.
+- `theory_tags`: list the concrete theories, models, mechanisms, or analytical frameworks used, compared, or tested.
+- `computation_tags`: list the computational/simulation/statistical/ML/data-analysis schemes used; empty list if none.
+- `experiment_tags`: list observations, experiments, sample analyses, instruments, missions, or protocols; empty list if none.
+- `research_object_tags`: list the research objects, such as materials, celestial bodies, systems, samples, populations, model objects, or datasets.
+
+The body must include `## Research classification`, explaining which of theory/computation/experiment apply, what specific theory/computational scheme/experimental process was used, and what objects were studied. If the source does not make something clear, write `unclear` rather than inventing it.
+
+### BibTeX Placement
+
+`papers/{slug}.md` YAML frontmatter must not contain a `bibtex` field. BibTeX belongs in the body under `## BibTeX` as a fenced code block:
 
 ````markdown
 ## BibTeX
@@ -113,18 +79,18 @@ uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "p
 ```
 ````
 
-BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`title`、`year`、一个 venue 字段（`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`）、`volume`、`number`、`pages`、`doi`。不要把 URL、tags/keywords、abstract、language、rights 或笔记类字段写进 BibTeX。
+BibTeX entries must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`. Do not include URL, tags/keywords, abstract, language, rights, or note-like fields in the BibTeX block.
 
-### 概念页原文溯源规范
+### Concept Source Grounding
 
-每个 `concepts/{slug}.md` 页面必须在 `## Definition` 后包含 `## Source excerpts`。
+Every `concepts/{slug}.md` page must include `## Source excerpts` immediately after `## Definition`.
 
-- 对每篇实质支撑该概念的论文，加入一条简短的原文片段。
-- 每条片段必须用普通 markdown 链接指向 MinerU 转化后的 markdown，通常是 `wiki/sources/papers/{paper-slug}.md`。
-- 片段必须保持原文语言和原文措辞，简短引用，不要在 blockquote 中改写。
-- 如果转化后的 markdown 缺失，写 `prepared markdown: missing`，并说明使用了哪个 fallback source。
+- Add one short original-language excerpt for each paper that materially grounds the concept.
+- Each excerpt must link to the prepared MinerU markdown, usually `wiki/sources/papers/{paper-slug}.md`, using a normal markdown link.
+- Keep the excerpt exact and brief; do not paraphrase inside the blockquote.
+- If the prepared markdown is missing, write `prepared markdown: missing` and state which fallback source was used.
 
-示例：
+Example:
 
 ```markdown
 - [[paper-slug]] ([prepared markdown](../sources/papers/paper-slug.md)):
@@ -133,54 +99,54 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 
 ---
 
-## 链接语法
+## Link Syntax
 
-所有内部链接都使用 Obsidian wikilink：
+All internal links use Obsidian wikilinks:
 
 ```markdown
-[[slug]]                    ← 链接到本 wiki 中任意页面
-[[lora-low-rank-adaptation]] ← 链接到 papers/lora-low-rank-adaptation.md
-[[flash-attention]]          ← 链接到 concepts/flash-attention.md
+[[slug]]                    ← link to any page in this wiki
+[[lora-low-rank-adaptation]] ← links to papers/lora-low-rank-adaptation.md
+[[flash-attention]]          ← links to concepts/flash-attention.md
 ```
 
-**命名约定**：非论文页面全小写、连字符分隔、无空格；论文页面使用 `citationKey` 或 `author_year_veryshorttitle`，因此可包含大小写、下划线、点、加号或连字符。
+**Naming convention**: all lowercase, hyphen-separated, no spaces.
 
 ---
 
-## 交叉引用规则
+## Cross-Reference Rules
 
-写入正向链接时，**必须同时写入反向链接**：
+When writing a forward link, **always write the reverse link simultaneously**:
 
-| 正向动作 | 必需反向动作 |
-|----------|--------------|
-| papers/A 写 `Related: [[concept-B]]` | concepts/B 追加 A 到 `key_papers` |
-| papers/A 写 `[[researcher-C]]` | people/C 追加 A 到 `Key papers` |
-| papers/A 写 `supports: [[claim-D]]` | claims/D 追加 `{source: A, type: supports}` 到 `evidence` |
-| topics/T 写 `key_people: [[person-D]]` | people/D 追加 T 到 `Research areas` |
-| concepts/K 写 `key_papers: [[paper-E]]` | papers/E 追加 K 到 `Related` |
-| concepts/K 写 part_of `[[topic-F]]` | topics/F 在 overview 段落追加 K |
-| ideas/I 写 `origin_gaps: [[claim-C]]` | claims/C 追加 I 到 `## Linked ideas` |
-| experiments/E 写 `target_claim: [[claim-C]]` | claims/C 追加 `{source: E, type: tested_by}` 到 `evidence` |
-| claims/C 写 `source_papers: [[paper-P]]` | papers/P 追加 C 到 `## Related` |
-| 任意页面链接到 `[[foundation-X]]` | **不写反向链接**。foundations 是终端节点：可被论文/概念等指向，但不写 `key_papers` 或反向字段 |
+| Forward action | Required reverse action |
+|----------------|------------------------|
+| papers/A writes `Related: [[concept-B]]` | concepts/B appends A to `key_papers` |
+| papers/A writes `[[researcher-C]]` | people/C appends A to `Key papers` |
+| papers/A writes `supports: [[claim-D]]` | claims/D appends `{source: A, type: supports}` to `evidence` |
+| topics/T writes `key_people: [[person-D]]` | people/D appends T to `Research areas` |
+| concepts/K writes `key_papers: [[paper-E]]` | papers/E appends K to `Related` |
+| concepts/K writes part_of `[[topic-F]]` | topics/F appends K to overview paragraph |
+| ideas/I writes `origin_gaps: [[claim-C]]` | claims/C appends I to `## Linked ideas` |
+| experiments/E writes `target_claim: [[claim-C]]` | claims/C appends `{source: E, type: tested_by}` to `evidence` |
+| claims/C writes `source_papers: [[paper-P]]` | papers/P appends C to `## Related` |
+| any page links to `[[foundation-X]]` | **no reverse link** — foundations are terminal: they receive inward links from papers/concepts/etc. but never write `key_papers` or any back-reference field |
 
 ---
 
-## Graph 规则
+## Graph Rules
 
-- `graph/` 自动生成，不要手动编辑
-- 核心派生文件是 `edges.jsonl`、`citations.jsonl`、`context_brief.md`、`open_questions.md`
-- 语义边类型包括 paper-paper（`same_problem_as`、`similar_method_to`、`complementary_to`、`builds_on`、`compares_against`、`improves_on`、`challenges`、`surveys`）、paper-concept（`introduces_concept`、`uses_concept`、`extends_concept`、`critiques_concept`），以及 claim/experiment/provenance 类型（`supports`、`contradicts`、`tested_by`、`invalidates`、`addresses_gap`、`derived_from`、`inspired_by`）
-- `/ingest` 写入 paper-paper 和 paper-concept 语义边时必须包含 `confidence: high|medium|low`
-- 对称 paper-paper 边只存一次，端点排序，并设置 `symmetric: true`
-- 文献引用存放在 `citations.jsonl`，类型为 `type: cites`
-- 使用 `tools/research_wiki.py add-edge`、`add-citation`、`rebuild-context-brief`、`rebuild-open-questions`
+- `graph/` is auto-generated; do not edit it manually
+- core derived files are `edges.jsonl`, `citations.jsonl`, `context_brief.md`, and `open_questions.md`
+- semantic edge types include paper-paper (`same_problem_as`, `similar_method_to`, `complementary_to`, `builds_on`, `compares_against`, `improves_on`, `challenges`, `surveys`), paper-concept (`introduces_concept`, `uses_concept`, `extends_concept`, `critiques_concept`), and existing claim/experiment/provenance types (`supports`, `contradicts`, `tested_by`, `invalidates`, `addresses_gap`, `derived_from`, `inspired_by`)
+- `/ingest` paper-paper and paper-concept semantic edges must include `confidence: high|medium|low`
+- symmetric paper-paper edges are stored once with sorted endpoints and `symmetric: true`
+- bibliographic citations live in `citations.jsonl` as `type: cites`
+- use `tools/research_wiki.py add-edge`, `add-citation`, `rebuild-context-brief`, and `rebuild-open-questions`
 
-## log/ 格式
+## log/ Format
 
-日志写入 `wiki/log/{yyyy-mm-wN}.md`，其中 `wN` 是当月第几周：1–7 日为 `w1`，8–14 日为 `w2`，依此类推。
+Logs are written to `wiki/log/{yyyy-mm-wN}.md`, where `wN` is the week-of-month bucket: days 1–7 are `w1`, days 8–14 are `w2`, and so on.
 
-每个周日志文件使用 `# log` 作为一级标题，使用 skill 名称作为二级标题。标准格式：
+Each weekly log file uses `# log` as the top-level heading and skill names as second-level headings. Standard format:
 
 ```markdown
 # log
@@ -192,7 +158,7 @@ BibTeX 条目只保留核心引用字段：entry type、citekey、`author`、`ti
 [YYYY-MM-DD] added something
 ```
 
-日志必须通过工具追加，不要手动编辑：
+Append log entries only through the tool:
 
 ```shell
 uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | added something"
@@ -200,69 +166,67 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 
 ---
 
-## Python 环境
+## Python Environment
 
-- 本项目由 **uv 管理**：`setup.sh` 通过 `uv sync` 从 `pyproject.toml` 创建/更新 `.venv`
-- `.venv/` 存在时优先使用 `.venv/bin/python`（Unix/macOS）或 `.venv/Scripts/python.exe`（Windows）
-- 否则回退到 `python3`（Unix/macOS）或 `python`（Windows）
-- skill 通过 `uv run python -X utf8 tools/<name>.py …` 运行工具（uv 会按 `pyproject.toml` 自动定位 `.venv`）；当 `.venv/` 已存在时，等价写法是 `.venv/bin/python tools/<name>.py …`
-- Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
-- 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；`active_profile: auto` 会按系统选择 `macos`、`windows` 或 `linux`，也可用 `LLM_WIKI_PATH_PROFILE` 临时指定；未配置时回退到仓库内 `wiki/` 和 `raw/`
-- `@configured`、`@raw-root`、`@configured-sources-papers` 等别名只由支持 `tools/_paths.py` 的 Python 工具解析。对直接文件编辑、`cat`、`cp`、`mkdir`、shell 重定向等普通文件操作，必须先运行 `uv run python -X utf8 tools/resolve_path_alias.py ...` 得到绝对路径，再使用绝对路径；禁止创建字面目录 `@configured/` 或 `@raw-root/`。
-- 可选 MinerU 本地后端需显式启用：`uv sync --extra local`（首次会下载数 GB 模型权重）
+- this project is **uv-managed**: `setup.sh` creates `.venv` via `uv venv` and installs from `pyproject.toml` via `uv pip install -e .`
+- prefer `.venv/bin/python` (Unix/macOS) or `.venv/Scripts/python.exe` (Windows) when `.venv/` exists
+- otherwise fall back to `python3` (Unix/macOS) or `python` (Windows)
+- skills run tools as `uv run python -X utf8 tools/<name>.py …` (uv automatically resolves `.venv` from `pyproject.toml`); the equivalent direct invocation is `.venv/bin/python tools/<name>.py …` when `.venv/` exists
+- Python tools load API keys through `tools/_env.py`: first process environment, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`); project-root `.env` and `~/.env` are legacy fallbacks only
+- Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`) to set external `wiki_root` / `raw_root`; `active_profile: auto` chooses `macos`, `windows`, or `linux` from the current OS, and `LLM_WIKI_PATH_PROFILE` can override it temporarily; without config, tools fall back to in-repo `wiki/` and `raw/`
+- the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
 
 ---
 
-## 约束
+## Constraints
 
-- **`raw/papers/`、`raw/notes/`、`raw/web/` 属于用户**：把它们视为权威输入。`/init` 和 `/ingest-local-pdf` 只可在 `wiki/sources/` 下添加 vault 可见 source 副本：PDF 只能转化为 `wiki/sources/papers/*.md`，不要把 PDF 放入 `wiki/`；notes/web 可复制到 `wiki/sources/notes/` 和 `wiki/sources/web/`。`/edit` 只有在用户明确要求时才可添加 raw source。`/init` 子代理在 INIT MODE 下仍将 `raw/` 视为严格只读，并直接消费传入的 canonical path。
-- **skill 只读执行**：使用 skill 完成用户任务时，不得因为发现 skill 文档有缺陷就自行修改该 skill 或运行入口文件。正确做法是继续在可安全执行的范围内完成任务，并把发现的问题、风险和建议修改点报告给用户；只有当用户明确要求修改 skill/运行规范时，才可编辑 `i18n/*/skills/`、`CLAUDE.md`、`AGENTS.md` 等规范文件。
-- **用户可见 skill 参数属于用户**：`argument-hint` 中显示的 flag 和值属于用户命令，不是 agent 策略。不要仅凭仓库状态发明、翻转或删除这些参数。若用户省略某参数，只有 skill 文档明确说明可默认/推导时才推导，否则保持未设置或询问用户。
-- **INIT MODE 交接由 manifest 驱动**：当 `/init` 写入 `.checkpoints/init-sources.json` 后，该 manifest 是 ingest 顺序和 canonical source path 的唯一事实来源。预处理后的本地输入应指向 `wiki/sources/papers/<slug>.md`。
-- **graph/ 自动生成**：不要手动编辑 `graph/`，只能通过 `tools/research_wiki.py`。
-- **双向链接**：写正向链接时必须同时写反向链接。
-- **mineru-md 是 canonical ingest 格式**：PDF 由 MinerU（`tools/_mineru.py`）预处理为带 frontmatter 的结构化 markdown（`sections`、`figures`）。`/ingest-local-pdf` 和 `/init` 产出/消费 `wiki/sources/papers/<slug>.md`；`/ingest` 只消费已准备好的 `wiki/sources/papers/<slug>.md`、INIT MODE 交接路径，或 Zotero 定位后的论文源，不要直接消费原始 PDF。
-- **每次 ingest 都更新 index.md**；`log/` 周日志只追加。
-- **lint 默认只报告**：`--fix` 只自动修复确定性问题（xref backlinks、缺失字段默认值）；`--suggest` 输出非确定性建议；`--fix --dry-run` 预览修复。
-- **Slug 生成规则**：论文页 `papers/{slug}.md` 使用 Zotero/Better BibTeX `citationKey`；没有 citation key 时使用 `author_year_veryshorttitle`。非论文页面仍使用标题关键词 slug：全小写、连字符连接、无空格。
-- **重要性评分**：1 = 小众，2 = 有用，3 = 领域标准，4 = 有影响力，5 = 开创性。
-- **失败 idea 必须记录原因**：`failure_reason` 是反重复记忆，防止重复探索已知死路。
-- **Claim confidence 范围**：0.0-1.0；每次 evidence 变化都重新评估。
-- **Experiment 必须链接到 claim**：每个 experiment 都需要 `target_claim`；用户外部运行实验并通过 `/exp-eval` 报告结果后，把结果写回 claim evidence。
-- **MinerU API token**：`MINERU_API_TOKEN` 环境变量驱动默认云端后端。没有它 PDF ingest 会失败；离线可安装本地后端（`uv sync --extra local`）。
-- **文献检索**：`tools/fetch_literature.py` 使用无需 API key 的 Crossref 搜索和元数据检索。由于公开源暴露的 citation graph 较少，引用图覆盖是 best-effort。
-- **仓库和 wiki 可分离**：使用 `tools/separate_wiki_repository.py` 将 `wiki/`、`raw/` 复制/移动到外部绝对路径并写入 `config/paths.json`；使用 `tools/clean_wiki_repository.py` 清理仓库内残留的 `wiki/`、`raw/`。清理脚本默认 dry-run，只有 `--yes` 才会删除。
+- **`raw/papers/`, `raw/notes/`, `raw/web/` are user-owned**: treat them as authoritative inputs. `/init` and `/ingest-local-pdf` may add vault-visible source copies under `wiki/sources/`: PDFs must be converted to `wiki/sources/papers/*.md` and never copied into `wiki/`; notes/web may be copied to `wiki/sources/notes/` and `wiki/sources/web/`. `/edit` may add raw sources only when the user explicitly asked for it. `/init` subagents running `/ingest` in INIT MODE still treat `raw/` as strictly read-only and must consume the handed-off canonical path directly.
+- **Read-only skill execution**: when using a skill to complete a user task, do not modify that skill or runtime entrypoint files just because you find a defect in the skill documentation. Continue within the safely executable scope and report the problem, risk, and suggested fix to the user. Edit `i18n/*/skills/`, `CLAUDE.md`, `AGENTS.md`, or similar spec files only when the user explicitly asks to modify skills or runtime rules.
+- **User-facing skill parameters are user-owned**: flags and values shown in a skill's `argument-hint` belong to the user's command, not to agent strategy. Do not invent, flip, or drop those parameters from repository state alone. If the user omitted a parameter, only use a default or derived value when that skill explicitly documents omission behavior; otherwise leave it unset or ask the user. Internal derived settings that are not user-facing parameters may still be inferred by the skill.
+- **INIT MODE handoff is manifest-driven**: when `/init` writes `.checkpoints/init-sources.json`, that manifest becomes the single source of truth for ingest order and canonical source paths. Prepared local inputs should point to `wiki/sources/papers/<slug>.md` (MinerU output).
+- **graph/ is auto-generated**: never manually edit files in `graph/` — only via `tools/research_wiki.py`.
+- **Bidirectional links**: always write the reverse link when writing a forward link.
+- **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`). `/ingest-local-pdf` and `/init` produce/consume the prepared `wiki/sources/papers/<slug>.md`; `/ingest` only consumes already prepared `wiki/sources/papers/<slug>.md`, the INIT MODE handoff path, or Zotero-located paper sources — never the raw PDF directly.
+- **index.md updated on every ingest**; log entries go through the weekly `log/` files.
+- **lint default is report-only**: `--fix` auto-fixes deterministic issues (xref backlinks, missing field defaults); `--suggest` outputs suggestions for non-deterministic issues; `--fix --dry-run` previews fixes.
+- **Slug generation rule**: paper title keywords, hyphen-joined, all lowercase.
+- **Importance scoring**: 1 = niche, 2 = useful, 3 = field-standard, 4 = influential, 5 = seminal.
+- **Failed ideas must record reason**: `failure_reason` is anti-repetition memory — prevents re-exploring known dead ends.
+- **Claim confidence range**: 0.0-1.0; re-evaluate every time evidence changes.
+- **Experiments must link to a claim**: every experiment requires `target_claim`; results are written back to the claim's evidence after the user runs the experiment externally and reports results to `/exp-eval`.
+- **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
+- **Literature lookup**: `tools/fetch_literature.py` uses no-key Crossref search and metadata. Citation graph coverage is best-effort because public sources expose fewer citation edges than key-gated services.
+- **Repository and wiki can be separated**: use `tools/separate_wiki_repository.py` to copy/move `wiki/` and `raw/` to external absolute paths and write `config/paths.json`; use `tools/clean_wiki_repository.py` to remove leftover in-repo `wiki/` and `raw/`. Cleanup is dry-run by default and deletes only with `--yes`.
 
 ---
 
 ## Skills
 
-| Skill | 文件 | 触发 |
-|-------|------|------|
-| `/setup` | `skills/setup/SKILL.md` | 手动（首次配置） |
-| `/reset` | `skills/reset/SKILL.md` | 手动（`--scope wiki\|raw\|log\|checkpoints\|all`） |
-| `/init` | `skills/init/SKILL.md` | 手动 |
-| `/prefill` | `skills/prefill/SKILL.md` | 手动（`[domain] [--add concept]`） |
-| `/ingest` | `skills/ingest/SKILL.md` | 手动 |
-| `/ingest-light` | `skills/ingest-light/SKILL.md` | 手动（学位论文引言/背景文献轻量入库） |
-| `/promote-light-ingest` | `skills/promote-light-ingest/SKILL.md` | 手动（筛选轻量入库文献，建议升级为完整 ingest） |
-| `/zotero-collection-list` | `skills/zotero-collection-list/SKILL.md` | 手动（按 Zotero 分类/子分类列出 citationKey、title、DOI） |
-| `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | 手动 |
-| `/reingest` | `skills/reingest/SKILL.md` | 手动（重生成已有论文页） |
-| `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |
-| `/ask` | `skills/ask/SKILL.md` | 手动 |
-| `/edit` | `skills/edit/SKILL.md` | 手动 |
-| `/code-analyze` | `skills/code-analyze/SKILL.md` | 手动（代码仓库架构/流程/风险/测试分析，可归档到 outputs） |
-| `/check` | `skills/check/SKILL.md` | 双周 / 手动 |
-| `/source-audit` | `skills/source-audit/SKILL.md` | 手动（对照 source 原文审查 wiki 解读是否忠实） |
-| `/novelty` | `skills/novelty/SKILL.md` | 手动 |
-| `/review` | `skills/review/SKILL.md` | 手动 |
-| `/ideate` | `skills/ideate/SKILL.md` | 手动 |
-| `/exp-design` | `skills/exp-design/SKILL.md` | 手动 |
-| `/exp-eval` | `skills/exp-eval/SKILL.md` | 手动 |
-| `/refine` | `skills/refine/SKILL.md` | 手动 |
-| `/paper-plan` | `skills/paper-plan/SKILL.md` | 手动 |
-| `/paper-draft` | `skills/paper-draft/SKILL.md` | 手动 |
-| `/survey` | `skills/survey/SKILL.md` | 手动 |
-| `/research` | `skills/research/SKILL.md` | 手动（仅设计型 orchestrator） |
-| `/rebuttal` | `skills/rebuttal/SKILL.md` | 手动 |
+| Skill | File | Trigger |
+|-------|------|---------|
+| `/setup` | `skills/setup/SKILL.md` | manual (first-time config) |
+| `/reset` | `skills/reset/SKILL.md` | manual (`--scope wiki\|raw\|log\|checkpoints\|all`) |
+| `/init` | `skills/init/SKILL.md` | manual |
+| `/prefill` | `skills/prefill/SKILL.md` | manual (`[domain] [--add concept]`) |
+| `/ingest` | `skills/ingest/SKILL.md` | manual |
+| `/ingest-light` | `skills/ingest-light/SKILL.md` | manual (lightly ingest dissertation-introduction/background papers) |
+| `/promote-light-ingest` | `skills/promote-light-ingest/SKILL.md` | manual (rank light-ingested papers for promotion to full ingest) |
+| `/zotero-collection-list` | `skills/zotero-collection-list/SKILL.md` | manual (list citationKey, title, and DOI by Zotero collection/subcollection) |
+| `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | manual |
+| `/reingest` | `skills/reingest/SKILL.md` | manual (regenerate an existing paper page) |
+| `/discover` | `skills/discover/SKILL.md` | manual / internal (called by `/ingest --discover`) |
+| `/ask` | `skills/ask/SKILL.md` | manual |
+| `/edit` | `skills/edit/SKILL.md` | manual |
+| `/check` | `skills/check/SKILL.md` | biweekly/manual |
+| `/source-audit` | `skills/source-audit/SKILL.md` | manual (audit wiki interpretations against original source text) |
+| `/novelty` | `skills/novelty/SKILL.md` | manual |
+| `/review` | `skills/review/SKILL.md` | manual |
+| `/ideate` | `skills/ideate/SKILL.md` | manual |
+| `/exp-design` | `skills/exp-design/SKILL.md` | manual |
+| `/exp-eval` | `skills/exp-eval/SKILL.md` | manual |
+| `/refine` | `skills/refine/SKILL.md` | manual |
+| `/paper-plan` | `skills/paper-plan/SKILL.md` | manual |
+| `/paper-draft` | `skills/paper-draft/SKILL.md` | manual |
+| `/survey` | `skills/survey/SKILL.md` | manual |
+| `/research` | `skills/research/SKILL.md` | manual (design-only orchestrator) |
+| `/rebuttal` | `skills/rebuttal/SKILL.md` | manual |

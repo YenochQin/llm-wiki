@@ -1,6 +1,6 @@
 # MinerU Pipeline — PDF to llm-wiki Source Markdown
 
-End-to-end pipeline for converting raw PDFs into the structured markdown that `/ingest` consumes. MinerU is a vision-language PDF parser; we use it instead of the OmegaWiki tex-priority chain because it preserves section structure and figure crops on PDF-only sources.
+End-to-end pipeline for converting raw PDFs into the structured markdown that `/ingest` consumes. MinerU is a vision-language PDF parser; we use it instead of the LLMWiki tex-priority chain because it preserves section structure and figure crops on PDF-only sources.
 
 ## Pipeline
 
@@ -18,7 +18,7 @@ raw/papers/<file>.pdf
 | Field | Meaning |
 |-------|---------|
 | `canonical_ingest_path` | the markdown file `/ingest` should read (always under `wiki/sources/papers/`) |
-| `prepared_path` | same as above; kept for parity with the OmegaWiki contract |
+| `prepared_path` | same as above; kept for parity with the LLMWiki contract |
 | `ingest_format` | `"mineru-md"` — flag to skills that this is structured MinerU output, not raw PDF or `.tex` |
 | `title` | best-effort title detected from the cover or the first non-junk heading |
 | `abstract_excerpt` | first ~400 chars after the abstract heading, for skill prompts |
@@ -28,7 +28,7 @@ raw/papers/<file>.pdf
 ## Components
 
 - **`tools/_mineru.py`** — MinerU client. Two interchangeable backends (`api` cloud and `local` library) that both normalize their output into the cache layout below. Lifted verbatim from `pdf-source-scripts/mineru_backend.py`.
-- **`tools/prepare_paper_source.py`** — orchestrator + adapter. Hashes the PDF for a per-document cache, calls `_mineru.extract`, synthesizes a manifest from MinerU's block list, runs the adapter, applies the conservative LaTeX math repair pass, and writes the OmegaWiki-style JSON manifest.
+- **`tools/prepare_paper_source.py`** — orchestrator + adapter. Hashes the PDF for a per-document cache, calls `_mineru.extract`, synthesizes a manifest from MinerU's block list, runs the adapter, applies the conservative LaTeX math repair pass, and writes the LLMWiki-style JSON manifest.
 - **`tools/repair_latex_math.py`** — reusable Markdown repair pass for OCR-spaced formulas. It only edits math spans/blocks, skips fenced and inline code, converts `\(...\)` / `\[...\]` to `$...$` / `$$...$$`, and fixes common spacing breaks such as `\ alpha`, `_ {i}`, `^ {2}`, `\left (`, and atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` -> `1s^{2} \ ^{1}S_{0}`.
 
 ## Prerequisites
@@ -111,6 +111,6 @@ uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers/<sou
 - **Administrative material leaks into body**: the skip heading didn't match any `SKIP_SECTION_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`). Do not add References/Bibliography/Literature Cited to the skip list.
 - **Stale output after editing the adapter**: delete only `manifest.json` inside the per-PDF cache (or the whole `<sha16>/` directory) and re-run; the cached `<stem>.md` / `<stem>.json` from MinerU are reused.
 
-## Why MinerU instead of the OmegaWiki tex-priority chain?
+## Why MinerU instead of the LLMWiki tex-priority chain?
 
-OmegaWiki's original `prepare_paper_source.py` preferred remote source packages when recoverable, falling back to synthetic text from PDF extraction. For a more general workflow (Zotero PDFs, books, conference papers, scanned reports), MinerU's vision-language extraction gives consistently better section/figure structure than text-only PDF parsing. The trade-off: MinerU is a network dependency (the API) or a heavy local install, and it does not recover paper identity automatically; metadata enrichment belongs to `/ingest` and uses DOI/title lookup when available.
+LLMWiki's original `prepare_paper_source.py` preferred remote source packages when recoverable, falling back to synthetic text from PDF extraction. For a more general workflow (Zotero PDFs, books, conference papers, scanned reports), MinerU's vision-language extraction gives consistently better section/figure structure than text-only PDF parsing. The trade-off: MinerU is a network dependency (the API) or a heavy local install, and it does not recover paper identity automatically; metadata enrichment belongs to `/ingest` and uses DOI/title lookup when available.

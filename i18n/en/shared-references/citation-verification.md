@@ -1,7 +1,7 @@
 # Citation Discipline
 
 > Shared reference for all skills that generate citations: /paper-draft, /survey, /paper-plan.
-> Every citation in a OmegaWiki output must be **verifiable** — never LLM-generated.
+> Every citation in a LLMWiki output must be **verifiable** — never LLM-generated.
 
 ---
 

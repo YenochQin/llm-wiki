@@ -3,7 +3,7 @@
 > 中文运行提示：使用本参考时，请用中文向用户解释结论；技术术语、BibTeX、命令、路径和字段名保持原样。下面保留英文规范作为精确参考。
 
 > Shared reference for all skills that generate citations: /paper-draft, /survey, /paper-plan.
-> Every citation in a OmegaWiki output must be **verifiable** — never LLM-generated.
+> Every citation in a LLMWiki output must be **verifiable** — never LLM-generated.
 
 ---
 

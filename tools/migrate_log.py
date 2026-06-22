@@ -99,7 +99,7 @@ def parse_legacy_log(content: str) -> tuple[list[LegacyLogEntry], list[str]]:
             seen_first_entry = True
             continue
 
-        if raw_line.strip() in {"# OmegaWiki Log", "# log"}:
+        if raw_line.strip() in {"# LLMWiki Log", "# log"}:
             continue
         if CONFLICT_MARKER_RE.match(raw_line):
             warnings.append(f"conflict marker line {line_no}: {raw_line[:80]}")
@@ -120,11 +120,15 @@ def _section_bounds(content: str, skill: str) -> tuple[int, int] | None:
         return None
     body_start = match.end()
     next_heading = re.search(r"(?m)^##\s+", content[body_start:])
-    section_end = body_start + (next_heading.start() if next_heading else len(content[body_start:]))
+    section_end = body_start + (
+        next_heading.start() if next_heading else len(content[body_start:])
+    )
     return body_start, section_end
 
 
-def _append_block_to_section(log_path: Path, skill: str, lines: list[str], *, dry_run: bool) -> bool:
+def _append_block_to_section(
+    log_path: Path, skill: str, lines: list[str], *, dry_run: bool
+) -> bool:
     """Append a multiline entry block under `## skill`.
 
     Returns True when the block would be/w was added, False when it already
@@ -149,7 +153,7 @@ def _append_block_to_section(log_path: Path, skill: str, lines: list[str], *, dr
         new_content = content.rstrip() + f"\n\n## {skill}\n{block}\n"
     else:
         _body_start, section_end = bounds
-        section_text = content[bounds[0]:bounds[1]]
+        section_text = content[bounds[0] : bounds[1]]
         if block in section_text:
             return False
         before = content[:section_end].rstrip()
@@ -165,7 +169,9 @@ def _append_block_to_section(log_path: Path, skill: str, lines: list[str], *, dr
     return True
 
 
-def migrate_log(wiki_root: Path, *, source: Path | None = None, dry_run: bool = True) -> dict:
+def migrate_log(
+    wiki_root: Path, *, source: Path | None = None, dry_run: bool = True
+) -> dict:
     source_path = source or (wiki_root / "log.md")
     output_dir = wiki_root / LOG_DIR
     if not source_path.exists():
@@ -176,7 +182,9 @@ def migrate_log(wiki_root: Path, *, source: Path | None = None, dry_run: bool = 
             "output_dir": str(output_dir),
         }
 
-    entries, warnings = parse_legacy_log(source_path.read_text(encoding="utf-8", errors="ignore"))
+    entries, warnings = parse_legacy_log(
+        source_path.read_text(encoding="utf-8", errors="ignore")
+    )
     file_summary: dict[str, dict] = {}
     added = 0
     skipped = 0
@@ -184,7 +192,9 @@ def migrate_log(wiki_root: Path, *, source: Path | None = None, dry_run: bool = 
     for entry in entries:
         rel_path = f"{LOG_DIR}/{entry.target_filename}"
         target = wiki_root / rel_path
-        summary = file_summary.setdefault(rel_path, {"entries_added": 0, "entries_skipped": 0, "skills": {}})
+        summary = file_summary.setdefault(
+            rel_path, {"entries_added": 0, "entries_skipped": 0, "skills": {}}
+        )
         if _append_block_to_section(target, entry.skill, entry.lines, dry_run=dry_run):
             added += 1
             summary["entries_added"] += 1
@@ -202,8 +212,7 @@ def migrate_log(wiki_root: Path, *, source: Path | None = None, dry_run: bool = 
         "entries_to_add": added,
         "entries_skipped_existing": skipped,
         "files": [
-            {"path": path, **summary}
-            for path, summary in sorted(file_summary.items())
+            {"path": path, **summary} for path, summary in sorted(file_summary.items())
         ],
         "warnings": warnings,
     }
@@ -266,10 +275,17 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--wiki-root", default="@configured", help="Wiki root, default: @configured")
-    parser.add_argument("--source", default="", help="Legacy log file path, default: <wiki-root>/log.md")
-    parser.add_argument("--rename-old-weekly", action="store_true",
-                        help="Rename old weekly yyyy-mm-NN.md or yyyy-mm-wN.log files to yyyy-mm-wN.md")
+    parser.add_argument(
+        "--wiki-root", default="@configured", help="Wiki root, default: @configured"
+    )
+    parser.add_argument(
+        "--source", default="", help="Legacy log file path, default: <wiki-root>/log.md"
+    )
+    parser.add_argument(
+        "--rename-old-weekly",
+        action="store_true",
+        help="Rename old weekly yyyy-mm-NN.md or yyyy-mm-wN.log files to yyyy-mm-wN.md",
+    )
     parser.add_argument("--yes", action="store_true", help="Write migrated entries")
     args = parser.parse_args()
 

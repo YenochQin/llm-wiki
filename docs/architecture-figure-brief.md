@@ -81,7 +81,7 @@ The central wiki box should appear to power and remember every step.
 - Keep typography clear and readable.
 - Avoid dense paragraphs inside the image.
 - Do not include `.arXiv` as a source label.
-- Do not mention `OmegaWiki` as the product name; this repo should be labeled
+- Do not mention `LLMWiki` as the product name; this repo should be labeled
   `llm-wiki`.
 
 ## Optional Caption

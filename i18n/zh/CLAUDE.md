@@ -2,7 +2,7 @@
 
 > 个人研究 wiki，由 Claude Code 维护。
 > 本文件是 wiki 的运行入口：定义页面结构、链接约定和工作流约束。
-> 工作流改编自 OmegaWiki，PDF 预处理层已替换为 MinerU。
+> 工作流改编自 LLMWiki，PDF 预处理层已替换为 MinerU。
 
 > **维护说明**：本文件由 `i18n/` 管理。请编辑 `i18n/zh/CLAUDE.md`，不要直接编辑仓库根目录的激活副本。运行 `./setup.sh --lang zh` 同步。
 

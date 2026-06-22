@@ -1,7 +1,7 @@
 [project]
 name = "llm-wiki"
 version = "0.1.0"
-description = "Personal LLM-maintained research wiki — OmegaWiki workflow with MinerU PDF preprocessing."
+description = "Personal LLM-maintained research wiki — LLMWiki workflow with MinerU PDF preprocessing."
 requires-python = ">=3.10"
 dependencies = [
     # Core wiki tooling. PDF preprocessing is handled by MinerU.

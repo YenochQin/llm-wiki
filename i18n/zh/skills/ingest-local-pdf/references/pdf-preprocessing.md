@@ -61,7 +61,7 @@ The helper writes the prepared entry under the explicit `--output-dir` (normally
 | Field | Meaning |
 |-------|---------|
 | `canonical_ingest_path` | the prepared `.md` `/ingest` should consume |
-| `prepared_path` | same path; kept for parity with the OmegaWiki contract |
+| `prepared_path` | same path; kept for parity with the LLMWiki contract |
 | `ingest_format` | always `mineru-md` for this pipeline |
 | `title` | best title (agent-supplied > MinerU-detected > filename stem) |
 | `abstract_excerpt` | first ~400 chars after the abstract heading |

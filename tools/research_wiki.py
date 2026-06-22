@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OmegaWiki — Wiki Knowledge Engine.
+"""LLMWiki — Wiki Knowledge Engine.
 
 Core operations for a wiki-centric research knowledge base: entity metadata
 read/write, typed graph management, knowledge-state queries, purpose-driven
@@ -80,14 +80,12 @@ from pathlib import Path
 
 import frontmatter
 import yaml
-
 from _cli_io import configure_utf8_stdio
 from _paths import load_paths
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-
 # Schema constants are re-exported from _schemas so this module and lint.py
 # share a single source of truth — see tools/_schemas.py.
 from _schemas import (  # noqa: E402
@@ -96,9 +94,9 @@ from _schemas import (  # noqa: E402
     ENTITY_DIRS,
     SYMMETRIC_EDGE_TYPES,
     VALID_EDGE_TYPES,
-    edge_is_legacy_for_endpoint,
     edge_endpoint_matches,
     edge_expected_endpoint,
+    edge_is_legacy_for_endpoint,
     edge_is_symmetric,
     edge_legacy_replacement_message,
     edge_requires_confidence,
@@ -114,12 +112,45 @@ def _json_dumps(obj, **kwargs) -> str:
     kwargs.setdefault("default", str)
     return json.dumps(obj, **kwargs)
 
-STOP_WORDS = frozenset({
-    "a", "an", "the", "of", "for", "in", "on", "with", "via",
-    "and", "to", "by", "is", "are", "from", "that", "this",
-    "its", "at", "as", "or", "be", "it", "not", "but", "we",
-    "can", "do", "has", "have", "was", "were", "been", "our",
-})
+
+STOP_WORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "of",
+        "for",
+        "in",
+        "on",
+        "with",
+        "via",
+        "and",
+        "to",
+        "by",
+        "is",
+        "are",
+        "from",
+        "that",
+        "this",
+        "its",
+        "at",
+        "as",
+        "or",
+        "be",
+        "it",
+        "not",
+        "but",
+        "we",
+        "can",
+        "do",
+        "has",
+        "have",
+        "was",
+        "were",
+        "been",
+        "our",
+    }
+)
 
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 
@@ -140,10 +171,14 @@ def _validate_cli_wiki_root(raw_wiki_root: str) -> str:
     """Reject ambiguous wiki roots that would write wiki files into the repo."""
     value = str(raw_wiki_root or "").strip()
     if not value:
-        print(json.dumps({
-            "status": "error",
-            "message": "wiki_root is empty; pass an explicit wiki root or @configured",
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": "wiki_root is empty; pass an explicit wiki root or @configured",
+                }
+            )
+        )
         sys.exit(2)
 
     root = Path(value).expanduser()
@@ -154,37 +189,49 @@ def _validate_cli_wiki_root(raw_wiki_root: str) -> str:
 
     project_root = load_paths().project_root.resolve()
     if root == project_root or _looks_like_project_root(root):
-        print(json.dumps({
-            "status": "error",
-            "message": (
-                "Refusing to use the code repository root as wiki_root. "
-                "Pass @configured or the external wiki root explicitly."
-            ),
-            "wiki_root": str(root),
-            "project_root": str(project_root),
-        }, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": (
+                        "Refusing to use the code repository root as wiki_root. "
+                        "Pass @configured or the external wiki root explicitly."
+                    ),
+                    "wiki_root": str(root),
+                    "project_root": str(project_root),
+                },
+                ensure_ascii=False,
+            )
+        )
         sys.exit(2)
     repo_wiki = project_root / "wiki"
     configured_wiki = load_paths().wiki_root.resolve()
     if configured_wiki != repo_wiki.resolve() and _is_relative_to(root, repo_wiki):
-        print(json.dumps({
-            "status": "error",
-            "message": (
-                "Refusing to use the code repository's wiki/ directory as wiki_root "
-                "while config/paths.json points at an external wiki root. "
-                "Pass @configured or the external wiki root explicitly."
-            ),
-            "wiki_root": str(root),
-            "configured_wiki_root": str(configured_wiki),
-            "project_root": str(project_root),
-        }, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": (
+                        "Refusing to use the code repository's wiki/ directory as wiki_root "
+                        "while config/paths.json points at an external wiki root. "
+                        "Pass @configured or the external wiki root explicitly."
+                    ),
+                    "wiki_root": str(root),
+                    "configured_wiki_root": str(configured_wiki),
+                    "project_root": str(project_root),
+                },
+                ensure_ascii=False,
+            )
+        )
         sys.exit(2)
 
     return str(root)
 
+
 # ---------------------------------------------------------------------------
 # Slug generation
 # ---------------------------------------------------------------------------
+
 
 def slugify(title: str) -> str:
     """Generate a kebab-case slug from a paper/concept title.
@@ -213,10 +260,28 @@ def slugify(title: str) -> str:
     return "-".join(keywords[:6])
 
 
-TITLE_STOP_WORDS = frozenset({
-    "a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of",
-    "on", "or", "the", "to", "using", "via", "with",
-})
+TITLE_STOP_WORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "as",
+        "at",
+        "by",
+        "for",
+        "from",
+        "in",
+        "into",
+        "of",
+        "on",
+        "or",
+        "the",
+        "to",
+        "using",
+        "via",
+        "with",
+    }
+)
 
 BIBTEX_ENTRY_RE = re.compile(r"@\s*[A-Za-z]+\s*\{\s*([^,\s]+)\s*,", re.MULTILINE)
 BIBTEX_FIELD_RE = re.compile(
@@ -226,7 +291,11 @@ BIBTEX_FIELD_RE = re.compile(
 
 
 def _safe_source_slug_part(value: str, *, separator: str = "-") -> str:
-    text = unicodedata.normalize("NFKD", value.strip().lower()).encode("ascii", "ignore").decode("ascii")
+    text = (
+        unicodedata.normalize("NFKD", value.strip().lower())
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     text = re.sub(r"\\[a-zA-Z]+\*?", " ", text)
     text = text.replace("$", " ")
     text = re.sub(r"[{}\\^]", " ", text)
@@ -236,7 +305,11 @@ def _safe_source_slug_part(value: str, *, separator: str = "-") -> str:
 
 
 def _safe_citation_key(value: str) -> str:
-    text = unicodedata.normalize("NFKD", value.strip()).encode("ascii", "ignore").decode("ascii")
+    text = (
+        unicodedata.normalize("NFKD", value.strip())
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     if not text:
         return ""
     text = re.sub(r"\\[a-zA-Z]+\*?", "", text)
@@ -267,7 +340,9 @@ def _first_author_from_bibtex(bibtex: str) -> str:
 
 
 def _paper_author_token(authors: str, bibtex: str) -> str:
-    first_author = (authors or "").split(",", 1)[0].strip() or _first_author_from_bibtex(bibtex)
+    first_author = (authors or "").split(",", 1)[
+        0
+    ].strip() or _first_author_from_bibtex(bibtex)
     if not first_author:
         return "unknown"
     if "," in first_author:
@@ -279,16 +354,24 @@ def _paper_author_token(authors: str, bibtex: str) -> str:
 
 
 def _paper_year_token(year: str, bibtex: str) -> str:
-    match = re.search(r"\d{4}", str(year or "")) or re.search(r"\d{4}", _bibtex_field(bibtex, "year"))
+    match = re.search(r"\d{4}", str(year or "")) or re.search(
+        r"\d{4}", _bibtex_field(bibtex, "year")
+    )
     return match.group(0) if match else "nodate"
 
 
 def _paper_very_short_title(title: str, bibtex: str, max_words: int = 3) -> str:
     title_text = title.strip() or _bibtex_field(bibtex, "title")
-    title_text = unicodedata.normalize("NFKD", title_text).encode("ascii", "ignore").decode("ascii")
+    title_text = (
+        unicodedata.normalize("NFKD", title_text)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     tokens = [
         token
-        for token in re.split(r"[^A-Za-z0-9]+", re.sub(r"\\[a-zA-Z]+\*?", " ", title_text).lower())
+        for token in re.split(
+            r"[^A-Za-z0-9]+", re.sub(r"\\[a-zA-Z]+\*?", " ", title_text).lower()
+        )
         if len(token) >= 2 and token not in TITLE_STOP_WORDS
     ]
     return "-".join(tokens[:max_words]) or "untitled"
@@ -315,6 +398,7 @@ def paper_slugify(
 # ---------------------------------------------------------------------------
 # Wiki init
 # ---------------------------------------------------------------------------
+
 
 def init_wiki(wiki_root: str) -> None:
     """Initialize wiki directory structure with all entity dirs and graph/.
@@ -344,10 +428,14 @@ def init_wiki(wiki_root: str) -> None:
     _write_if_missing(root / "index.md", _initial_index())
     _write_if_missing(graph / "edges.jsonl", "")
     _write_if_missing(graph / "citations.jsonl", "")
-    _write_if_missing(graph / "context_brief.md",
-                      "# Query Pack\n\n_Auto-generated compressed context. Do not edit._\n")
-    _write_if_missing(graph / "open_questions.md",
-                      "# Gap Map\n\n_Auto-generated open questions. Do not edit._\n")
+    _write_if_missing(
+        graph / "context_brief.md",
+        "# Query Pack\n\n_Auto-generated compressed context. Do not edit._\n",
+    )
+    _write_if_missing(
+        graph / "open_questions.md",
+        "# Gap Map\n\n_Auto-generated open questions. Do not edit._\n",
+    )
 
     append_log(wiki_root, "init | wiki initialized")
     print(json.dumps({"status": "ok", "wiki_root": str(root)}))
@@ -368,6 +456,7 @@ def _initial_index() -> str:
 # ---------------------------------------------------------------------------
 # Edge and citation management
 # ---------------------------------------------------------------------------
+
 
 def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -395,9 +484,9 @@ def _validate_node_refs(root: Path, *node_ids: str) -> list[str]:
     return warnings
 
 
-def _semantic_edge_warnings(edge_type: str, from_id: str, to_id: str,
-                            confidence: str = "",
-                            evidence: str = "") -> list[str]:
+def _semantic_edge_warnings(
+    edge_type: str, from_id: str, to_id: str, confidence: str = "", evidence: str = ""
+) -> list[str]:
     warnings: list[str] = []
     from_kind = _node_kind(from_id)
     to_kind = _node_kind(to_id)
@@ -405,10 +494,14 @@ def _semantic_edge_warnings(edge_type: str, from_id: str, to_id: str,
     if not edge_endpoint_matches(edge_type, from_kind, to_kind):
         expected_from = edge_expected_endpoint(edge_type, "from")
         expected_to = edge_expected_endpoint(edge_type, "to")
-        warnings.append(f"{edge_type} should connect {expected_from}/* -> {expected_to}/*")
-    if (edge_expected_endpoint(edge_type, "from") == "papers"
-            and edge_expected_endpoint(edge_type, "to") == "papers"
-            and from_id == to_id):
+        warnings.append(
+            f"{edge_type} should connect {expected_from}/* -> {expected_to}/*"
+        )
+    if (
+        edge_expected_endpoint(edge_type, "from") == "papers"
+        and edge_expected_endpoint(edge_type, "to") == "papers"
+        and from_id == to_id
+    ):
         warnings.append(f"{edge_type} should not connect a paper to itself")
     if edge_requires_confidence(edge_type) and not confidence:
         warnings.append(f"{edge_type} should include confidence=high|medium|low")
@@ -417,9 +510,9 @@ def _semantic_edge_warnings(edge_type: str, from_id: str, to_id: str,
     return warnings
 
 
-def _semantic_edge_errors(edge_type: str, from_id: str, to_id: str,
-                          confidence: str = "",
-                          evidence: str = "") -> list[str]:
+def _semantic_edge_errors(
+    edge_type: str, from_id: str, to_id: str, confidence: str = "", evidence: str = ""
+) -> list[str]:
     """Hard validation for new writes. Legacy graph rows remain lint-readable."""
     errors: list[str] = []
     from_kind = _node_kind(from_id)
@@ -431,9 +524,11 @@ def _semantic_edge_errors(edge_type: str, from_id: str, to_id: str,
         expected_from = edge_expected_endpoint(edge_type, "from")
         expected_to = edge_expected_endpoint(edge_type, "to")
         errors.append(f"{edge_type} must connect {expected_from}/* -> {expected_to}/*")
-    if (edge_expected_endpoint(edge_type, "from") == "papers"
-            and edge_expected_endpoint(edge_type, "to") == "papers"
-            and from_id == to_id):
+    if (
+        edge_expected_endpoint(edge_type, "from") == "papers"
+        and edge_expected_endpoint(edge_type, "to") == "papers"
+        and from_id == to_id
+    ):
         errors.append(f"{edge_type} must not connect a paper to itself")
     if edge_requires_confidence(edge_type) and not confidence:
         errors.append(f"{edge_type} requires --confidence high|medium|low")
@@ -442,11 +537,17 @@ def _semantic_edge_errors(edge_type: str, from_id: str, to_id: str,
     return errors
 
 
-def _canonical_edge_ids(from_id: str, to_id: str, edge_type: str,
-                        symmetric: bool = False) -> tuple[str, str, bool, str]:
+def _canonical_edge_ids(
+    from_id: str, to_id: str, edge_type: str, symmetric: bool = False
+) -> tuple[str, str, bool, str]:
     is_symmetric = symmetric or edge_is_symmetric(edge_type)
     if is_symmetric and not edge_is_symmetric(edge_type):
-        return from_id, to_id, False, f"symmetric is only valid for {sorted(SYMMETRIC_EDGE_TYPES)}"
+        return (
+            from_id,
+            to_id,
+            False,
+            f"symmetric is only valid for {sorted(SYMMETRIC_EDGE_TYPES)}",
+        )
     if is_symmetric:
         left, right = sorted([from_id, to_id])
         return left, right, True, ""
@@ -462,21 +563,35 @@ def _edge_key(edge: dict) -> tuple[str, str, str]:
     return from_id, to_id, edge_type
 
 
-def add_edge(wiki_root: str, from_id: str, to_id: str,
-             edge_type: str, evidence: str = "", confidence: str = "",
-             symmetric: bool = False) -> None:
+def add_edge(
+    wiki_root: str,
+    from_id: str,
+    to_id: str,
+    edge_type: str,
+    evidence: str = "",
+    confidence: str = "",
+    symmetric: bool = False,
+) -> None:
     """Append a typed edge to graph/edges.jsonl with dedup and entity validation."""
     if edge_type not in VALID_EDGE_TYPES:
-        print(json.dumps({
-            "status": "error",
-            "message": f"Unknown edge type '{edge_type}'. Valid: {sorted(VALID_EDGE_TYPES)}"
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Unknown edge type '{edge_type}'. Valid: {sorted(VALID_EDGE_TYPES)}",
+                }
+            )
+        )
         sys.exit(1)
     if confidence and confidence not in EDGE_CONFIDENCE_VALUES:
-        print(json.dumps({
-            "status": "error",
-            "message": f"Unknown confidence '{confidence}'. Valid: {sorted(EDGE_CONFIDENCE_VALUES)}"
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Unknown confidence '{confidence}'. Valid: {sorted(EDGE_CONFIDENCE_VALUES)}",
+                }
+            )
+        )
         sys.exit(1)
 
     from_id, to_id, is_symmetric, error = _canonical_edge_ids(
@@ -492,22 +607,25 @@ def add_edge(wiki_root: str, from_id: str, to_id: str,
 
     errors = _semantic_edge_errors(edge_type, from_id, to_id, confidence, evidence)
     if errors:
-        print(json.dumps({"status": "error", "errors": errors},
-                         ensure_ascii=False))
+        print(json.dumps({"status": "error", "errors": errors}, ensure_ascii=False))
         sys.exit(1)
 
     warnings = _validate_node_refs(root, from_id, to_id)
-    warnings.extend(_semantic_edge_warnings(
-        edge_type, from_id, to_id, confidence, evidence
-    ))
+    warnings.extend(
+        _semantic_edge_warnings(edge_type, from_id, to_id, confidence, evidence)
+    )
     for msg in warnings:
         print(msg, file=sys.stderr)
 
     # Dedup: check existing edges
-    target_key = _edge_key({
-        "from": from_id, "to": to_id, "type": edge_type,
-        "symmetric": is_symmetric,
-    })
+    target_key = _edge_key(
+        {
+            "from": from_id,
+            "to": to_id,
+            "type": edge_type,
+            "symmetric": is_symmetric,
+        }
+    )
     if edges_path.exists():
         for line in edges_path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
@@ -518,8 +636,10 @@ def add_edge(wiki_root: str, from_id: str, to_id: str,
             except json.JSONDecodeError:
                 continue
             if _edge_key(e) == target_key:
-                result: dict = {"status": "exists",
-                                "message": f"{from_id} --{edge_type}--> {to_id}"}
+                result: dict = {
+                    "status": "exists",
+                    "message": f"{from_id} --{edge_type}--> {to_id}",
+                }
                 if warnings:
                     result["warnings"] = warnings
                 print(json.dumps(result))
@@ -540,15 +660,15 @@ def add_edge(wiki_root: str, from_id: str, to_id: str,
     with open(edges_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(edge, ensure_ascii=False) + "\n")
 
-    result2: dict = {"status": "ok",
-                     "edge": f"{from_id} --{edge_type}--> {to_id}"}
+    result2: dict = {"status": "ok", "edge": f"{from_id} --{edge_type}--> {to_id}"}
     if warnings:
         result2["warnings"] = warnings
     print(json.dumps(result2))
 
 
-def apply_legacy_add_edge_args(parser: argparse.ArgumentParser, args: argparse.Namespace,
-                               unknown_args: list[str]) -> list[str]:
+def apply_legacy_add_edge_args(
+    parser: argparse.ArgumentParser, args: argparse.Namespace, unknown_args: list[str]
+) -> list[str]:
     """Accept the old positional add-edge form while preferring named flags."""
     if args.command != "add-edge" or not unknown_args:
         return unknown_args
@@ -566,11 +686,15 @@ def apply_legacy_add_edge_args(parser: argparse.ArgumentParser, args: argparse.N
         return unknown_args
 
     if args.from_id and args.from_id != legacy_from:
-        parser.error("add-edge received both --from and a conflicting positional from_id")
+        parser.error(
+            "add-edge received both --from and a conflicting positional from_id"
+        )
     if args.to_id and args.to_id != legacy_to:
         parser.error("add-edge received both --to and a conflicting positional to_id")
     if args.edge_type and args.edge_type != legacy_type:
-        parser.error("add-edge received both --type and a conflicting positional edge_type")
+        parser.error(
+            "add-edge received both --type and a conflicting positional edge_type"
+        )
 
     args.from_id = args.from_id or legacy_from
     args.to_id = args.to_id or legacy_to
@@ -595,14 +719,19 @@ def load_citations(wiki_root: str) -> list[dict]:
     return citations
 
 
-def add_citation(wiki_root: str, from_id: str, to_id: str,
-                 source: str = "literature_api") -> None:
+def add_citation(
+    wiki_root: str, from_id: str, to_id: str, source: str = "literature_api"
+) -> None:
     """Append a deterministic bibliographic paper citation to graph/citations.jsonl."""
     if source not in CITATION_SOURCES:
-        print(json.dumps({
-            "status": "error",
-            "message": f"Unknown citation source '{source}'. Valid: {sorted(CITATION_SOURCES)}"
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Unknown citation source '{source}'. Valid: {sorted(CITATION_SOURCES)}",
+                }
+            )
+        )
         sys.exit(1)
 
     root = Path(wiki_root)
@@ -625,8 +754,10 @@ def add_citation(wiki_root: str, from_id: str, to_id: str,
             except json.JSONDecodeError:
                 continue
             if c.get("from") == from_id and c.get("to") == to_id:
-                result: dict = {"status": "exists",
-                                "citation": f"{from_id} --cites--> {to_id}"}
+                result: dict = {
+                    "status": "exists",
+                    "citation": f"{from_id} --cites--> {to_id}",
+                }
                 if warnings:
                     result["warnings"] = warnings
                 print(json.dumps(result))
@@ -642,8 +773,7 @@ def add_citation(wiki_root: str, from_id: str, to_id: str,
     with open(citations_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(citation, ensure_ascii=False) + "\n")
 
-    result2: dict = {"status": "ok",
-                     "citation": f"{from_id} --cites--> {to_id}"}
+    result2: dict = {"status": "ok", "citation": f"{from_id} --cites--> {to_id}"}
     if warnings:
         result2["warnings"] = warnings
     print(json.dumps(result2))
@@ -691,8 +821,9 @@ def dedup_edges(wiki_root: str) -> None:
             e = json.loads(stripped)
             edge_type = str(e.get("type", ""))
             if edge_is_symmetric(edge_type) or e.get("symmetric") is True:
-                e["from"], e["to"] = sorted([str(e.get("from", "")),
-                                             str(e.get("to", ""))])
+                e["from"], e["to"] = sorted(
+                    [str(e.get("from", "")), str(e.get("to", ""))]
+                )
                 e["symmetric"] = True
             triple = _edge_key(e)
             if triple not in seen:
@@ -703,31 +834,36 @@ def dedup_edges(wiki_root: str) -> None:
         except json.JSONDecodeError:
             kept.append(stripped)  # preserve malformed lines
 
-    edges_path.write_text(
-        "\n".join(kept) + ("\n" if kept else ""), encoding="utf-8"
-    )
+    edges_path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
     print(json.dumps({"status": "ok", "kept": len(kept), "removed": removed}))
 
 
-def set_edge_confidence(wiki_root: str, from_id: str, to_id: str,
-                        edge_type: str, confidence: str) -> None:
+def set_edge_confidence(
+    wiki_root: str, from_id: str, to_id: str, edge_type: str, confidence: str
+) -> None:
     """Set confidence on an existing semantic edge."""
     if edge_type not in VALID_EDGE_TYPES:
-        print(json.dumps({
-            "status": "error",
-            "message": f"Unknown edge type '{edge_type}'. Valid: {sorted(VALID_EDGE_TYPES)}"
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Unknown edge type '{edge_type}'. Valid: {sorted(VALID_EDGE_TYPES)}",
+                }
+            )
+        )
         sys.exit(1)
     if confidence not in EDGE_CONFIDENCE_VALUES:
-        print(json.dumps({
-            "status": "error",
-            "message": f"Unknown confidence '{confidence}'. Valid: {sorted(EDGE_CONFIDENCE_VALUES)}"
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Unknown confidence '{confidence}'. Valid: {sorted(EDGE_CONFIDENCE_VALUES)}",
+                }
+            )
+        )
         sys.exit(1)
 
-    from_id, to_id, _, error = _canonical_edge_ids(
-        from_id, to_id, edge_type, False
-    )
+    from_id, to_id, _, error = _canonical_edge_ids(from_id, to_id, edge_type, False)
     if error:
         print(json.dumps({"status": "error", "message": error}))
         sys.exit(1)
@@ -757,18 +893,26 @@ def set_edge_confidence(wiki_root: str, from_id: str, to_id: str,
             updated_lines.append(stripped)
 
     if not changed:
-        print(json.dumps({
-            "status": "error",
-            "message": f"edge not found: {from_id} --{edge_type}--> {to_id}"
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"edge not found: {from_id} --{edge_type}--> {to_id}",
+                }
+            )
+        )
         sys.exit(1)
 
     edges_path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
-    print(json.dumps({
-        "status": "ok",
-        "edge": f"{from_id} --{edge_type}--> {to_id}",
-        "confidence": confidence,
-    }))
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "edge": f"{from_id} --{edge_type}--> {to_id}",
+                "confidence": confidence,
+            }
+        )
+    )
 
 
 def dedup_citations(wiki_root: str) -> None:
@@ -808,6 +952,7 @@ def dedup_citations(wiki_root: str) -> None:
 # Query pack generation
 # ---------------------------------------------------------------------------
 
+
 def _is_linked_worktree() -> bool:
     # Linked worktrees have distinct --git-dir and --git-common-dir; the primary
     # checkout has them equal. Used to block graph rebuilds from /init subagents:
@@ -815,11 +960,15 @@ def _is_linked_worktree() -> bool:
     try:
         git_dir = subprocess.run(
             ["git", "rev-parse", "--git-dir"],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
         common_dir = subprocess.run(
             ["git", "rev-parse", "--git-common-dir"],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
@@ -847,6 +996,7 @@ def rebuild_context_brief(wiki_root: str, max_chars: int = 8000) -> None:
 # ---------------------------------------------------------------------------
 # Gap map generation
 # ---------------------------------------------------------------------------
+
 
 def rebuild_open_questions(wiki_root: str) -> None:
     """Scan wiki pages for open questions / research gaps and write open_questions.md.
@@ -893,8 +1043,9 @@ def rebuild_open_questions(wiki_root: str) -> None:
     print(json.dumps({"status": "ok", "gaps": len(gaps)}))
 
 
-def _collect_section_items(directory: Path, section_name: str,
-                           out: list[str], source_type: str) -> None:
+def _collect_section_items(
+    directory: Path, section_name: str, out: list[str], source_type: str
+) -> None:
     """Extract bullet items from a named markdown section across all files in a dir."""
     if not directory.exists():
         return
@@ -931,7 +1082,9 @@ def _match_filter(actual, pattern_str: str) -> bool:
         op, threshold_s = m.group(1), m.group(2)
         try:
             threshold = float(threshold_s)
-            actual_num = float(actual) if not isinstance(actual, (int, float)) else actual
+            actual_num = (
+                float(actual) if not isinstance(actual, (int, float)) else actual
+            )
         except (ValueError, TypeError):
             return False
         if op == "<":
@@ -948,8 +1101,9 @@ def _match_filter(actual, pattern_str: str) -> bool:
     return str(actual) == pattern_str
 
 
-def find_entities(wiki_root: str, entity_type: str,
-                  filters: list[tuple[str, str]]) -> None:
+def find_entities(
+    wiki_root: str, entity_type: str, filters: list[tuple[str, str]]
+) -> None:
     """Search entities of a given type by slug or frontmatter field filters."""
     root = Path(wiki_root)
     entity_dir = root / entity_type
@@ -1038,32 +1192,72 @@ def _content_tokens(text: str) -> set[str]:
 
 
 _CLAIM_CANONICAL_MAP = {
-    "outperform": "beat", "outperforms": "beat", "outperformed": "beat",
-    "outperforming": "beat", "beats": "beat", "beaten": "beat",
-    "exceed": "beat", "exceeds": "beat", "exceeded": "beat",
-    "surpass": "beat", "surpasses": "beat", "surpassed": "beat",
-    "improve": "beat", "improves": "beat", "improved": "beat",
-    "improvement": "beat", "improvements": "beat",
-    "better": "beat", "best": "beat",
-    "achieve": "beat", "achieves": "beat", "achieved": "beat",
-    "produce": "produce", "produces": "produce", "produced": "produce",
-    "producing": "produce", "production": "produce",
-    "generate": "produce", "generates": "produce", "generated": "produce",
-    "generating": "produce", "generation": "produce",
-    "optimize": "produce", "optimizes": "produce", "optimized": "produce",
-    "optimizing": "produce", "optimization": "produce",
-    "discover": "produce", "discovers": "produce", "discovered": "produce",
-    "create": "produce", "creates": "produce", "created": "produce",
-    "human": "human", "humans": "human",
-    "manual": "human", "manually": "human",
-    "expert": "human", "experts": "human", "expertly": "human",
-    "handwritten": "human", "handcrafted": "human",
-    "prompts": "prompt", "instructions": "instruction",
-    "models": "model", "papers": "paper", "methods": "method",
-    "results": "result", "tasks": "task", "datasets": "dataset",
-    "benchmarks": "benchmark", "experiments": "experiment",
-    "claims": "claim", "concepts": "concept",
-    "llms": "llm", "lms": "llm",
+    "outperform": "beat",
+    "outperforms": "beat",
+    "outperformed": "beat",
+    "outperforming": "beat",
+    "beats": "beat",
+    "beaten": "beat",
+    "exceed": "beat",
+    "exceeds": "beat",
+    "exceeded": "beat",
+    "surpass": "beat",
+    "surpasses": "beat",
+    "surpassed": "beat",
+    "improve": "beat",
+    "improves": "beat",
+    "improved": "beat",
+    "improvement": "beat",
+    "improvements": "beat",
+    "better": "beat",
+    "best": "beat",
+    "achieve": "beat",
+    "achieves": "beat",
+    "achieved": "beat",
+    "produce": "produce",
+    "produces": "produce",
+    "produced": "produce",
+    "producing": "produce",
+    "production": "produce",
+    "generate": "produce",
+    "generates": "produce",
+    "generated": "produce",
+    "generating": "produce",
+    "generation": "produce",
+    "optimize": "produce",
+    "optimizes": "produce",
+    "optimized": "produce",
+    "optimizing": "produce",
+    "optimization": "produce",
+    "discover": "produce",
+    "discovers": "produce",
+    "discovered": "produce",
+    "create": "produce",
+    "creates": "produce",
+    "created": "produce",
+    "human": "human",
+    "humans": "human",
+    "manual": "human",
+    "manually": "human",
+    "expert": "human",
+    "experts": "human",
+    "expertly": "human",
+    "handwritten": "human",
+    "handcrafted": "human",
+    "prompts": "prompt",
+    "instructions": "instruction",
+    "models": "model",
+    "papers": "paper",
+    "methods": "method",
+    "results": "result",
+    "tasks": "task",
+    "datasets": "dataset",
+    "benchmarks": "benchmark",
+    "experiments": "experiment",
+    "claims": "claim",
+    "concepts": "concept",
+    "llms": "llm",
+    "lms": "llm",
 }
 
 
@@ -1103,8 +1297,9 @@ def _phrase_match_score(a: str, b: str) -> float:
     return 0.0
 
 
-def _scan_entity_dir_for_similar(entity_dir: Path, entity_type: str,
-                                 candidate_names: list[str]) -> list[dict]:
+def _scan_entity_dir_for_similar(
+    entity_dir: Path, entity_type: str, candidate_names: list[str]
+) -> list[dict]:
     """Scan one directory for concept-shaped entities similar to the candidate.
 
     Works for both concepts/ and foundations/ because both carry title + aliases.
@@ -1142,21 +1337,24 @@ def _scan_entity_dir_for_similar(entity_dir: Path, entity_type: str,
                     reason = f"phrase containment: '{cn}' ↔ '{en}'"
                 else:
                     reason = f"token overlap (Jaccard): '{cn}' ↔ '{en}'"
-            matches.append({
-                "entity_type": entity_type,
-                "slug": f.stem,
-                "title": existing_title,
-                "aliases": [str(a) for a in existing_aliases],
-                "key_papers": fm.get("key_papers", []) or [],
-                "maturity": fm.get("maturity", ""),
-                "score": round(best_score, 3),
-                "match_reason": reason,
-            })
+            matches.append(
+                {
+                    "entity_type": entity_type,
+                    "slug": f.stem,
+                    "title": existing_title,
+                    "aliases": [str(a) for a in existing_aliases],
+                    "key_papers": fm.get("key_papers", []) or [],
+                    "maturity": fm.get("maturity", ""),
+                    "score": round(best_score, 3),
+                    "match_reason": reason,
+                }
+            )
     return matches
 
 
-def find_similar_concept(wiki_root: str, candidate_title: str,
-                         candidate_aliases: list[str] | None = None) -> None:
+def find_similar_concept(
+    wiki_root: str, candidate_title: str, candidate_aliases: list[str] | None = None
+) -> None:
     """Find existing concepts AND foundations that overlap with the candidate.
 
     Scans both wiki/concepts/ and wiki/foundations/. Results include an
@@ -1172,22 +1370,28 @@ def find_similar_concept(wiki_root: str, candidate_title: str,
     candidate_names = [candidate_title] + [a for a in candidate_aliases if a]
 
     matches: list[dict] = []
-    matches.extend(_scan_entity_dir_for_similar(
-        root / "foundations", "foundation", candidate_names))
-    matches.extend(_scan_entity_dir_for_similar(
-        root / "concepts", "concept", candidate_names))
+    matches.extend(
+        _scan_entity_dir_for_similar(
+            root / "foundations", "foundation", candidate_names
+        )
+    )
+    matches.extend(
+        _scan_entity_dir_for_similar(root / "concepts", "concept", candidate_names)
+    )
 
     # Sort: foundations with high score first (they're terminal — prefer them),
     # then by score descending.
     def sort_key(m: dict) -> tuple:
         is_found = 0 if m["entity_type"] == "foundation" else 1
         return (is_found, -m["score"])
+
     matches.sort(key=sort_key)
     print(_json_dumps(matches, ensure_ascii=False, indent=2))
 
 
-def find_similar_claim(wiki_root: str, candidate_title: str,
-                       candidate_tags: list[str] | None = None) -> None:
+def find_similar_claim(
+    wiki_root: str, candidate_title: str, candidate_tags: list[str] | None = None
+) -> None:
     """Find existing claims that semantically overlap with the candidate.
 
     Claims are full propositions; uses canonicalized token Jaccard with a
@@ -1201,7 +1405,9 @@ def find_similar_claim(wiki_root: str, candidate_title: str,
         print(json.dumps([]))
         return
 
-    candidate_tags_set = {t.strip().lower() for t in (candidate_tags or []) if t.strip()}
+    candidate_tags_set = {
+        t.strip().lower() for t in (candidate_tags or []) if t.strip()
+    }
     cand_tokens = _claim_tokens(candidate_title)
     cand_norm = _normalize_text(candidate_title)
 
@@ -1254,16 +1460,18 @@ def find_similar_claim(wiki_root: str, candidate_title: str,
                 score = min(score + tag_boost, 0.95)
             reason += f"; tags shared: {sorted(shared_tags)}"
 
-        matches.append({
-            "slug": f.stem,
-            "title": existing_title,
-            "tags": [str(t) for t in ex_tags],
-            "status": fm.get("status", ""),
-            "confidence": fm.get("confidence", ""),
-            "source_papers": fm.get("source_papers", []) or [],
-            "score": round(score, 3),
-            "match_reason": reason,
-        })
+        matches.append(
+            {
+                "slug": f.stem,
+                "title": existing_title,
+                "tags": [str(t) for t in ex_tags],
+                "status": fm.get("status", ""),
+                "confidence": fm.get("confidence", ""),
+                "source_papers": fm.get("source_papers", []) or [],
+                "score": round(score, 3),
+                "match_reason": reason,
+            }
+        )
 
     matches.sort(key=lambda m: -m["score"])
     print(_json_dumps(matches, ensure_ascii=False, indent=2))
@@ -1272,6 +1480,7 @@ def find_similar_claim(wiki_root: str, candidate_title: str,
 # ---------------------------------------------------------------------------
 # Named queries: cross-entity knowledge state
 # ---------------------------------------------------------------------------
+
 
 def query_weak_claims(wiki_root: str, threshold: float = 0.5) -> None:
     """Find claims with low confidence or weak status."""
@@ -1297,13 +1506,15 @@ def query_weak_claims(wiki_root: str, threshold: float = 0.5) -> None:
         ev_count = len(evidence) if isinstance(evidence, list) else 0
 
         if conf_f < threshold or status in ("proposed", "weakly_supported"):
-            results.append({
-                "slug": f.stem,
-                "title": fm.get("title", f.stem),
-                "status": status,
-                "confidence": conf_f,
-                "evidence_count": ev_count,
-            })
+            results.append(
+                {
+                    "slug": f.stem,
+                    "title": fm.get("title", f.stem),
+                    "status": status,
+                    "confidence": conf_f,
+                    "evidence_count": ev_count,
+                }
+            )
 
     # Sort by confidence ascending (weakest first)
     results.sort(key=lambda x: x["confidence"])
@@ -1316,8 +1527,9 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
     claim_path = root / "claims" / f"{claim_slug}.md"
 
     if not claim_path.exists():
-        print(json.dumps({"status": "error",
-                          "message": f"Claim not found: {claim_slug}"}))
+        print(
+            json.dumps({"status": "error", "message": f"Claim not found: {claim_slug}"})
+        )
         sys.exit(1)
 
     fm = _parse_frontmatter(claim_path)
@@ -1332,7 +1544,9 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
     edges_out = [e for e in edges if e.get("from") == f"claims/{claim_slug}"]
 
     supporting = [e for e in edges_in if e.get("type") in ("supports", "tested_by")]
-    contradicting = [e for e in edges_in if e.get("type") in ("contradicts", "invalidates")]
+    contradicting = [
+        e for e in edges_in if e.get("type") in ("contradicts", "invalidates")
+    ]
 
     # Find linked experiments
     experiments: list[dict] = []
@@ -1341,16 +1555,21 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
         for f in sorted(exp_dir.glob("*.md")):
             exp_fm = _parse_frontmatter(f)
             if exp_fm.get("target_claim") == claim_slug:
-                experiments.append({
-                    "slug": f.stem,
-                    "status": exp_fm.get("status", ""),
-                    "outcome": exp_fm.get("outcome", ""),
-                    "key_result": exp_fm.get("key_result", ""),
-                })
+                experiments.append(
+                    {
+                        "slug": f.stem,
+                        "status": exp_fm.get("status", ""),
+                        "outcome": exp_fm.get("outcome", ""),
+                        "key_result": exp_fm.get("key_result", ""),
+                    }
+                )
 
     # Determine net evidence strength
-    strong_count = sum(1 for e in (evidence if isinstance(evidence, list) else [])
-                       if isinstance(e, dict) and e.get("strength") == "strong")
+    strong_count = sum(
+        1
+        for e in (evidence if isinstance(evidence, list) else [])
+        if isinstance(e, dict) and e.get("strength") == "strong"
+    )
     total_count = len(evidence) if isinstance(evidence, list) else 0
     if strong_count >= 2:
         net = "strong"
@@ -1359,16 +1578,22 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
     else:
         net = "weak"
 
-    print(json.dumps({
-        "claim": {"slug": claim_slug, **fm},
-        "source_papers": source_papers,
-        "evidence": evidence,
-        "supporting": supporting,
-        "contradicting": contradicting,
-        "experiments": experiments,
-        "edges_out": edges_out,
-        "net_strength": net,
-    }, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "claim": {"slug": claim_slug, **fm},
+                "source_papers": source_papers,
+                "evidence": evidence,
+                "supporting": supporting,
+                "contradicting": contradicting,
+                "experiments": experiments,
+                "edges_out": edges_out,
+                "net_strength": net,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 def query_ready_to_test(wiki_root: str) -> None:
@@ -1387,13 +1612,15 @@ def query_ready_to_test(wiki_root: str) -> None:
         status = fm.get("status", "")
         linked = fm.get("linked_experiments", [])
         if status == "proposed" and not linked:
-            results.append({
-                "slug": f.stem,
-                "title": fm.get("title", f.stem),
-                "priority": fm.get("priority", 3),
-                "origin_gaps": fm.get("origin_gaps", []),
-                "domain": fm.get("domain", ""),
-            })
+            results.append(
+                {
+                    "slug": f.stem,
+                    "title": fm.get("title", f.stem),
+                    "priority": fm.get("priority", 3),
+                    "origin_gaps": fm.get("origin_gaps", []),
+                    "domain": fm.get("domain", ""),
+                }
+            )
 
     # Sort by priority descending
     results.sort(key=lambda x: x.get("priority", 0), reverse=True)
@@ -1429,9 +1656,14 @@ def query_orphans(wiki_root: str) -> None:
 # Graph traversal: neighbors
 # ---------------------------------------------------------------------------
 
-def neighbors(wiki_root: str, node_id: str, depth: int = 1,
-              edge_types: list[str] | None = None,
-              direction: str = "both") -> None:
+
+def neighbors(
+    wiki_root: str,
+    node_id: str,
+    depth: int = 1,
+    edge_types: list[str] | None = None,
+    direction: str = "both",
+) -> None:
     """BFS traversal from a node in the edge graph.
 
     Args:
@@ -1447,15 +1679,39 @@ def neighbors(wiki_root: str, node_id: str, depth: int = 1,
         if edge_types and etype not in edge_types:
             continue
         src, dst = e.get("from", ""), e.get("to", "")
-        adj_out[src].append({"id": dst, "edge": etype, "direction": "outgoing",
-                             "evidence": e.get("evidence", "")})
-        adj_in[dst].append({"id": src, "edge": etype, "direction": "incoming",
-                            "evidence": e.get("evidence", "")})
+        adj_out[src].append(
+            {
+                "id": dst,
+                "edge": etype,
+                "direction": "outgoing",
+                "evidence": e.get("evidence", ""),
+            }
+        )
+        adj_in[dst].append(
+            {
+                "id": src,
+                "edge": etype,
+                "direction": "incoming",
+                "evidence": e.get("evidence", ""),
+            }
+        )
         if e.get("symmetric") is True or edge_is_symmetric(etype):
-            adj_out[dst].append({"id": src, "edge": etype, "direction": "symmetric",
-                                 "evidence": e.get("evidence", "")})
-            adj_in[src].append({"id": dst, "edge": etype, "direction": "symmetric",
-                                "evidence": e.get("evidence", "")})
+            adj_out[dst].append(
+                {
+                    "id": src,
+                    "edge": etype,
+                    "direction": "symmetric",
+                    "evidence": e.get("evidence", ""),
+                }
+            )
+            adj_in[src].append(
+                {
+                    "id": dst,
+                    "edge": etype,
+                    "direction": "symmetric",
+                    "evidence": e.get("evidence", ""),
+                }
+            )
 
     # BFS
     visited: set[str] = {node_id}
@@ -1481,8 +1737,13 @@ def neighbors(wiki_root: str, node_id: str, depth: int = 1,
         if not current_level:
             break
 
-    print(_json_dumps({"center": node_id, "depth": depth, "nodes": all_nodes},
-                      ensure_ascii=False, indent=2))
+    print(
+        _json_dumps(
+            {"center": node_id, "depth": depth, "nodes": all_nodes},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1491,11 +1752,11 @@ def neighbors(wiki_root: str, node_id: str, depth: int = 1,
 
 CONTEXT_BUDGETS = {
     #                Claims  Gaps  Failed  Papers  Experiments  Edges  Stale
-    "ideation":     (1500,  2000, 2000,   1000,   500,         500,   500),
-    "experiment":   (2500,  500,  500,    1000,   2500,        500,   0),
-    "writing":      (2000,  500,  200,    2500,   500,         800,   0),
-    "review":       (2500,  1000, 500,    1000,   1500,        500,   500),
-    "general":      (2000,  1500, 1500,   2000,   0,           1000,  0),
+    "ideation": (1500, 2000, 2000, 1000, 500, 500, 500),
+    "experiment": (2500, 500, 500, 1000, 2500, 500, 0),
+    "writing": (2000, 500, 200, 2500, 500, 800, 0),
+    "review": (2500, 1000, 500, 1000, 1500, 500, 500),
+    "general": (2000, 1500, 1500, 2000, 0, 1000, 0),
 }
 
 
@@ -1509,8 +1770,7 @@ def _entity_edge_counts(wiki_root: str) -> dict[str, int]:
     return dict(counts)
 
 
-def compile_context(wiki_root: str, purpose: str,
-                    max_chars: int = 8000) -> None:
+def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None:
     """Generate purpose-specific compressed context for downstream skills.
 
     Replaces the old one-size-fits-all rebuild_context_brief with budget
@@ -1534,8 +1794,9 @@ def compile_context(wiki_root: str, purpose: str,
                 status = fm.get("status", "unknown")
                 confidence = fm.get("confidence", "?")
                 connectivity = edge_counts.get(f"claims/{f.stem}", 0)
-                items.append((connectivity,
-                              f"- [{status}] {title} (conf: {confidence})"))
+                items.append(
+                    (connectivity, f"- [{status}] {title} (conf: {confidence})")
+                )
             if items:
                 items.sort(key=lambda x: x[0], reverse=True)
                 text = "\n".join(line for _, line in items)[:b_claims]
@@ -1546,8 +1807,9 @@ def compile_context(wiki_root: str, purpose: str,
         gap_path = root / DERIVED_DIR / "open_questions.md"
         if gap_path.exists():
             gap_text = gap_path.read_text(encoding="utf-8")
-            body_lines = [l for l in gap_text.split("\n")
-                          if not l.startswith("#") and l.strip()]
+            body_lines = [
+                l for l in gap_text.split("\n") if not l.startswith("#") and l.strip()
+            ]
             body = "\n".join(body_lines)
             if body.strip():
                 sections.append(f"## Open Gaps\n{body[:b_gaps]}\n")
@@ -1616,14 +1878,16 @@ def compile_context(wiki_root: str, purpose: str,
     if b_edges > 0:
         edges = load_edges(wiki_root)
         if edges:
-            chain_lines = [f"  {e['from']} --{e['type']}--> {e['to']}"
-                           for e in edges[-25:]]
+            chain_lines = [
+                f"  {e['from']} --{e['type']}--> {e['to']}" for e in edges[-25:]
+            ]
             text = "\n".join(chain_lines)[:b_edges]
             sections.append(f"## Recent Relationships ({len(edges)} total)\n{text}\n")
 
     # 7. Stale entities
     if b_stale > 0:
         from datetime import timedelta
+
         cutoff = datetime.now(timezone.utc) - timedelta(days=30)
         stale_lines: list[str] = []
         for etype in ENTITY_DIRS:
@@ -1632,15 +1896,19 @@ def compile_context(wiki_root: str, purpose: str,
                 continue
             for f in sorted(edir.glob("*.md")):
                 fm = _parse_frontmatter(f)
-                date_str = (fm.get("date_updated") or fm.get("date_added")
-                            or fm.get("date_proposed") or "")
+                date_str = (
+                    fm.get("date_updated")
+                    or fm.get("date_added")
+                    or fm.get("date_proposed")
+                    or ""
+                )
                 if isinstance(date_str, str) and date_str:
                     try:
                         d = datetime.strptime(date_str, "%Y-%m-%d").replace(
-                            tzinfo=timezone.utc)
+                            tzinfo=timezone.utc
+                        )
                         if d < cutoff:
-                            stale_lines.append(
-                                f"- {etype}/{f.stem} (last: {date_str})")
+                            stale_lines.append(f"- {etype}/{f.stem} (last: {date_str})")
                     except ValueError:
                         pass
         if stale_lines:
@@ -1648,8 +1916,10 @@ def compile_context(wiki_root: str, purpose: str,
             sections.append(f"## Stale Entities\n{text}\n")
 
     # Assemble within budget
-    header = (f"# Query Pack ({purpose})\n\n"
-              f"_Auto-generated compressed context. Do not edit._\n\n")
+    header = (
+        f"# Query Pack ({purpose})\n\n"
+        f"_Auto-generated compressed context. Do not edit._\n\n"
+    )
     pack = header
     for s in sections:
         if len(pack) + len(s) <= max_chars:
@@ -1669,6 +1939,7 @@ def compile_context(wiki_root: str, purpose: str,
 # ---------------------------------------------------------------------------
 # Statistics
 # ---------------------------------------------------------------------------
+
 
 def get_stats(wiki_root: str, as_json: bool = False) -> dict:
     """Collect and print wiki statistics."""
@@ -1709,16 +1980,20 @@ def get_stats(wiki_root: str, as_json: bool = False) -> dict:
     if as_json:
         print(json.dumps(stats, indent=2))
     else:
-        print("OmegaWiki Stats")
+        print("LLMWiki Stats")
         print(f"  Papers:      {stats['papers']}")
         print(f"  Concepts:    {stats['concepts']}")
         print(f"  Topics:      {stats['topics']}")
         print(f"  People:      {stats['people']}")
-        print(f"  Ideas:       {stats['ideas']} "
-              f"({stats['ideas_validated']} validated, {stats['ideas_failed']} failed)")
+        print(
+            f"  Ideas:       {stats['ideas']} "
+            f"({stats['ideas_validated']} validated, {stats['ideas_failed']} failed)"
+        )
         print(f"  Experiments: {stats['experiments']}")
-        print(f"  Claims:      {stats['claims']} "
-              f"({stats['claims_supported']} supported, {stats['claims_challenged']} challenged)")
+        print(
+            f"  Claims:      {stats['claims']} "
+            f"({stats['claims_supported']} supported, {stats['claims_challenged']} challenged)"
+        )
         print(f"  Summaries:   {stats['summaries']}")
         print(f"  Edges:       {stats['edges']}")
         print(f"  Citations:   {stats['citations']}")
@@ -1740,6 +2015,7 @@ def get_maturity(wiki_root: str, as_json: bool = False) -> dict:
 
     # Collect stats silently (suppress get_stats output).
     import io as _io
+
     _old_stdout = sys.stdout
     sys.stdout = _io.StringIO()
     try:
@@ -1766,9 +2042,17 @@ def get_maturity(wiki_root: str, as_json: bool = False) -> dict:
 
     # Total entities across all dirs
     total_entities = sum(
-        stats.get(k, 0) for k in
-        ("papers", "concepts", "topics", "people",
-         "ideas", "experiments", "claims", "summaries")
+        stats.get(k, 0)
+        for k in (
+            "papers",
+            "concepts",
+            "topics",
+            "people",
+            "ideas",
+            "experiments",
+            "claims",
+            "summaries",
+        )
     )
 
     # Graph density: edges / max(1, N*(N-1))
@@ -1777,22 +2061,29 @@ def get_maturity(wiki_root: str, as_json: bool = False) -> dict:
     graph_density = round(min(1.0, n_edges / max_possible), 4)
 
     # Coverage score: weighted sum, capped at 1.0
-    coverage_score = round(min(1.0, (
-        stats["papers"] / 20 * 0.3
-        + stats["claims"] / 40 * 0.3
-        + exp_completed / 5 * 0.2
-        + n_edges / 50 * 0.2
-    )), 4)
+    coverage_score = round(
+        min(
+            1.0,
+            (
+                stats["papers"] / 20 * 0.3
+                + stats["claims"] / 40 * 0.3
+                + exp_completed / 5 * 0.2
+                + n_edges / 50 * 0.2
+            ),
+        ),
+        4,
+    )
 
     # Determine level
     papers = stats["papers"]
     claims = stats["claims"]
-    if (papers >= MATURITY_HOT["papers"]
-            and claims >= MATURITY_HOT["claims"]
-            and has_experiment_evidence):
+    if (
+        papers >= MATURITY_HOT["papers"]
+        and claims >= MATURITY_HOT["claims"]
+        and has_experiment_evidence
+    ):
         level = "hot"
-    elif (papers >= MATURITY_WARM["papers"]
-          and claims >= MATURITY_WARM["claims"]):
+    elif papers >= MATURITY_WARM["papers"] and claims >= MATURITY_WARM["claims"]:
         level = "warm"
     else:
         level = "cold"
@@ -1815,20 +2106,30 @@ def get_maturity(wiki_root: str, as_json: bool = False) -> dict:
     else:
         print(f"Wiki Maturity: {level}")
         if level == "cold":
-            print(f"  Papers: {papers}/{MATURITY_WARM['papers']}"
-                  f" (need {MATURITY_WARM['papers']} for warm)")
-            print(f"  Claims: {claims}/{MATURITY_WARM['claims']}"
-                  f" (need {MATURITY_WARM['claims']} for warm)")
+            print(
+                f"  Papers: {papers}/{MATURITY_WARM['papers']}"
+                f" (need {MATURITY_WARM['papers']} for warm)"
+            )
+            print(
+                f"  Claims: {claims}/{MATURITY_WARM['claims']}"
+                f" (need {MATURITY_WARM['claims']} for warm)"
+            )
         elif level == "warm":
-            print(f"  Papers: {papers}/{MATURITY_HOT['papers']}"
-                  f" (need {MATURITY_HOT['papers']} for hot)")
-            print(f"  Claims: {claims}/{MATURITY_HOT['claims']}"
-                  f" (need {MATURITY_HOT['claims']} for hot)")
+            print(
+                f"  Papers: {papers}/{MATURITY_HOT['papers']}"
+                f" (need {MATURITY_HOT['papers']} for hot)"
+            )
+            print(
+                f"  Claims: {claims}/{MATURITY_HOT['claims']}"
+                f" (need {MATURITY_HOT['claims']} for hot)"
+            )
             if not has_experiment_evidence:
                 print("  Experiment evidence: missing (needed for hot)")
         else:
-            print(f"  Papers: {papers} | Claims: {claims}"
-                  f" | Experiments completed: {exp_completed}")
+            print(
+                f"  Papers: {papers} | Claims: {claims}"
+                f" | Experiments completed: {exp_completed}"
+            )
         print(f"  Coverage: {int(coverage_score * 100)}%")
 
     return result
@@ -1874,8 +2175,14 @@ def transition(path: str, new_status: str, reason: str = "") -> None:
     # Determine entity type from path
     entity_type = p.parent.name
     if entity_type not in TRANSITIONS:
-        print(json.dumps({"status": "error",
-                          "message": f"No lifecycle rules for entity type '{entity_type}'"}))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"No lifecycle rules for entity type '{entity_type}'",
+                }
+            )
+        )
         sys.exit(1)
 
     fm = _parse_frontmatter(p)
@@ -1883,49 +2190,85 @@ def transition(path: str, new_status: str, reason: str = "") -> None:
     rules = TRANSITIONS[entity_type]
 
     if current_status not in rules:
-        print(json.dumps({"status": "error",
-                          "message": f"Current status '{current_status}' is terminal or unknown"}))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Current status '{current_status}' is terminal or unknown",
+                }
+            )
+        )
         sys.exit(1)
 
     allowed = rules[current_status]
     if new_status not in allowed:
-        print(json.dumps({
-            "status": "error",
-            "message": f"Invalid: {current_status} -> {new_status}. "
-                       f"Allowed: {allowed}",
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Invalid: {current_status} -> {new_status}. "
+                    f"Allowed: {allowed}",
+                }
+            )
+        )
         sys.exit(1)
 
     # Precondition checks
     if entity_type == "ideas" and new_status == "in_progress":
         linked = fm.get("linked_experiments", [])
         if not linked:
-            print(json.dumps({"status": "error",
-                              "message": "linked_experiments must be non-empty "
-                                         "to transition to in_progress"}))
+            print(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "message": "linked_experiments must be non-empty "
+                        "to transition to in_progress",
+                    }
+                )
+            )
             sys.exit(1)
 
     if entity_type == "ideas" and new_status == "failed":
         if not reason:
-            print(json.dumps({"status": "error",
-                              "message": "--reason is required to transition to failed"}))
+            print(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "message": "--reason is required to transition to failed",
+                    }
+                )
+            )
             sys.exit(1)
 
     if entity_type == "experiments" and new_status == "completed":
         if not fm.get("key_result"):
-            print(json.dumps({"status": "error",
-                              "message": "key_result must be non-empty "
-                                         "to transition to completed"}))
+            print(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "message": "key_result must be non-empty "
+                        "to transition to completed",
+                    }
+                )
+            )
             sys.exit(1)
 
     if entity_type == "claims" and new_status == "supported":
         evidence = fm.get("evidence", [])
-        has_strong = any(isinstance(e, dict) and e.get("strength") == "strong"
-                         for e in (evidence if isinstance(evidence, list) else []))
+        has_strong = any(
+            isinstance(e, dict) and e.get("strength") == "strong"
+            for e in (evidence if isinstance(evidence, list) else [])
+        )
         if not has_strong:
-            print(json.dumps({"status": "error",
-                              "message": "Must have at least one 'strong' evidence "
-                                         "to transition to supported"}))
+            print(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "message": "Must have at least one 'strong' evidence "
+                        "to transition to supported",
+                    }
+                )
+            )
             sys.exit(1)
 
     # Apply transition
@@ -1977,6 +2320,7 @@ def transition(path: str, new_status: str, reason: str = "") -> None:
 # ---------------------------------------------------------------------------
 # Batch edge creation
 # ---------------------------------------------------------------------------
+
 
 def batch_edges(wiki_root: str) -> None:
     """Create multiple edges from a JSON array on stdin."""
@@ -2042,19 +2386,23 @@ def batch_edges(wiki_root: str) -> None:
             errors.extend(f"{item_label}: {msg}" for msg in item_errors)
             continue
 
-        triple = _edge_key({
-            "from": from_id, "to": to_id, "type": edge_type,
-            "symmetric": is_symmetric,
-        })
+        triple = _edge_key(
+            {
+                "from": from_id,
+                "to": to_id,
+                "type": edge_type,
+                "symmetric": is_symmetric,
+            }
+        )
         if triple in existing:
             existed += 1
             continue
 
         # Entity validation
         warnings.extend(_validate_node_refs(root, from_id, to_id))
-        warnings.extend(_semantic_edge_warnings(
-            edge_type, from_id, to_id, confidence, evidence
-        ))
+        warnings.extend(
+            _semantic_edge_warnings(edge_type, from_id, to_id, confidence, evidence)
+        )
 
         edge = {
             "from": from_id,
@@ -2072,9 +2420,18 @@ def batch_edges(wiki_root: str) -> None:
         added += 1
 
     if errors:
-        print(json.dumps({"status": "error", "added": 0, "existed": existed,
-                          "errors": errors, "warnings": warnings},
-                         ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "added": 0,
+                    "existed": existed,
+                    "errors": errors,
+                    "warnings": warnings,
+                },
+                ensure_ascii=False,
+            )
+        )
         sys.exit(1)
 
     if new_lines:
@@ -2082,13 +2439,18 @@ def batch_edges(wiki_root: str) -> None:
             for line in new_lines:
                 f.write(line + "\n")
 
-    print(json.dumps({"status": "ok", "added": added, "existed": existed,
-                       "warnings": warnings}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {"status": "ok", "added": added, "existed": existed, "warnings": warnings},
+            ensure_ascii=False,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
 # Rebuild index.md
 # ---------------------------------------------------------------------------
+
 
 def rebuild_index(wiki_root: str) -> None:
     """Regenerate index.md by scanning all entity directories."""
@@ -2124,11 +2486,15 @@ def rebuild_index(wiki_root: str) -> None:
             if "research_modes" in fm and fm["research_modes"]:
                 modes = fm["research_modes"]
                 if isinstance(modes, list):
-                    line_parts.append(f"    research_modes: [{', '.join(str(m) for m in modes)}]")
+                    line_parts.append(
+                        f"    research_modes: [{', '.join(str(m) for m in modes)}]"
+                    )
             if "research_object_tags" in fm and fm["research_object_tags"]:
                 objects = fm["research_object_tags"]
                 if isinstance(objects, list):
-                    line_parts.append(f"    research_object_tags: [{', '.join(str(o) for o in objects)}]")
+                    line_parts.append(
+                        f"    research_object_tags: [{', '.join(str(o) for o in objects)}]"
+                    )
             if "confidence" in fm:
                 line_parts.append(f"    confidence: {fm['confidence']}")
             if "domain" in fm:
@@ -2161,6 +2527,7 @@ def rebuild_index(wiki_root: str) -> None:
 # Topic backfill (post-merge sweep for /init INIT MODE)
 # ---------------------------------------------------------------------------
 
+
 def topic_backfill(wiki_root: str) -> None:
     """Append matching papers to each topic's seminal_works / SOTA tracker.
 
@@ -2187,15 +2554,19 @@ def topic_backfill(wiki_root: str) -> None:
     papers_dir = root / "papers"
 
     if not topics_dir.exists() or not papers_dir.exists():
-        print(json.dumps({
-            "status": "ok",
-            "topics_scanned": 0,
-            "topics_matched": 0,
-            "lines_added": 0,
-            "lines_skipped_existing": 0,
-            "per_topic": {},
-            "note": "topics/ or papers/ missing",
-        }))
+        print(
+            json.dumps(
+                {
+                    "status": "ok",
+                    "topics_scanned": 0,
+                    "topics_matched": 0,
+                    "lines_added": 0,
+                    "lines_skipped_existing": 0,
+                    "per_topic": {},
+                    "note": "topics/ or papers/ missing",
+                }
+            )
+        )
         return
 
     def _as_str_set(val) -> set[str]:
@@ -2232,8 +2603,11 @@ def topic_backfill(wiki_root: str) -> None:
         tfm = _parse_frontmatter(tpath)
         ttags = _as_str_set(tfm.get("tags"))
         if not ttags:
-            per_topic[topic_slug] = {"added": 0, "skipped": 0,
-                                      "note": "topic has no tags"}
+            per_topic[topic_slug] = {
+                "added": 0,
+                "skipped": 0,
+                "note": "topic has no tags",
+            }
             continue
 
         seminal: list[str] = []
@@ -2266,14 +2640,19 @@ def topic_backfill(wiki_root: str) -> None:
         skipped_existing += t_skipped
         per_topic[topic_slug] = {"added": t_added, "skipped": t_skipped}
 
-    print(json.dumps({
-        "status": "ok",
-        "topics_scanned": len(per_topic),
-        "topics_matched": matched_topics,
-        "lines_added": added,
-        "lines_skipped_existing": skipped_existing,
-        "per_topic": per_topic,
-    }, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "topics_scanned": len(per_topic),
+                "topics_matched": matched_topics,
+                "lines_added": added,
+                "lines_skipped_existing": skipped_existing,
+                "per_topic": per_topic,
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 def _find_section_heading(content: str, heading: str) -> int:
@@ -2297,8 +2676,9 @@ def _find_section_heading(content: str, heading: str) -> int:
         start = idx + 1
 
 
-def _append_lines_to_section(fpath: Path, heading: str,
-                              lines: list[str]) -> tuple[int, int]:
+def _append_lines_to_section(
+    fpath: Path, heading: str, lines: list[str]
+) -> tuple[int, int]:
     """Append lines under a markdown heading. Returns (added, skipped).
 
     - Idempotent: re-appending an already-present line in the same section
@@ -2400,7 +2780,9 @@ def _append_log_section_line(log_path: Path, skill: str, line: str) -> None:
 
     body_start = match.end()
     next_heading = re.search(r"(?m)^##\s+", content[body_start:])
-    section_end = body_start + (next_heading.start() if next_heading else len(content[body_start:]))
+    section_end = body_start + (
+        next_heading.start() if next_heading else len(content[body_start:])
+    )
     before = content[:section_end].rstrip()
     after = content[section_end:].lstrip("\n")
     if after:
@@ -2428,6 +2810,7 @@ def append_log(wiki_root: str, message: str) -> None:
 # ---------------------------------------------------------------------------
 # Frontmatter engine (parse / serialize / update)
 # ---------------------------------------------------------------------------
+
 
 def _parse_scalar(val: str):
     """Parse a YAML scalar value to Python type."""
@@ -2617,7 +3000,7 @@ def _serialize_frontmatter(fm: dict) -> str:
 
     for key, val in fm.items():
         if val is None or val == "":
-            lines.append(f"{key}: \"\"")
+            lines.append(f'{key}: ""')
         elif isinstance(val, bool):
             lines.append(f"{key}: {'true' if val else 'false'}")
         elif isinstance(val, (int, float)):
@@ -2634,7 +3017,9 @@ def _serialize_frontmatter(fm: dict) -> str:
             elif all(isinstance(x, (str, int, float, bool)) for x in val):
                 # Short inline list for simple items
                 formatted = ", ".join(
-                    f'"{x}"' if isinstance(x, str) and any(c in x for c in ":#,[]") else str(x)
+                    f'"{x}"'
+                    if isinstance(x, str) and any(c in x for c in ":#,[]")
+                    else str(x)
                     for x in val
                 )
                 lines.append(f"{key}: [{formatted}]")
@@ -2664,8 +3049,9 @@ def _serialize_frontmatter(fm: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _update_frontmatter_field(content: str, field: str, value,
-                               append: bool = False) -> tuple[str, str, str]:
+def _update_frontmatter_field(
+    content: str, field: str, value, append: bool = False
+) -> tuple[str, str, str]:
     """Update a single field in a file's frontmatter text.
 
     Returns ``(new_content, old_value_str, new_value_str)``.
@@ -2676,7 +3062,7 @@ def _update_frontmatter_field(content: str, field: str, value,
         raise ValueError("No frontmatter found")
 
     fm_text = m.group(1)
-    after_fm = content[m.end():]
+    after_fm = content[m.end() :]
 
     # Parse existing frontmatter
     fm = _parse_yaml_block(fm_text)
@@ -2685,7 +3071,11 @@ def _update_frontmatter_field(content: str, field: str, value,
         raise ValueError(f"Field '{field}' not found in frontmatter")
 
     old_val = fm.get(field, "")
-    old_str = json.dumps(old_val, ensure_ascii=False) if not isinstance(old_val, str) else old_val
+    old_str = (
+        json.dumps(old_val, ensure_ascii=False)
+        if not isinstance(old_val, str)
+        else old_val
+    )
 
     if append:
         # Append to list field
@@ -2702,7 +3092,11 @@ def _update_frontmatter_field(content: str, field: str, value,
         fm[field] = value
 
     new_val = fm[field]
-    new_str = json.dumps(new_val, ensure_ascii=False) if not isinstance(new_val, str) else new_val
+    new_str = (
+        json.dumps(new_val, ensure_ascii=False)
+        if not isinstance(new_val, str)
+        else new_val
+    )
 
     # Rebuild file
     new_fm_text = _serialize_frontmatter(fm)
@@ -2714,6 +3108,7 @@ def _update_frontmatter_field(content: str, field: str, value,
 # ---------------------------------------------------------------------------
 # Frontmatter CLI commands
 # ---------------------------------------------------------------------------
+
 
 def read_meta(path: str, field: str | None = None) -> None:
     """Read frontmatter from a wiki page, output as JSON."""
@@ -2731,8 +3126,14 @@ def read_meta(path: str, field: str | None = None) -> None:
         print(_json_dumps(fm, ensure_ascii=False, indent=2))
     else:
         if field not in fm:
-            print(json.dumps({"status": "error",
-                              "message": f"Field '{field}' not in frontmatter"}))
+            print(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "message": f"Field '{field}' not in frontmatter",
+                    }
+                )
+            )
             sys.exit(1)
         val = fm[field]
         print(_json_dumps(val, ensure_ascii=False))
@@ -2754,10 +3155,12 @@ def set_meta(path: str, field: str, value: str, append: bool = False) -> None:
         if append:
             # For append, value is always treated as a string to add to a list
             new_content, old_str, new_str = _update_frontmatter_field(
-                content, field, value, append=True)
+                content, field, value, append=True
+            )
         else:
             new_content, old_str, new_str = _update_frontmatter_field(
-                content, field, parsed_value, append=False)
+                content, field, parsed_value, append=False
+            )
     except ValueError as e:
         print(json.dumps({"status": "error", "message": str(e)}))
         sys.exit(1)
@@ -2782,6 +3185,7 @@ def set_meta(path: str, field: str, value: str, append: bool = False) -> None:
 # ---------------------------------------------------------------------------
 # Checkpoint management (for resumable batch operations)
 # ---------------------------------------------------------------------------
+
 
 def _checkpoint_path(wiki_root: str, task_id: str) -> Path:
     return Path(wiki_root) / ".checkpoints" / f"{task_id}.json"
@@ -2830,8 +3234,9 @@ def _checkpoint_write(wiki_root: str, task_id: str, data: dict) -> None:
     cp_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def checkpoint_save(wiki_root: str, task_id: str, item: str,
-                    status: str = "completed") -> None:
+def checkpoint_save(
+    wiki_root: str, task_id: str, item: str, status: str = "completed"
+) -> None:
     """Record an item as completed/failed in a checkpoint file."""
     data = _checkpoint_read(wiki_root, task_id)
 
@@ -2840,8 +3245,11 @@ def checkpoint_save(wiki_root: str, task_id: str, item: str,
         data[target_list].append(item)
 
     _checkpoint_write(wiki_root, task_id, data)
-    print(json.dumps({"status": "ok", "task_id": task_id,
-                      "item": item, "item_status": status}))
+    print(
+        json.dumps(
+            {"status": "ok", "task_id": task_id, "item": item, "item_status": status}
+        )
+    )
 
 
 def checkpoint_set_meta(wiki_root: str, task_id: str, key: str, value: str) -> None:
@@ -2854,8 +3262,7 @@ def checkpoint_set_meta(wiki_root: str, task_id: str, key: str, value: str) -> N
     data = _checkpoint_read(wiki_root, task_id)
     data["metadata"][key] = value
     _checkpoint_write(wiki_root, task_id, data)
-    print(json.dumps({"status": "ok", "task_id": task_id,
-                      "key": key, "value": value}))
+    print(json.dumps({"status": "ok", "task_id": task_id, "key": key, "value": value}))
 
 
 def checkpoint_get_meta(wiki_root: str, task_id: str, key: str = "") -> None:
@@ -2887,16 +3294,34 @@ def checkpoint_load(wiki_root: str, task_id: str) -> None:
     cp_file = _checkpoint_path(wiki_root, task_id)
 
     if not cp_file.exists():
-        print(json.dumps({"task_id": task_id, "completed": [], "failed": [],
-                          "metadata": {}, "exists": False}))
+        print(
+            json.dumps(
+                {
+                    "task_id": task_id,
+                    "completed": [],
+                    "failed": [],
+                    "metadata": {},
+                    "exists": False,
+                }
+            )
+        )
         return
 
     try:
         data = _checkpoint_read(wiki_root, task_id, strict=True)
     except (json.JSONDecodeError, ValueError):
-        print(json.dumps({"task_id": task_id, "completed": [], "failed": [],
-                          "metadata": {}, "exists": False,
-                          "error": "corrupt checkpoint"}))
+        print(
+            json.dumps(
+                {
+                    "task_id": task_id,
+                    "completed": [],
+                    "failed": [],
+                    "metadata": {},
+                    "exists": False,
+                    "error": "corrupt checkpoint",
+                }
+            )
+        )
         return
 
     data["exists"] = True
@@ -2914,6 +3339,7 @@ def checkpoint_clear(wiki_root: str, task_id: str) -> None:
 
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -2930,12 +3356,22 @@ def main():
     p.add_argument("title", help="Paper or concept title")
 
     # paper-slug
-    p = sub.add_parser("paper-slug", help="Generate citation-key style slug for a paper page")
+    p = sub.add_parser(
+        "paper-slug", help="Generate citation-key style slug for a paper page"
+    )
     p.add_argument("title", help="Paper title")
-    p.add_argument("--citation-key", default="", help="Zotero/Better BibTeX citation key")
-    p.add_argument("--authors", default="", help="Author string; first author is used for fallback")
+    p.add_argument(
+        "--citation-key", default="", help="Zotero/Better BibTeX citation key"
+    )
+    p.add_argument(
+        "--authors", default="", help="Author string; first author is used for fallback"
+    )
     p.add_argument("--year", default="", help="Publication year; used for fallback")
-    p.add_argument("--bibtex", default="", help="BibTeX entry; citekey/author/title/year are used when provided")
+    p.add_argument(
+        "--bibtex",
+        default="",
+        help="BibTeX entry; citekey/author/title/year are used when provided",
+    )
 
     # add-edge
     p = sub.add_parser("add-edge", help="Add typed edge to graph")
@@ -2944,17 +3380,21 @@ def main():
     p.add_argument("--to", dest="to_id", default="")
     p.add_argument("--type", dest="edge_type", default="")
     p.add_argument("--evidence", default="")
-    p.add_argument("--confidence", default="",
-                   choices=["", *sorted(EDGE_CONFIDENCE_VALUES)])
+    p.add_argument(
+        "--confidence", default="", choices=["", *sorted(EDGE_CONFIDENCE_VALUES)]
+    )
     p.add_argument("--symmetric", action="store_true")
 
     # add-citation
-    p = sub.add_parser("add-citation", help="Add paper citation to graph/citations.jsonl")
+    p = sub.add_parser(
+        "add-citation", help="Add paper citation to graph/citations.jsonl"
+    )
     p.add_argument("wiki_root")
     p.add_argument("--from", dest="from_id", required=True)
     p.add_argument("--to", dest="to_id", required=True)
-    p.add_argument("--source", default="literature_api",
-                   choices=sorted(CITATION_SOURCES))
+    p.add_argument(
+        "--source", default="literature_api", choices=sorted(CITATION_SOURCES)
+    )
 
     # rebuild-context-brief
     p = sub.add_parser("rebuild-context-brief", help="Regenerate context_brief.md")
@@ -2971,8 +3411,7 @@ def main():
     p.add_argument("--json", action="store_true")
 
     # maturity
-    p = sub.add_parser("maturity",
-                        help="Assess wiki maturity level (cold/warm/hot)")
+    p = sub.add_parser("maturity", help="Assess wiki maturity level (cold/warm/hot)")
     p.add_argument("wiki_root")
     p.add_argument("--json", action="store_true")
 
@@ -2984,15 +3423,20 @@ def main():
     # read-meta
     p = sub.add_parser("read-meta", help="Read frontmatter field(s) as JSON")
     p.add_argument("path", help="Path to .md file")
-    p.add_argument("field", nargs="?", default=None, help="Specific field (omit for all)")
+    p.add_argument(
+        "field", nargs="?", default=None, help="Specific field (omit for all)"
+    )
 
     # set-meta
     p = sub.add_parser("set-meta", help="Set a frontmatter field")
     p.add_argument("path")
     p.add_argument("field")
     p.add_argument("value")
-    p.add_argument("--append", action="store_true",
-                   help="Append value to a list field instead of replacing")
+    p.add_argument(
+        "--append",
+        action="store_true",
+        help="Append value to a list field instead of replacing",
+    )
 
     # find
     p = sub.add_parser("find", help="Search entities by frontmatter fields")
@@ -3000,26 +3444,37 @@ def main():
     p.add_argument("entity_type", choices=ENTITY_DIRS)
 
     # find-similar-concept
-    p = sub.add_parser("find-similar-concept",
-                       help="Detect existing concepts/foundations that semantically overlap with a candidate (call this BEFORE creating a new concept page)")
+    p = sub.add_parser(
+        "find-similar-concept",
+        help="Detect existing concepts/foundations that semantically overlap with a candidate (call this BEFORE creating a new concept page)",
+    )
     p.add_argument("wiki_root")
     p.add_argument("title", help="Candidate concept title")
-    p.add_argument("--aliases", default="",
-                   help="Comma-separated list of candidate aliases / alternative names")
+    p.add_argument(
+        "--aliases",
+        default="",
+        help="Comma-separated list of candidate aliases / alternative names",
+    )
 
     # find-similar-claim
-    p = sub.add_parser("find-similar-claim",
-                       help="Detect existing claims that semantically overlap with a candidate (call this BEFORE creating a new claim page)")
+    p = sub.add_parser(
+        "find-similar-claim",
+        help="Detect existing claims that semantically overlap with a candidate (call this BEFORE creating a new claim page)",
+    )
     p.add_argument("wiki_root")
     p.add_argument("title", help="Candidate claim title (the proposition itself)")
-    p.add_argument("--tags", default="",
-                   help="Comma-separated list of candidate tags (used as tiebreaker)")
+    p.add_argument(
+        "--tags",
+        default="",
+        help="Comma-separated list of candidate tags (used as tiebreaker)",
+    )
 
     # query
     p = sub.add_parser("query", help="Cross-entity knowledge queries")
     p.add_argument("wiki_root")
-    p.add_argument("subquery",
-                   choices=["weak-claims", "evidence-for", "ready-to-test", "orphans"])
+    p.add_argument(
+        "subquery", choices=["weak-claims", "evidence-for", "ready-to-test", "orphans"]
+    )
     p.add_argument("slug", nargs="?", help="Entity slug (for evidence-for)")
     p.add_argument("--threshold", type=float, default=0.5)
 
@@ -3028,18 +3483,19 @@ def main():
     p.add_argument("wiki_root")
     p.add_argument("node_id", help="Node ID (e.g. papers/lora)")
     p.add_argument("--depth", type=int, default=1)
-    p.add_argument("--edge-type", default=None,
-                   help="Comma-separated edge types to filter")
+    p.add_argument(
+        "--edge-type", default=None, help="Comma-separated edge types to filter"
+    )
     direction = p.add_mutually_exclusive_group()
     direction.add_argument("--incoming", action="store_true")
     direction.add_argument("--outgoing", action="store_true")
 
     # compile-context
-    p = sub.add_parser("compile-context",
-                       help="Generate purpose-specific context")
+    p = sub.add_parser("compile-context", help="Generate purpose-specific context")
     p.add_argument("wiki_root")
-    p.add_argument("--for", dest="purpose", required=True,
-                   choices=list(CONTEXT_BUDGETS.keys()))
+    p.add_argument(
+        "--for", dest="purpose", required=True, choices=list(CONTEXT_BUDGETS.keys())
+    )
     p.add_argument("--max-chars", type=int, default=8000)
 
     # transition
@@ -3053,23 +3509,27 @@ def main():
     p.add_argument("wiki_root")
 
     # dedup-edges
-    p = sub.add_parser("dedup-edges",
-                       help="Deduplicate edges.jsonl after parallel ingest merge")
+    p = sub.add_parser(
+        "dedup-edges", help="Deduplicate edges.jsonl after parallel ingest merge"
+    )
     p.add_argument("wiki_root")
 
     # set-edge-confidence
-    p = sub.add_parser("set-edge-confidence",
-                       help="Set confidence on an existing graph edge")
+    p = sub.add_parser(
+        "set-edge-confidence", help="Set confidence on an existing graph edge"
+    )
     p.add_argument("wiki_root")
     p.add_argument("--from", dest="from_id", required=True)
     p.add_argument("--to", dest="to_id", required=True)
     p.add_argument("--type", dest="edge_type", required=True)
-    p.add_argument("--confidence", required=True,
-                   choices=sorted(EDGE_CONFIDENCE_VALUES))
+    p.add_argument(
+        "--confidence", required=True, choices=sorted(EDGE_CONFIDENCE_VALUES)
+    )
 
     # dedup-citations
-    p = sub.add_parser("dedup-citations",
-                       help="Deduplicate citations.jsonl by paper pair")
+    p = sub.add_parser(
+        "dedup-citations", help="Deduplicate citations.jsonl by paper pair"
+    )
     p.add_argument("wiki_root")
 
     # rebuild-index
@@ -3077,8 +3537,10 @@ def main():
     p.add_argument("wiki_root")
 
     # topic-backfill
-    p = sub.add_parser("topic-backfill",
-                       help="Append matching papers to topic seminal_works / SOTA tracker (post-merge sweep for /init)")
+    p = sub.add_parser(
+        "topic-backfill",
+        help="Append matching papers to topic seminal_works / SOTA tracker (post-merge sweep for /init)",
+    )
     p.add_argument("wiki_root")
 
     # checkpoint-save
@@ -3086,7 +3548,9 @@ def main():
     p.add_argument("wiki_root")
     p.add_argument("task_id", help="Unique task identifier (e.g. init-2026-04-09)")
     p.add_argument("item", help="Item identifier (e.g. paper filename or slug)")
-    p.add_argument("--failed", action="store_true", help="Mark item as failed instead of completed")
+    p.add_argument(
+        "--failed", action="store_true", help="Mark item as failed instead of completed"
+    )
 
     # checkpoint-load
     p = sub.add_parser("checkpoint-load", help="Load batch checkpoint state")
@@ -3099,20 +3563,27 @@ def main():
     p.add_argument("task_id")
 
     # checkpoint-set-meta
-    p = sub.add_parser("checkpoint-set-meta",
-                       help="Persist a key/value pair in checkpoint metadata")
+    p = sub.add_parser(
+        "checkpoint-set-meta", help="Persist a key/value pair in checkpoint metadata"
+    )
     p.add_argument("wiki_root")
     p.add_argument("task_id")
     p.add_argument("key")
     p.add_argument("value")
 
     # checkpoint-get-meta
-    p = sub.add_parser("checkpoint-get-meta",
-                       help="Read a metadata value (raw) or the whole metadata dict (JSON)")
+    p = sub.add_parser(
+        "checkpoint-get-meta",
+        help="Read a metadata value (raw) or the whole metadata dict (JSON)",
+    )
     p.add_argument("wiki_root")
     p.add_argument("task_id")
-    p.add_argument("key", nargs="?", default="",
-                   help="If given, print the raw value; otherwise print the whole metadata dict as JSON")
+    p.add_argument(
+        "key",
+        nargs="?",
+        default="",
+        help="If given, print the raw value; otherwise print the whole metadata dict as JSON",
+    )
 
     args, unknown_args = parser.parse_known_args()
     unknown_args = apply_legacy_add_edge_args(parser, args, unknown_args)
@@ -3129,13 +3600,15 @@ def main():
     elif args.command == "slug":
         print(slugify(args.title))
     elif args.command == "paper-slug":
-        print(paper_slugify(
-            args.title,
-            citation_key=args.citation_key,
-            authors=args.authors,
-            year=args.year,
-            bibtex=args.bibtex,
-        ))
+        print(
+            paper_slugify(
+                args.title,
+                citation_key=args.citation_key,
+                authors=args.authors,
+                year=args.year,
+                bibtex=args.bibtex,
+            )
+        )
     elif args.command == "add-edge":
         missing = []
         if not args.wiki_root:
@@ -3150,11 +3623,17 @@ def main():
             parser.error(
                 "add-edge requires "
                 f"{', '.join(missing)}. Use: add-edge '@configured' "
-                "--from <id> --to <id> --type <type> --evidence \"<text>\""
+                '--from <id> --to <id> --type <type> --evidence "<text>"'
             )
-        add_edge(args.wiki_root, args.from_id, args.to_id,
-                 args.edge_type, args.evidence, args.confidence,
-                 args.symmetric)
+        add_edge(
+            args.wiki_root,
+            args.from_id,
+            args.to_id,
+            args.edge_type,
+            args.evidence,
+            args.confidence,
+            args.symmetric,
+        )
     elif args.command == "add-citation":
         add_citation(args.wiki_root, args.from_id, args.to_id, args.source)
     elif args.command == "rebuild-context-brief":
@@ -3196,8 +3675,14 @@ def main():
             query_weak_claims(args.wiki_root, args.threshold)
         elif args.subquery == "evidence-for":
             if not args.slug:
-                print(json.dumps({"status": "error",
-                                  "message": "evidence-for requires a claim slug"}))
+                print(
+                    json.dumps(
+                        {
+                            "status": "error",
+                            "message": "evidence-for requires a claim slug",
+                        }
+                    )
+                )
                 sys.exit(1)
             query_evidence_for(args.wiki_root, args.slug)
         elif args.subquery == "ready-to-test":
@@ -3205,13 +3690,11 @@ def main():
         elif args.subquery == "orphans":
             query_orphans(args.wiki_root)
     elif args.command == "neighbors":
-        edge_type_list = (args.edge_type.split(",")
-                          if args.edge_type else None)
-        direction = ("incoming" if args.incoming
-                     else "outgoing" if args.outgoing
-                     else "both")
-        neighbors(args.wiki_root, args.node_id, args.depth,
-                  edge_type_list, direction)
+        edge_type_list = args.edge_type.split(",") if args.edge_type else None
+        direction = (
+            "incoming" if args.incoming else "outgoing" if args.outgoing else "both"
+        )
+        neighbors(args.wiki_root, args.node_id, args.depth, edge_type_list, direction)
     elif args.command == "compile-context":
         compile_context(args.wiki_root, args.purpose, args.max_chars)
     elif args.command == "transition":
@@ -3221,8 +3704,9 @@ def main():
     elif args.command == "dedup-edges":
         dedup_edges(args.wiki_root)
     elif args.command == "set-edge-confidence":
-        set_edge_confidence(args.wiki_root, args.from_id, args.to_id,
-                            args.edge_type, args.confidence)
+        set_edge_confidence(
+            args.wiki_root, args.from_id, args.to_id, args.edge_type, args.confidence
+        )
     elif args.command == "dedup-citations":
         dedup_citations(args.wiki_root)
     elif args.command == "rebuild-index":
@@ -3230,8 +3714,12 @@ def main():
     elif args.command == "topic-backfill":
         topic_backfill(args.wiki_root)
     elif args.command == "checkpoint-save":
-        checkpoint_save(args.wiki_root, args.task_id, args.item,
-                        status="failed" if args.failed else "completed")
+        checkpoint_save(
+            args.wiki_root,
+            args.task_id,
+            args.item,
+            status="failed" if args.failed else "completed",
+        )
     elif args.command == "checkpoint-load":
         checkpoint_load(args.wiki_root, args.task_id)
     elif args.command == "checkpoint-clear":
