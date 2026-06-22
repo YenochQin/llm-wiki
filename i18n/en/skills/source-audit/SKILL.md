@@ -1,7 +1,7 @@
 ---
 name: source-audit
 description: Use when verifying that wiki pages faithfully represent their original sources — surfacing misreadings, unsupported claims, omissions, wrong numbers, units or signs, overgeneralizations, source-excerpt mismatches, and classification errors against the prepared source markdown.
-argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--batch-size N] [--start-after slug] [--fix] [--dry-run] [--write-report] [--adversarial]"
+argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include-linked] [--batch-size N] [--start-after slug] [--fix] [--dry-run] [--write-report] [--adversarial]"
 ---
 
 # /source-audit
@@ -19,6 +19,7 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--batch-s
   - `concepts`: compare concept definitions/excerpts against linked prepared sources.
   - `claims`: compare claim text/evidence against cited source papers.
   - `all`: audit papers, then concepts, then claims.
+- `--include-linked`: when the selected batch includes paper pages, also audit directly linked concept and claim pages supported by those papers. This is opt-in; default paper audits remain paper-only.
 - `--batch-size N`: number of pages per batch; default `5`.
 - `--start-after slug`: for batch continuation; skip sorted targets through this slug.
 - `--fix`: apply conservative wiki corrections after reporting findings.
@@ -74,8 +75,13 @@ Use the resolved absolute path for direct file reads/edits. If `uv` is unavailab
    - explicit slug: find it under the selected type directories.
    - `--all` or no target: list sorted pages for the selected type.
 2. Apply `--start-after slug` and `--batch-size N`.
-3. For paper pages, require a matching prepared source at `wiki/sources/papers/{slug}.md`.
-4. If a prepared source is missing, report it as `SOURCE_MISSING`; do not infer from memory.
+3. If `--include-linked` is set and the selected batch contains paper pages, expand the audit target set with directly linked concepts and claims:
+   - concepts linked from the paper page's `## Related` or whose `key_papers` contains the paper slug.
+   - claims linked from the paper page's `## Related`, or whose `source_papers` / `evidence[].source` contains the paper slug.
+   - Do not include people, topics, Summary pages, foundations, graph files, or cited-but-not-ingested papers.
+   - Deduplicate pages. `--batch-size` applies only to the primary selected pages; linked pages are additional and must be reported as `linked`.
+4. For paper pages, require a matching prepared source at `wiki/sources/papers/{slug}.md`.
+5. If a prepared source is missing, report it as `SOURCE_MISSING`; do not infer from memory.
 
 Default batch behavior:
 
@@ -108,6 +114,12 @@ For each target page:
 6. Every finding must be anchored in one or more exact source excerpts. Keep quotes short, but include enough original wording to let the user see the mismatch directly.
 7. Use a source-level summary only as navigation. Do not report a finding from a summary alone unless the source OCR is too poor; label that as `SOURCE_QUALITY_BLOCKER`.
 
+When `--include-linked` added a concept or claim page, audit it as a first-class target:
+
+- Concepts: verify definitions, `## Source excerpts`, and claims made in concept prose against all linked prepared sources, especially the originating paper(s) from the current batch.
+- Claims: verify `## Statement`, evidence summary, conditions/scope, confidence/status rationale, and YAML evidence against the cited `source_papers` and `evidence[].source` papers. If the claim cites multiple papers, do not treat one paper as supporting the whole claim unless the claim's scope says so.
+- Report linked-page findings under their own page headings, and label the page as `linked from [[paper-slug]]` in the report.
+
 ### Step 3: Classify findings
 
 Use these issue classes:
@@ -138,6 +150,7 @@ Use this structure for every batch:
 ## Batch
 - **Type**: papers
 - **Range**: {first slug} ... {last slug}
+- **Linked expansion**: off | on, linked pages: N
 - **Mode**: report-only | fix | dry-run
 - **Source root**: `{configured wiki root}/sources`
 
@@ -163,6 +176,7 @@ Use this structure for every batch:
 
 ## Proposed Edits
 - `wiki/papers/{slug}.md`: exact field/section edits, or `none`.
+- Linked pages: exact `concepts/{slug}.md` / `claims/{slug}.md` edits, or `none`.
 
 ## Next Batch
 - Continue with: `/source-audit --type papers --batch-size 5 --start-after {last slug}`
@@ -210,6 +224,7 @@ Skip logging only if the user asks for a no-write audit.
 - **No memory-only judgments**: if the source does not contain enough evidence, report uncertainty instead of relying on model knowledge.
 - **Prepared markdown is canonical**: for paper audits, use `wiki/sources/papers/*.md`; raw PDFs are fallback only when the user explicitly asks.
 - **Read-only by default**: no wiki edits unless `--fix` is explicit.
+- **Linked expansion is explicit**: do not audit linked concepts/claims during a paper audit unless `--include-linked` is set. When it is set, linked concepts/claims are full audit targets, not casual context reads.
 - **Batch strictly**: when the user asks for batches of 5, audit exactly 5 available targets unless fewer remain.
 - **Separate source error from wiki error**: OCR loss, broken tables, missing figures, or incomplete MinerU conversion are `SOURCE_QUALITY_BLOCKER`.
 - **Keep quotes short**: use brief exact fragments only where needed to ground the finding.

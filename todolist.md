@@ -159,18 +159,18 @@
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
 - [ ] **hagen_2016_Neutron** (miss 5) — Neutron and weak-charge distributions of the 48Ca nucleus
       - 缺:Problem×1, Limitations×1, Concept×3
-- [ ] **laatiaoui_2016_atom-time-laser** (miss 5) — Atom-at-a-time laser resonance ionization spectroscopy of nobelium
+- [ ] **laatiaoui_2016_Atomatatime** (miss 5) — Atom-at-a-time laser resonance ionization spectroscopy of nobelium
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
 - [ ] **miyagi_2020_initio** (miss 5) — Ab initio multishell valence-space Hamiltonians and the island of inversion
       - 缺:Problem×1, Method×1, Limitations×1, Concept×2
-- [ ] **schriber_2016_Communication** (miss 5) — Communication: an adaptive configuration interaction approach for strongly correlated electrons with tunable accuracy
-      - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
+- [x] **schriber_2016_Communication** (miss 5 → 0) — Communication: an adaptive configuration interaction approach for strongly correlated electrons with tunable accuracy
+      - 补全: Evidence Pack 16卡(Problem×2, Method×5, Results×4, Limitations×2, Concept×2, Claim×1); 修复concept source excerpts; 修复claim oc-aci-provides-best-tunable-error YAML schema; 新建claim aci-provides-sigma-tunable-error; 添加edges(introduces_concept, builds_on)
 - [ ] **zhang_2024_Variational** (miss 5) — Variational Monte Carlo configuration-interaction approach for multielectron atoms within the multiconfiguration Dirac-Fock framework
       - 缺:Problem×1, Method×1, Results×1, Limitations×1, Concept×1
-- [ ] **berengut_2018_probing-new-long** (miss 4) — Probing new long-range interactions by isotope shift spectroscopy
-      - 缺:Problem×1, Method×1, Results×1, Limitations×1
-- [ ] **bilous_2023_DeepLearning** (miss 4) — Deep-Learning Approach for the Atomic Configuration Interaction Problem on Large Basis Sets
-      - 缺:Method×1, Results×1, Limitations×1, Concept×1
+- [x] **berengut_2018_Probing** (miss 0) — Probing new long-range interactions by isotope shift spectroscopy
+      - 补全: Evidence Pack 11卡(Problem×2, Method×3, Results×2, Limitations×3, Research×1); 更新concepts/king-plot, concepts/isotope-shift, concepts/generalized-king-plot; slug修正 berengut_2018_probing-new-long→berengut_2018_Probing
+- [x] **bilous_2023_DeepLearning** (miss 4 → 0) — Deep-Learning Approach for the Atomic Configuration Interaction Problem on Large Basis Sets
+      - 补全: Evidence Pack 3→12卡(Problem×1, Method×4, Results×4, Limitations×1, Concept×1, Claim×1); 新建claim cnn-csf-selection-replaces-expert-preselection; 更新concept nn-supported-ci-basis-selection(第二段源摘录); 添加paper-claim,paper-concept边+citations×3
 
 ## P2 — 领域标准(importance 3,full ingest):164 篇
 
@@ -180,7 +180,8 @@
 - [ ] **delzanna_2018_Solar** (miss 12) — Solar UV and X-ray spectral diagnostics
 - [ ] **cassidy_2016_Rates** (miss 10) — Rates of E1, E2, M1, and M2 transitions in Ni II
 - [ ] **gamrath_2018_MCDHF** (miss 10) — MCDHF calculations of isotope shifts in neutral antimony
-- [ ] **liu_2024_Presolar** (miss 10) — Presolar grains as probes of supernova nucleosynthesis
+- [x] **liu_2024_Presolar** (miss 10 → 0) — Presolar grains as probes of supernova nucleosynthesis
+      - 补全: Evidence Pack 14卡(Problem×2, Method×2, Results×6, Limitations×3); 新建claim presolar-grain-compositions-favor-large-scale, 44ti-production-variation-mixing-ratios-rare; 添加edges(uses_concept×5, supports×2)
 - [ ] **ma_2024_Natural** (miss 10) — Natural Orbitals and Targeted Non-Orthogonal Orbital Sets for Atomic Hyperfine Structure Multiconfiguration Calculations
 - [ ] **bromley_2023_Electronimpact** (miss 9) — Electron-impact Excitation of Pt i–iii: The Importance of Metastables and Collision Processes in Neutron Star Merger and Laboratory Plasmas
 - [ ] **ding_2025_Challenges** (miss 9) — Challenges in Atomic Spectroscopy of Low-Ionisation-Stage Heavy Elements for Astrophysics

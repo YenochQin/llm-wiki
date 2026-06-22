@@ -1,7 +1,7 @@
 ---
 name: source-audit
 description: Use when verifying that wiki pages faithfully represent their original sources — surfacing misreadings, unsupported claims, omissions, wrong numbers, units or signs, overgeneralizations, source-excerpt mismatches, and classification errors against the prepared source markdown.
-argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--batch-size N] [--start-after slug] [--fix] [--dry-run] [--write-report] [--adversarial]"
+argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include-linked] [--batch-size N] [--start-after slug] [--fix] [--dry-run] [--write-report] [--adversarial]"
 ---
 
 # /source-audit
@@ -21,6 +21,7 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--batch-s
   - `concepts`: compare concept definitions/excerpts against linked prepared sources.
   - `claims`: compare claim text/evidence against cited source papers.
   - `all`: audit papers, then concepts, then claims.
+- `--include-linked`: when the selected batch includes paper pages, also audit directly linked concept and claim pages supported by those papers. This is opt-in; default paper audits remain paper-only.
 - `--batch-size N`: number of pages per batch; default `5`.
 - `--start-after slug`: for batch continuation; skip sorted targets through this slug.
 - `--fix`: apply conservative wiki corrections after reporting findings.
@@ -77,8 +78,13 @@ Use the resolved absolute path for direct file reads/edits. If `uv` is unavailab
    - explicit slug → find it under the selected type directories.
    - `--all` or no target → list sorted pages for the selected type.
 2. Apply `--start-after slug` and `--batch-size N`.
-3. For paper pages, require a matching prepared source at `wiki/sources/papers/{slug}.md`.
-4. If a prepared source is missing, report it as `SOURCE_MISSING`; do not infer from memory.
+3. If `--include-linked` is set and the selected batch contains paper pages, expand the audit target set with directly linked concepts and claims:
+   - concepts linked from the paper page's `## Related` or whose `key_papers` contains the paper slug.
+   - claims linked from the paper page's `## Related`, or whose `source_papers` / `evidence[].source` contains the paper slug.
+   - Do not include people, topics, Summary pages, foundations, graph files, or cited-but-not-ingested papers.
+   - Deduplicate pages. `--batch-size` applies only to the primary selected pages; linked pages are additional and must be reported as `linked`.
+4. For paper pages, require a matching prepared source at `wiki/sources/papers/{slug}.md`.
+5. If a prepared source is missing, report it as `SOURCE_MISSING`; do not infer from memory.
 
 Default batch behavior:
 
@@ -101,7 +107,7 @@ uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "p
 
 Rules:
 
-1. Use only wiki-relative paths under `papers/`, `concepts/`, or `claims/`; even when the user selected `--all`, run the gate only for the current batch's selected targets.
+1. Use only wiki-relative paths under `papers/`, `concepts/`, or `claims/`; even when the user selected `--all`, run the gate only for the current batch's selected targets. When `--include-linked` is set, include both primary targets and expanded linked targets in the same scoped command.
 2. Treat every `level: red` result as a source-grounding finding in the audit report. Do not downgrade it to a warning.
 3. Classify red results as `UNSUPPORTED`, `SOURCE_EXCERPT_MISMATCH`, or `SOURCE_MISSING`/`SOURCE_QUALITY_BLOCKER` according to the concrete message. If the red result means a page has generated interpretation with no recoverable source anchor, describe it as a hallucination-risk blocker.
 4. Continue to Step 3 after recording the gate output. The mechanical gate is a screen, not a substitute for checking whether source-backed-looking prose actually matches the source.
@@ -129,6 +135,12 @@ For each target page:
 6. Run an explicit hallucination pass over high-risk wiki statements: numbers, units, signs, sample sizes, dataset names, benchmark names, algorithm names, causality/mechanism wording, "first", "best", "SOTA", necessary/sufficient claims, and broad generalizations. For each high-risk statement, search the prepared source for distinctive terms and plausible synonyms. If the source has no corresponding passage, record `UNSUPPORTED` and label the mismatch type as `fabricated or unsupported addition`.
 7. Every finding must be anchored in one or more exact source excerpts. Keep quotes short, but include enough original wording to let the user see the mismatch directly.
 8. Use a source-level summary only as navigation. Do not report a finding from a summary alone unless the source OCR is too poor; label that as `SOURCE_QUALITY_BLOCKER`.
+
+When `--include-linked` added a concept or claim page, audit it as a first-class target:
+
+- Concepts: verify definitions, `## Source excerpts`, and claims made in concept prose against all linked prepared sources, especially the originating paper(s) from the current batch.
+- Claims: verify `## Statement`, evidence summary, conditions/scope, confidence/status rationale, and YAML evidence against the cited `source_papers` and `evidence[].source` papers. If the claim cites multiple papers, do not treat one paper as supporting the whole claim unless the claim's scope says so.
+- Report linked-page findings under their own page headings, and label the page as `linked from [[paper-slug]]` in the report.
 
 ### Step 4: Classify findings
 
@@ -160,6 +172,7 @@ Use this structure for every batch:
 ## Batch
 - **Type**: papers
 - **Range**: {first slug} … {last slug}
+- **Linked expansion**: off | on, linked pages: N
 - **Mode**: report-only | fix | dry-run
 - **Source root**: `{configured wiki root}/sources`
 
@@ -192,6 +205,7 @@ Use this structure for every batch:
 
 ## Proposed Edits
 - `wiki/papers/{slug}.md`: exact field/section edits, or `none`.
+- Linked pages: exact `concepts/{slug}.md` / `claims/{slug}.md` edits, or `none`.
 
 ## Next Batch
 - Continue with: `/source-audit --type papers --batch-size 5 --start-after {last slug}`
@@ -236,6 +250,7 @@ Skip logging only if the user asks for a no-write audit.
 - **Exact excerpts required**: every error or omission finding must include one or more short exact source excerpts. For omissions, quote the source passage and name where the wiki should cover it.
 - **Unsupported requires search evidence**: when marking a wiki statement as unsupported, quote the nearest relevant source passage or state `no corresponding source passage found` after targeted searches for the claim's key terms, numbers, entities, and synonyms.
 - **Hallucination gate required**: every selected `papers/`, `concepts/`, or `claims/` page must pass through the scoped `tools/grounding_lint.py` command before final reporting. Red grounding-gate issues are reportable findings, not advisory notes.
+- **Linked expansion is explicit**: do not audit linked concepts/claims during a paper audit unless `--include-linked` is set. When it is set, linked concepts/claims are full audit targets, not casual context reads.
 - **High-risk statement sweep**: numbers, units, signs, sample sizes, dataset names, benchmark comparisons, causality, mechanisms, novelty, "first", "best", "SOTA", necessary/sufficient wording, and broad generalizations require direct source support or an `UNSUPPORTED` finding.
 - **No summary-only findings**: do not report a finding from a source-level summary alone. Source summaries may guide navigation but cannot replace exact source evidence.
 - **No memory-only judgments**: if the source does not contain enough evidence, report uncertainty instead of relying on model knowledge.
