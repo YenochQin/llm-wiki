@@ -34,6 +34,17 @@ class RepairLatexMathTests(unittest.TestCase):
 
         self.assertEqual(repaired, r"$\text{ keep these words }$")
 
+    def test_inserts_latex_space_before_adjacent_superscript(self) -> None:
+        text = r"Bad term $4d^{1 0}^{1} S_{0}$ and code `$4d^{1 0}^{1} S_{0}$`."
+
+        repaired, report = repair_latex_math(text)
+
+        self.assertEqual(
+            repaired,
+            r"Bad term $4d^{1 0} \ ^{1}S_{0}$ and code `$4d^{1 0}^{1} S_{0}$`.",
+        )
+        self.assertTrue(report.changed)
+
 
 if __name__ == "__main__":
     unittest.main()

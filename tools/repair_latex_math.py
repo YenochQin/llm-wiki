@@ -233,6 +233,16 @@ def _repair_math_body_once(body: str) -> tuple[str, int]:
         repaired,
     )
     replacements += count
+
+    # MinerU can collapse a right superscript and a following left superscript:
+    # "4d^{1 0}^{1} S_{0}" should be "4d^{1 0} \ ^{1}S_{0}".
+    repaired, count = _apply(
+        r"(\^(?:\{[^{}\n]+\}|[A-Za-z0-9\\]))\^(?=(?:\{[^{}\n]+\}|[A-Za-z0-9\\]))",
+        r"\1 \\ ^",
+        repaired,
+    )
+    replacements += count
+
     repaired, count = _apply(
         rf"\\\s*\^\s*\{{\s*([0-9]+)\s*\}}\s*([{TERM_SYMBOL_LETTERS}])",
         r"\\ ^{\1}\2",
