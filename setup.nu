@@ -266,7 +266,7 @@ def main [
     let commands_dir = ($project_root | path join ".claude" "commands")
     mkdir $commands_dir
 
-    write-command-file ($commands_dir | path join "ingest.md") "Ingest one paper into llm-wiki." "[--zotero-root <dir>] (--title <str>|--doi <doi>|--item-key <key>) [--discover]" "skills/ingest/SKILL.md"
+    write-command-file ($commands_dir | path join "ingest.md") "Ingest one paper into llm-wiki." "[--zotero-root <dir>] (--title <str>| --doi <doi>) [--discover]" "skills/ingest/SKILL.md"
 
     write-command-file ($commands_dir | path join "ingest-local-pdf.md") "Prepare and ingest local PDF files into llm-wiki." "(<local-pdf-or-dir> | <wiki/sources/papers/*.md>) [--title <str>] [--discover]" "skills/ingest-local-pdf/SKILL.md"
 
@@ -345,7 +345,7 @@ def main [
     print "     https://mineru.net/  ->  create token  ->  paste into .env"
     print ""
     print "  3. Run Python tools through uv (no need to activate the venv):"
-    print "     uv run python tools/research_wiki.py --help"
+    print "     uv run python -X utf8 tools/research_wiki.py --help"
     print ""
     print "  4. Start Claude Code:"
     print "     claude"
