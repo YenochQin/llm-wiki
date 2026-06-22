@@ -35,19 +35,20 @@ Turn one paper into a fully wired set of wiki pages. `/ingest` is a **phase runn
 
 - `source`: Zotero lookup arguments — `--title <str>` and/or `--doi <doi>`, optionally `--zotero-root <dir>`. Zotero discipline (including why `--item-key` is internal-only) is in invariants §2. Prepared `@configured-sources-papers/*.md` and `canonical_ingest_path` values are internal handoffs from `/ingest-local-pdf` or `/init` only; do not expose prepared markdown as a user-facing input.
 - Zotero metadata alone is not a grounded source: with no PDF / prepared markdown / notes / web content, do not create a paper page.
-- `--discover` (optional, default **off**): after the final report, run `/discover` anchored on this paper and append the gated shortlist as "Related papers you may want to ingest next". User-owned flag — do not set it from repo state. Skipped in INIT MODE.
+- `--discover` (optional, default **off**): after Phase E, run `/discover` anchored on this paper and append the gated shortlist to `@configured/outputs/ingest-candidates.md`. User-owned flag — do not set it from repo state. Skipped in INIT MODE.
 
 ## Outputs
 
 - One fully-wired paper page plus linked entities (concepts, claims, people)
 - Graph edges and citations appended via `tools/research_wiki.py`
-- Terminal summary with page counts and optional structured follow-up candidates
+- Terminal summary with page counts and, when `--discover` is used, the count/path for queued follow-up candidates
+- `outputs/ingest-candidates.md` (CREATE/APPEND only when `--discover` produces gated candidates)
 - Minimum viable ingest: paper page + ≥1 concept (new or updated) + ≥1 claim (new or updated; mandatory for importance ≥ 4) + author handling + `index.md` + `log/` + graph/context. If the source cannot support a claim or concept, say why in the log and report.
 
 ## Wiki Interaction
 
 - **Reads**: `index.md`; `papers/*` (already-ingested check); `concepts/*` + `foundations/*` and `claims/*` (dedup); `people/*`; `topics/*`; `graph/open_questions.md`.
-- **Writes**: `papers/{slug}.md` (CREATE); `concepts/{slug}.md` (CREATE/EDIT); `claims/{slug}.md` (CREATE/EDIT); `people/{slug}.md` (CREATE if importance ≥ 4, else EDIT); `topics/{slug}.md` (EDIT only); `graph/edges.jsonl` + `graph/citations.jsonl` (APPEND via tool); `graph/context_brief.md` + `graph/open_questions.md` (REBUILD, skipped in INIT MODE); `index.md` (APPEND); `log/` (APPEND via tool).
+- **Writes**: `papers/{slug}.md` (CREATE); `concepts/{slug}.md` (CREATE/EDIT); `claims/{slug}.md` (CREATE/EDIT); `people/{slug}.md` (CREATE if importance ≥ 4, else EDIT); `topics/{slug}.md` (EDIT only); `outputs/ingest-candidates.md` (CREATE/APPEND only for `--discover` gated candidates); `graph/edges.jsonl` + `graph/citations.jsonl` (APPEND via tool); `graph/context_brief.md` + `graph/open_questions.md` (REBUILD, skipped in INIT MODE); `index.md` (APPEND); `log/` (APPEND via tool).
 - **Graph edges**: `paper→concept` (`introduces_/uses_/extends_/critiques_concept`); `paper→foundation` (`derived_from`, terminal); `paper→claim` (`supports`/`contradicts`); `paper→paper` semantic types; bibliographic `cites` in `citations.jsonl`. Edge invocation contract is in invariants §8; type selection in `cross-references.md`.
 
 ## Workflow
@@ -68,7 +69,7 @@ Skip unless the user passed `--discover`; also skip in INIT MODE. When active:
 uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title-of-this-paper> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Append only gated candidates (Phase E candidate gate: title + authors + year + DOI + Zotero status + relation evidence). Never auto-ingest. A failed or empty `/discover` must not fail an otherwise successful `/ingest` — note it in one line.
+Append only gated candidates (Phase E candidate gate: title + authors + year + DOI + Zotero status + relation evidence) to `@configured/outputs/ingest-candidates.md`, creating it with a `# Follow-up Ingest Candidates` heading and `## Queue` table if absent. Use one table row per candidate with `status=todo`, `priority` inferred from relation strength/citation evidence, `candidate` as plain text (no dangling paper wikilinks), `suggested by` = `[[{slug}]]`, and `reason` = one-line relation evidence. Never write follow-up candidates into `papers/{slug}.md`, including under `## Related` or a `### Suggested follow-up ingests` heading. Never auto-ingest. A failed or empty `/discover` must not fail an otherwise successful `/ingest` — note it in one line.
 
 ## Constraints
 

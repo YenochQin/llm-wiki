@@ -59,9 +59,12 @@ Review entities connected to the old or regenerated page: pages in old/new `## R
 ### Phase E delta — rebuild + validate
 Run `rebuild-index`, `rebuild-context-brief`, `rebuild-open-questions`, then scoped `lint.py` and `grounding_lint.py --only` on touched `papers/`/`concepts/`/`claims/`, then `log "reingest | refreshed papers/<slug> | updated: <list>"`. Fix any `grounding_lint` `level: red` before reporting; fix deterministic `lint` issues unless that would delete user-authored content. The final report must state how many connected claims were template-audited and how many were migrated for template/schema reasons even when their source-grounded content was already acceptable.
 
+### After Phase E: optional discovery (only if `--discover`)
+Skip unless the user passed `--discover`. When active, follow `/ingest`'s optional discovery rule: run `/discover` anchored on the refreshed paper's DOI when available, otherwise its title, then append only gated candidates to `@configured/outputs/ingest-candidates.md`. Never write follow-up candidates into `papers/{slug}.md`, including under `## Related` or a `### Suggested follow-up ingests` heading. The final report should state only the candidate count and queue path.
+
 ## Report
 
-Summarize: refreshed source path + warnings; paper page updated; entity migration summary (reviewed/updated/created/marked-stale); edges/citations added; stale or ambiguous old links needing review; lint + grounding_lint result. Close with:
+Summarize: refreshed source path + warnings; paper page updated; entity migration summary (reviewed/updated/created/marked-stale); edges/citations added; stale or ambiguous old links needing review; optional `--discover` queue count/path; lint + grounding_lint result. Close with:
 
 ```text
 Wiki: reingested papers/<slug> | updated: <list> | lint: <summary>

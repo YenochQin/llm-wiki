@@ -15,25 +15,26 @@ Place the paper in topics/Summary, refresh navigation, log the run, and run the 
 3. **Index**: `uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'`.
 4. **Log** (always): `uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest | added papers/<slug> | updated: <list>"`.
 5. **Rebuild** (skip in INIT MODE): `rebuild-context-brief` and `rebuild-open-questions`.
-6. **Report**: pages created/updated, edges added, `Topic placement: matched N; Summary placement: matched S`, contradictions, and follow-up candidates only if they pass the structured candidate gate (title + authors + year + DOI + Zotero status + relation evidence; otherwise omit). Close with `Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges`.
+6. **Report**: pages created/updated, edges added, `Topic placement: matched N; Summary placement: matched S`, contradictions, and optional `--discover` queue count/path. Follow-up ingest candidates must be written only to `@configured/outputs/ingest-candidates.md` after the structured candidate gate (title + authors + year + DOI + Zotero status + relation evidence); never append them to `papers/{slug}.md`. Close with `Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges`.
 
 ## Gate E — consolidated final self-check; output this block; if any line is ✗, fix before reporting
 
 ```text
 [Gate E] final
 1. papers/{slug}.md exists & frontmatter YAML parses: ✓/✗
-2. Evidence Pack meets coverage floor (per populated section + per concept + per claim): ✓/✗
+2. Evidence Pack meets coverage floor, complete-formal-unit rule, and display-math quote-marker rule (per populated section + per concept + per claim): ✓/✗
 3. grounding_lint --only (paper + touched concepts/claims) has no red: ✓/✗
 4. ≥1 concept created/updated with all mandatory sections: ✓/✗
 5. importance≥4 ⇒ ≥1 claim, else exception named in report: ✓/✗ / n.a.
 6. graph/edges.jsonl has ≥1 edge involving the new paper: ✓/✗
 7. current weekly log has a [today] entry under ## ingest: ✓/✗
 8. index.md includes the new paper and all new entities: ✓/✗
-9. all pages use $/$$ LaTeX only: ✓/✗
+9. all pages use $/$$ LaTeX only, with no `>` markers inside Evidence Pack display-math blocks: ✓/✗
 10. every [prepared markdown](...) link resolves to a file > 0B: ✓/✗
 11. every concept ## My understanding has the research-direction sentence / scoped reason / anchor-absent note: ✓/✗
 12. no directory-prefixed wikilinks; no dangling paper-slug wikilinks: ✓/✗
 13. Topic placement N and Summary placement S recorded in report: ✓/✗
+14. no follow-up ingest candidate section in papers/{slug}.md; --discover candidates queued in outputs/ingest-candidates.md: ✓/✗ / n.a.
 ```
 
 Run the grounding gate across all touched pages (red blocks the report):

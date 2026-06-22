@@ -33,6 +33,8 @@ These invariants always hold, in every phase, in every ingest-family skill. A ph
 - Inline math `$...$`; display math `$$...$$`. This is the Obsidian rendering standard.
 - Never use code fences for equations and never use `\(...\)` / `\[...\]`.
 - PDF-derived prepared sources already passed `tools/repair_latex_math.py`. If a copied formula is still visibly broken, repair the math span itself; do not carry OCR-spaced commands (`\ alpha`, `_ {i}`, `^ {2}`, `\left (`) onto the page, and do not replace formal notation with vague prose or ASCII pseudocode.
+- When copying equations or formal statements from a prepared source into Evidence Pack cards, copy the complete meaning-preserving unit. Do not truncate long display equations, multi-line `aligned` / `split` / `cases` blocks, definitions, theorem statements, algorithm steps, or derivation lines and then use the partial quote as evidence. If a full formula is too long for a card, cite the equation label/section and keep the card descriptive rather than using a shortened formula as formal support.
+- A leading `>` in an Evidence Pack quote is Markdown blockquote syntax, not part of the LaTeX. Keep quote markers outside math content: for a `$$...$$` display-math block, only the opening `$$` line may carry the quote marker; formula continuation lines and the closing `$$` line must not start with `>` after list indentation, because some renderers treat that marker as formula content. If an equation is inline within an already quoted sentence, do not add an extra `>` immediately before the formula.
 
 ## 5. Wikilinks and source links
 

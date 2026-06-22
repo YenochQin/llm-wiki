@@ -32,6 +32,8 @@ cited_by: []
 
 Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## BibTeX` / `## Related`
 
+Do not add follow-up ingest queues, not-yet-ingested bibliography recommendations, or `### Suggested follow-up ingests` sections to paper pages. Candidates for future ingestion belong in `outputs/ingest-candidates.md` as plain-text queue rows until their paper pages exist.
+
 `## Evidence Pack` is mandatory for generated paper pages. It must appear before interpretive sections and contain short source-grounding cards copied from the prepared MinerU markdown:
 
 ```markdown
@@ -43,11 +45,34 @@ Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research 
 
 > **Single source of truth.** This block is the *only* canonical definition of the Evidence Pack card shape and its citation syntax for the whole repo. Skills and references must point here (`docs/runtime-page-templates.en.md` §papers) instead of restating the ASCII shape or the forbidden-variant list. If this spec changes, it changes here only.
 
+The leading `>` before the source fragment is Markdown blockquote syntax, not source text and not LaTeX. Treat `$$...$$` display math as one indivisible LaTeX block: only the opening `$$` line may carry the Evidence Pack quote marker, and no line inside the block may start with `>` after the list indentation. The closing `$$` line is also part of the math block and must not be prefixed with `>`. If an equation is inline within an already quoted sentence, do not add an extra `>` immediately before the formula.
+
+Valid display-math quote shape:
+
+```markdown
+- `E1` Method — rate expression ([prepared markdown](../sources/papers/<source-slug>.md), Eq. 2): ^E1
+  > $$
+  A = \sum_i c_i f_i
+  + \sum_j d_j g_j
+  $$
+```
+
+Invalid shape — the `>` markers on formula continuation/closing lines become formula content in some renderers:
+
+```markdown
+  > $$
+  > A = \sum_i c_i f_i
+  > + \sum_j d_j g_j
+  > $$
+```
+
 This is the only valid Evidence Pack card header shape. Keep both markers: the readable evidence id stays at the start as `` `E1` ``, and the Obsidian block id goes at the very end of the same bullet header as `^E1`. Never start a card with `^E1`, and never replace `` `E1` `` with `^E1`. Subsequent prose cites the card with the literal Obsidian block-link string `[[#^E1]]`; the outer double brackets `[[...]]`, the leading `#`, and one literal space before the citation are mandatory. Write `... finding [[#^E1]]`, never `... finding[[#^E1]]`.
 
 **Forbidden citation/marker variants** (canonical list — none of these may appear on any generated page): `[#^E1]`, `[[^E1]]`, `#^E1`, bare `^E1` as a citation, `word[[#^E1]]` (missing the space), `- ^E1 ...` (card starting with the block id), and legacy `[!E1]`.
 
 Every card must link to an existing `wiki/sources/papers/{source-slug}.md` prepared source and include an exact blockquote that occurs in that source. Subsequent `## Method`, `## Results`, `## Limitations`, and claim-generating statements may only use facts supported by these cards. If the source does not support a detail, write `unclear` or move it to `## Open questions`; do not fill gaps from model memory.
+
+When a card quotes an equation, definition, theorem, algorithm step, table result, or derivation line, the excerpt must preserve the complete meaning-bearing unit. Long formulas must not be shortened to the first line, first term, or a convenient prefix if omitted terms change the meaning. If the complete formula is too long for an Evidence Pack card, quote the surrounding source sentence plus equation label/section and state that the full equation remains in the prepared source; do not use that shortened card to support formal notation or claims that depend on the omitted terms.
 
 **Coverage floor.** The pack is not satisfied by a single card or by a fixed round number (a uniform three-card pack across substantive papers is a laziness smell). Provide at least one card per interpretive section you actually populate (`Problem`, `Method`, `Results`, `Limitations`), plus one card per generated concept page and per generated claim. The card count scales with the paper's substance; a section the source cannot support takes `unclear` instead of a card.
 
