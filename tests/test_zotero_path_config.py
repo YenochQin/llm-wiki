@@ -131,6 +131,45 @@ class RuntimePathsConfigTests(unittest.TestCase):
             )
             self.assertIn("linux", payload["profiles"])
 
+    def test_write_paths_config_keeps_current_profile_custom_zotero_roots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_path = root / "paths.json"
+            current_profile = _paths.current_platform_profile()
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "active_profile": "auto",
+                        "profiles": {
+                            current_profile: {
+                                "wiki_root": "~/wiki",
+                                "raw_root": "~/raw",
+                                "zotero_roots": [
+                                    {"label": "current-custom", "path": str(root / "current"), "enabled": True}
+                                ],
+                            },
+                            "windows": {
+                                "wiki_root": "old-wiki",
+                                "raw_root": "old-raw",
+                                "zotero_roots": [
+                                    {"label": "other-custom", "path": "E:/Literatures/Zotero/data", "enabled": True}
+                                ],
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            _paths.write_paths_config(config_path, root / "new-wiki", root / "new-raw")
+            payload = json.loads(config_path.read_text(encoding="utf-8"))
+            profile = payload["profiles"][current_profile]
+
+            self.assertEqual(
+                profile["zotero_roots"],
+                [{"label": "current-custom", "path": str(root / "current"), "enabled": True}],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

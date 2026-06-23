@@ -84,6 +84,48 @@ def _select_profile(cfg: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return selected, profile_cfg
 
 
+def _looks_like_default_zotero_root(entry: Any) -> bool:
+    if isinstance(entry, str):
+        return entry.strip() in {"~/Zotero"}
+    if not isinstance(entry, dict):
+        return False
+    label = str(entry.get("label") or "").strip().lower()
+    path = str(entry.get("path") or "").strip()
+    return (
+        "default" in label or "profile candidates" in label
+    ) and path in {
+        "~/Zotero",
+        "~/.zotero/zotero/*",
+        "~/Library/Application Support/Zotero/Profiles/*",
+        "%APPDATA%/Zotero/Zotero/Profiles/*",
+        "%USERPROFILE%/Zotero",
+    }
+
+
+def _custom_zotero_roots(profile_cfg: dict[str, Any]) -> list[Any]:
+    raw_entries = profile_cfg.get("zotero_roots")
+    if not isinstance(raw_entries, list):
+        return []
+    custom_entries = [entry for entry in raw_entries if not _looks_like_default_zotero_root(entry)]
+    return custom_entries
+
+
+def _preserved_zotero_roots(
+    profiles: dict[str, Any], profile_name: str, profile_cfg: dict[str, Any]
+) -> list[Any] | None:
+    current_custom = _custom_zotero_roots(profile_cfg)
+    if current_custom:
+        return current_custom
+
+    for other_name, other_cfg in profiles.items():
+        if other_name == profile_name or not isinstance(other_cfg, dict):
+            continue
+        other_custom = _custom_zotero_roots(other_cfg)
+        if other_custom:
+            return other_custom
+    return None
+
+
 def load_paths(
     *,
     config_path: Path | None = None,
@@ -163,11 +205,14 @@ def write_paths_config(config_path: Path, wiki_root: Path, raw_root: Path) -> No
     profile_cfg = profiles.get(profile_name)
     if not isinstance(profile_cfg, dict):
         profile_cfg = {}
+    preserved_zotero_roots = _preserved_zotero_roots(profiles, profile_name, profile_cfg)
     profile_cfg = {
         **profile_cfg,
         "wiki_root": str(wiki_root.resolve()),
         "raw_root": str(raw_root.resolve()),
     }
+    if preserved_zotero_roots is not None:
+        profile_cfg["zotero_roots"] = preserved_zotero_roots
     profiles[profile_name] = profile_cfg
 
     payload = {

@@ -40,7 +40,6 @@ from __future__ import annotations
 
 import argparse
 import json as json_module
-import os
 import re
 import sys
 from pathlib import Path
@@ -1295,7 +1294,6 @@ def fix_issues(
 def _fix_xref(wiki_dir: Path, issue: LintIssue, dry_run: bool) -> FixResult | None:
     """Fix a single xref-asymmetry issue by adding the reverse link."""
     msg = issue.message
-    source_rel = issue.file  # e.g. "concepts/foo.md"
 
     # Parse the issue message to determine what fix is needed
     # Pattern: "key_papers has {ref} but papers/{ref}.md doesn't link back to [[{slug}]]"

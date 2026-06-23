@@ -220,7 +220,7 @@ def _extract_via_api_with_requests(requests_module, pdf: Path, cache_dir: Path, 
             data_id,
             file_name=file_name or None,
         )
-        print(f"mineru api: downloading result zip", file=sys.stderr)
+        print("mineru api: downloading result zip", file=sys.stderr)
         _download_and_extract_zip(requests_module, full_zip_url, cache_dir, pdf.stem)
         return
 
@@ -272,7 +272,7 @@ def _extract_via_api_with_requests(requests_module, pdf: Path, cache_dir: Path, 
         file_name=pdf.name,
     )
 
-    print(f"mineru api: downloading result zip", file=sys.stderr)
+    print("mineru api: downloading result zip", file=sys.stderr)
     _download_and_extract_zip(requests_module, full_zip_url, cache_dir, pdf.stem)
 
 

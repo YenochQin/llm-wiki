@@ -1808,7 +1808,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
         if gap_path.exists():
             gap_text = gap_path.read_text(encoding="utf-8")
             body_lines = [
-                l for l in gap_text.split("\n") if not l.startswith("#") and l.strip()
+                line for line in gap_text.split("\n") if not line.startswith("#") and line.strip()
             ]
             body = "\n".join(body_lines)
             if body.strip():
@@ -2710,7 +2710,7 @@ def _append_lines_to_section(
     section_end = body_start + (next_section.start() if next_section else len(rest))
     section_text = content[body_start:section_end]
 
-    new_lines = [l for l in lines if l.strip() not in section_text]
+    new_lines = [line for line in lines if line.strip() not in section_text]
     skipped = len(lines) - len(new_lines)
     if not new_lines:
         return (0, skipped)
@@ -2919,7 +2919,7 @@ def _parse_block_value(lines: list[str]) -> list | dict | str:
     ``key: value``), or an empty string if no content.
     """
     # Filter to non-empty lines
-    content_lines = [l for l in lines if l.strip()]
+    content_lines = [line for line in lines if line.strip()]
     if not content_lines:
         return ""
 
