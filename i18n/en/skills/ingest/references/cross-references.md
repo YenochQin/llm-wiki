@@ -8,12 +8,12 @@ Mirrors the matrix in the root `CLAUDE.md` ("Cross-Reference Rules"), trimmed to
 
 | Forward action (what you write on page A) | Required reverse action (what you also write on page B in the same turn) |
 |-------------------------------------------|--------------------------------------------------------------------------|
-| `papers/P` writes `Related: [[concept-K]]` | `concepts/K` appends `P` to `key_papers` |
+| `papers/P` lists `[[concept-K]]` under `Concepts` in `## Related` | `concepts/K` appends `P` to `key_papers` |
 | `papers/P` writes `[[person-R]]` (in Key authors) | `people/R` appends `P` to `Key papers` |
 | `papers/P` writes `supports: [[claim-C]]` | `claims/C` appends `{source: P, type: supports}` to `evidence` |
 | `papers/P` writes `supports: [[claim-C]]` but paper contradicts claim | use `type: contradicts` in the evidence entry |
-| `claims/C` writes `source_papers: [[paper-P]]` | `papers/P` appends `C` to `## Related` |
-| `concepts/K` writes `key_papers: [[paper-P]]` | `papers/P` appends `K` to `## Related` |
+| `claims/C` writes `source_papers: [[paper-P]]` | `papers/P` lists `[[C]]` under `Claims` in `## Related` |
+| `concepts/K` writes `key_papers: [[paper-P]]` | `papers/P` lists `[[K]]` under `Concepts` in `## Related` |
 | any page writes `[[foundation-X]]` | **no reverse link** — foundations are terminal |
 
 Writing a forward link without its reverse is the most common way `/check` surfaces `missing-field` errors. Doing both together eliminates the class entirely.
@@ -22,7 +22,7 @@ Writing a forward link without its reverse is the most common way `/check` surfa
 
 Never modify a foundation page from `/ingest`. No `key_papers` field, no back-reference of any kind. A paper linking to a foundation leaves a trace only in two places:
 
-- the paper page's `## Related` contains `[[foundation-slug]]`
+- the paper page's `## Related` lists `[[foundation-slug]]` under `Foundations`
 - `wiki/graph/edges.jsonl` contains the `paper → foundation` edge with type `derived_from`
 
 Foundations are created only by `/prefill`. `/ingest` never creates foundations, even when a concept candidate looks foundational and has no match. In that case, route the candidate through the ordinary concept path (possibly creating a new concept page), and let the user seed a foundation later if they want to.

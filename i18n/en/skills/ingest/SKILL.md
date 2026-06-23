@@ -49,7 +49,7 @@ Turn one paper into a fully wired set of wiki pages. `/ingest` is a **phase runn
 
 - **Reads**: `index.md`; `papers/*` (already-ingested check); `concepts/*` + `foundations/*` and `claims/*` (dedup); `people/*`; `topics/*`; `graph/open_questions.md`.
 - **Writes**: `papers/{slug}.md` (CREATE); `concepts/{slug}.md` (CREATE/EDIT); `claims/{slug}.md` (CREATE/EDIT); `people/{slug}.md` (CREATE if importance ≥ 4, else EDIT); `topics/{slug}.md` (EDIT only); `outputs/ingest-candidates.md` (CREATE/APPEND only for `--discover` gated candidates); `graph/edges.jsonl` + `graph/citations.jsonl` (APPEND via tool); `graph/context_brief.md` + `graph/open_questions.md` (REBUILD, skipped in INIT MODE); `index.md` (APPEND); `log/` (APPEND via tool).
-- **Graph edges**: `paper→concept` (`introduces_/uses_/extends_/critiques_concept`); `paper→foundation` (`derived_from`, terminal); `paper→claim` (`supports`/`contradicts`); `paper→paper` semantic types; bibliographic `cites` in `citations.jsonl`. Edge invocation contract is in invariants §8; type selection in `cross-references.md`.
+- **Graph edges**: `paper→concept` (`introduces_/uses_/extends_/critiques_concept`); `paper→foundation` (`derived_from`, terminal); `paper→claim` (`supports`/`contradicts`); `paper→paper` semantic types; bibliographic `cites` in `citations.jsonl`. Edge invocation contract is in invariants §9; type selection in `cross-references.md`.
 
 ## Workflow
 
@@ -79,7 +79,8 @@ Append only gated candidates (Phase E candidate gate: title + authors + year + D
 - `mineru-md` is the canonical prepared format; preparation failure (`usable: false`) blocks ingest with the warnings surfaced.
 - New-entity caps (dedup-policy.md): importance < 4 → ≤1 new concept, ≤1 new claim; importance ≥ 4 → ≥1 and ≤3 concepts, ≥1 and ≤2 claims. Caps are upper bounds, not targets.
 - `/ingest` runs only a narrow shape check + scoped `grounding_lint`/`lint --only` on touched files. Backlink symmetry, dangling nodes, full semantic audits, and whole-wiki lint counts belong to `/check`.
-- All other cross-cutting rules: invariants §1–§9.
+- Paper pages must use the fixed `## Related` format in invariants §8.
+- All other cross-cutting rules: invariants §1–§10.
 
 ## Error Handling
 
@@ -88,7 +89,7 @@ See `.claude/skills/ingest/references/error-handling.md`. Highlights: MinerU API
 ## Dependencies
 
 ### Tools
-- `tools/research_wiki.py` — `stats`, `paper-slug`, `slug`, `find-similar-concept`, `find-similar-claim`, `add-edge`, `add-citation`, `log`, `rebuild-index`, `rebuild-context-brief`, `rebuild-open-questions` (invocation contracts in invariants §3/§8)
+- `tools/research_wiki.py` — `stats`, `paper-slug`, `slug`, `find-similar-concept`, `find-similar-claim`, `add-edge`, `add-citation`, `log`, `rebuild-index`, `rebuild-context-brief`, `rebuild-open-questions` (invocation contracts in invariants §3/§9)
 - `tools/find_zotero_pdf.py`, `tools/fetch_zotero_metadata.py --item-key <key>` — Zotero lookup + internal enrichment (invariants §2)
 - `tools/prepare_paper_source.py …` — MinerU prepare (pdf-preprocessing.md)
 - `tools/fetch_literature.py paper|citations|references <doi-or-title>` — when a DOI/confident title is available

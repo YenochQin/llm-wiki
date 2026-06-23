@@ -51,7 +51,7 @@ sources.
 | `enrich_local_pdf_bibtex.py` | Derive BibTeX for a local PDF from matching Zotero metadata. | `uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source raw/papers/a.pdf --title "Paper title"` |
 | `backfill_bibtex_from_zotero.py` | Update existing paper pages and prepared sources with Zotero-derived BibTeX. | `uv run python -X utf8 tools/backfill_bibtex_from_zotero.py --slug foo --dry-run` |
 | `promote_light_ingest.py` | Rank light-ingested papers for promotion to full `/ingest`. | `uv run python -X utf8 tools/promote_light_ingest.py --wiki-dir @configured --output .checkpoints/promote.md` |
-| `repair_latex_math.py` | Repair OCR-spaced LaTeX math in Markdown files. | `uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers --dry-run` |
+| `repair_latex_math.py` | Repair OCR-spaced LaTeX math in Markdown files; use `--ingest-check` to inspect only a generated paper page. | `uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check paper-slug` |
 | `resolve_path_alias.py` | Resolve runtime path aliases before using normal shell commands. | `uv run python -X utf8 tools/resolve_path_alias.py --json @configured @raw-root` |
 
 ## Maintenance and migration tools

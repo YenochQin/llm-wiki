@@ -101,7 +101,7 @@ Known limitations, scope limits, or reasons this paper is background-only.
 
 ## Related
 
-- [[thesis-introduction-literature]] — <role> citation for dissertation introduction
+- Summary: [[thesis-introduction-literature]]
 ```
 
 ## Rules
@@ -111,4 +111,5 @@ Known limitations, scope limits, or reasons this paper is background-only.
 - `## Evidence Pack` is mandatory. Use the canonical card shape and citation syntax defined once in `docs/runtime-page-templates.en.md` §papers (forbidden-variant list included there); do not restate it here.
 - Prefer Zotero BibTeX. Never put BibTeX in YAML frontmatter.
 - Use Obsidian wikilinks for internal pages and ordinary markdown links for prepared source files.
+- `## Related` must follow `.claude/skills/shared-references/ingest-invariants.md` §8 exactly: fixed labels/order, `- <Label>: [[slug]]` bullet shape, no prose, no anchors, no not-yet-ingested papers.
 - Do not create concept, claim, or people pages from a light ingest.

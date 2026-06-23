@@ -19,8 +19,8 @@ Writes:
     Rewrites changed Markdown files unless --dry-run is set.
 
 Usage:
-    uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers --dry-run
-    uv run python -X utf8 tools/repair_latex_math.py wiki/sources/papers
+    uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check paper-slug
+    uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers/source.md --dry-run
 """
 
 from __future__ import annotations
@@ -453,17 +453,58 @@ def _iter_markdown_files(paths: list[Path]) -> list[Path]:
     return files
 
 
+def resolve_ingest_check_target(value: str, paths) -> Path:
+    """Resolve an ingest LaTeX check target to one generated paper page only."""
+    text = value.strip()
+    if not text:
+        raise ValueError("--ingest-check requires a paper slug or papers/<slug>.md path")
+
+    candidate = resolve_runtime_path(text, paths, role="ingest-check")
+    papers_dir = (paths.wiki_root / "papers").resolve()
+    if candidate is not None:
+        resolved = candidate.resolve()
+        try:
+            resolved.relative_to(papers_dir)
+            if resolved.suffix == ".md" and resolved.is_file():
+                return resolved
+        except ValueError:
+            pass
+
+    slug = text.removesuffix(".md")
+    if "/" in slug:
+        parts = Path(slug).parts
+        if len(parts) == 2 and parts[0] == "papers":
+            slug = parts[1]
+        else:
+            raise ValueError("--ingest-check only accepts a paper slug or papers/<slug>.md")
+
+    return papers_dir / f"{slug}.md"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("paths", nargs="+", help="Markdown files or directories. Supports configured-path aliases.")
+    parser.add_argument("paths", nargs="*", help="Markdown files or directories. Supports configured-path aliases.")
     parser.add_argument("--dry-run", action="store_true", help="Report changes without writing files.")
+    parser.add_argument(
+        "--ingest-check",
+        metavar="SLUG_OR_PAPERS_PATH",
+        help="Check only the generated wiki/papers page for an ingest run; never scans sources/papers.",
+    )
     args = parser.parse_args()
 
     runtime_paths = load_paths()
-    resolved_paths = [resolve_runtime_path(path, runtime_paths, role="path") for path in args.paths]
+    if args.ingest_check:
+        target = resolve_ingest_check_target(args.ingest_check, runtime_paths)
+        if not target.is_file():
+            raise FileNotFoundError(f"generated paper page not found for --ingest-check: {target}")
+        resolved_paths = [target]
+    else:
+        if not args.paths:
+            parser.error("paths are required unless --ingest-check is used")
+        resolved_paths = [resolve_runtime_path(path, runtime_paths, role="path") for path in args.paths]
     for path in _iter_markdown_files([p for p in resolved_paths if p is not None]):
         original = path.read_text(encoding="utf-8", errors="ignore")
         repaired, report = repair_latex_math(original)

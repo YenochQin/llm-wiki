@@ -15,6 +15,12 @@ dependencies = [
 # Cloud (api) backend is the default and only needs `requests`, already in core deps.
 local = ["mineru[all]>=2.0"]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0,<9.0",
+    "ruff>=0.8,<1.0",
+]
+
 [tool.uv]
 package = false
 

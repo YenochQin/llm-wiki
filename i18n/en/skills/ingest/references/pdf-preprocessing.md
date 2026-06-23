@@ -93,13 +93,13 @@ droppedHeadings: ["URL stub", "Contents"]
 
 Use the frontmatter as your structural anchor when extracting concepts, claims, and figure references. Do not re-derive section structure from the body; the adapter already did it. The bibliography is intentionally retained: use it to resolve inline `(Author, year)` references and to expand citation/discovery paths.
 
-Prepared math should already use `$...$` and `$$...$$`. If you still see visibly broken formulas in the prepared markdown, run a dry report first:
+Prepared math should already use `$...$` and `$$...$$`. During `/ingest`, do not run a broad LaTeX repair dry-run on `@configured-sources-papers`; source OCR noise can be large and is not the ingest gate. After writing `papers/<slug>.md`, inspect only the generated paper page:
 
 ```shell
-uv run python -X utf8 tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'
+uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check '<paper-slug>'
 ```
 
-Only rewrite existing prepared sources after confirming the report is limited to math-span repairs.
+If maintaining an existing prepared source outside an ingest run, inspect that one source file explicitly before rewriting it.
 
 ## Output
 

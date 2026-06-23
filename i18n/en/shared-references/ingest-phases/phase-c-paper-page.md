@@ -13,7 +13,7 @@ Write the paper page from the Evidence Pack cards — structured, source-faithfu
 3. **Anchor structure to the prepared frontmatter** (`sections`, `figures`, `abstract_excerpt`). Name source sections, figures, tables, algorithms, equations in `## Method` / `## Results`; avoid generic summaries that fit any paper.
 4. **`## Research classification`** must explicitly state, per active direction: which theory/model/framework (theory), which numerical/simulation/statistical/ML/data-analysis scheme (computation), which observational/lab/sample/instrument/protocol process (experiment), and the research object(s). `unclear` where the source does not say.
 5. **`## BibTeX`** carries the Zotero/Crossref-derived entry as a fenced ```bibtex block, citation-core only (invariants §6).
-6. **`## Related`** lists only concepts/claims/foundations/topics/people touched this run and existing-or-same-run paper slugs (invariants §5).
+6. **`## Related`** follows the fixed label order and bullet shape in invariants §8, listing only touched concepts/claims/foundations/topics/people and existing-or-same-run paper slugs.
 7. Math uses `$`/`$$` only (invariants §4).
 
 ## Gate C — output this block before Phase D; if any line is ✗, stop and fix

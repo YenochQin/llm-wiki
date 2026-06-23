@@ -124,6 +124,7 @@ Parallel local ingest contract:
 - subagent prompts must use **relative paths only**, and the subagent's shell working directory must be the worktree path (`$WT_PATH`), not the main repository root
 - execute `/ingest-local-pdf` for exactly one handed-off source path; do not bypass `/ingest-local-pdf`
 - every downstream `/ingest-local-pdf` -> `/ingest` paper page must use the fixed `## Evidence Pack` card shape and citation syntax defined once in `docs/runtime-page-templates.en.md` §papers (forbidden-variant list included there). Do not let init subagent prompts restate or invent alternate markers.
+- every downstream `/ingest-local-pdf` -> `/ingest` paper page must use the fixed `## Related` labels/order/bullet shape defined once in `.claude/skills/shared-references/ingest-invariants.md` §8.
 - in INIT MODE, consume the handed-off canonical path exactly as provided
 - skip `fetch_literature.py citations`
 - skip `fetch_literature.py references`

@@ -33,8 +33,9 @@ Place the paper in topics/Summary, refresh navigation, log the run, and run the 
 10. every [prepared markdown](...) link resolves to a file > 0B: ✓/✗
 11. every concept ## My understanding has the research-direction sentence / scoped reason / anchor-absent note: ✓/✗
 12. no directory-prefixed wikilinks; no dangling paper-slug wikilinks: ✓/✗
-13. Topic placement N and Summary placement S recorded in report: ✓/✗
-14. no follow-up ingest candidate section in papers/{slug}.md; --discover candidates queued in outputs/ingest-candidates.md: ✓/✗ / n.a.
+13. paper ## Related uses only fixed labels/order and `- <Label>: [[slug]]` bullets: ✓/✗
+14. Topic placement N and Summary placement S recorded in report: ✓/✗
+15. no follow-up ingest candidate section in papers/{slug}.md; --discover candidates queued in outputs/ingest-candidates.md: ✓/✗ / n.a.
 ```
 
 Run the grounding gate across all touched pages (red blocks the report):

@@ -55,7 +55,7 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
    - Frontmatter = normal paper fields + tags containing `thesis-introduction`, the selected role, and `light-ingest`. Fill `paper_type`/`research_modes`/`research_object_tags` conservatively, else `other`/`[]`/`[]`.
    - Light body sections: `## Evidence Pack` (first, per template), `## Problem`, `## Key idea`, `## Research classification`, `## Introduction use`, `## Evidence notes`, `## Limitations`, `## BibTeX`, `## Related`.
    - `## Introduction use` states the primary role and why this paper belongs in it.
-   - `## Related` includes `[[{target-summary}]]` unless `--depth paper-only`.
+   - `## Related` follows the fixed paper Related format in ingest invariants §8; include `[[{target-summary}]]` under `Summary` unless `--depth paper-only`.
    - Do not create concept/claim/people pages; link existing pages only when clearly useful. If the page already exists, update only missing/stale light metadata — never overwrite a full `/ingest` page with a lighter one.
    - Print Gate C (template shape check + scoped `grounding_lint --only` on the paper page; fix red).
 4. **Summary update** (skip for `--depth paper-only`) — follow `references/summary-update.md`: add the paper under a role-based subsection in `Summary/{target-summary}.md`, preserving prose; create the Summary from template if absent.

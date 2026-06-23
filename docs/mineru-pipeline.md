@@ -94,7 +94,13 @@ MinerU's raw markdown is flat and noisy. The adapter applies nine passes (mirror
 8. **LaTeX math repair.** Runs `tools/repair_latex_math.py` on the cleaned body before writing. Repair counts are reported through JSON `warnings` as `latex math repaired: ...` and stored in prepared frontmatter fields `latexRepairReplacements`, `latexRepairConvertedDelimiters`, and `latexRepairMathSpans` when nonzero.
 9. **Frontmatter emission.** Writes the YAML described above.
 
-To inspect or repair existing prepared markdown, use:
+The automatic repair above is a preprocessing cleanup step. During `/ingest`, check only the generated paper page so source OCR noise does not overwhelm the run:
+
+```bash
+uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check <paper-slug>
+```
+
+To maintain an existing prepared source outside an ingest run, inspect that one source file explicitly:
 
 ```bash
 uv run python -X utf8 tools/repair_latex_math.py --dry-run @configured-sources-papers/<source-slug>.md

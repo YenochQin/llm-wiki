@@ -52,7 +52,17 @@ These invariants always hold, in every phase, in every ingest-family skill. A ph
 - The Evidence Pack card shape, its citation syntax `[[#^E1]]`, the forbidden-variant list, the per-page frontmatter/body structure, the `## Source excerpts` shape, and the claim YAML provenance shape are all defined **once** in `docs/runtime-page-templates.en.md`. Emit per that template; do **not** restate the ASCII shapes in skill or phase prose.
 - claim YAML provenance is structured data: `source_papers` and `evidence[].source` are paper slugs only; `evidence[].source_anchor` is the Evidence Pack id only (`E1`). Never put `[[...]]`, `#`, `^`, or `[[#^E1]]` in claim YAML.
 
-## 8. Graph edge invocation contract
+## 8. Paper `## Related` section
+
+- Every generated or regenerated `papers/{slug}.md` page must end with exactly one `## Related` section.
+- `## Related` contains wikilinks only to pages that already exist or are created in the same run. Never link not-yet-ingested bibliography items, follow-up candidates, external URLs, DOIs, raw notes, prepared sources, or graph files here.
+- Use only these bullet labels, in this order, omitting empty labels: `Concepts`, `Claims`, `Foundations`, `Papers`, `Topics`, `People`, `Summary`.
+- Bullet shape is fixed: `- <Label>: [[slug-a]], [[slug-b]]`. Do not add prose explanations, evidence text, citation anchors, parentheticals, confidence notes, or nested bullets.
+- Sort slugs alphabetically within each label. Do not duplicate a slug across labels.
+- Put paper-paper related work only under `Papers`, and only when the linked paper page exists or is created in the same run. Queue not-yet-ingested related work in `outputs/ingest-candidates.md` instead.
+- `/ingest-light` may include the target Summary link under `Summary` unless `--depth paper-only`; it must still follow the same bullet shape.
+
+## 9. Graph edge invocation contract
 
 - Always: `uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from <id> --to <id> --type <type> --evidence "<text>" [--confidence high|medium|low]`.
 - The first argument after `add-edge` **must** be `'@configured'`. Never start with `add-edge --from`.
@@ -60,7 +70,7 @@ These invariants always hold, in every phase, in every ingest-family skill. A ph
 - paper-concept and paper-paper **semantic** edges require both `--evidence` (short, source-grounded) and `--confidence`. Symmetric paper-paper types are canonicalized and stored once with `symmetric: true`.
 - Bibliographic citations go to `citations.jsonl` via `add-citation`, separate from semantic edges; not every citation becomes a semantic edge.
 
-## 9. Scope boundary with `/check`
+## 10. Scope boundary with `/check`
 
 - Ingest-family skills emit well-shaped entities and correct forward/reverse links at write time, and run a narrow **shape check** (required keys, enum ranges, YAML parses) plus a **scoped** `grounding_lint.py --only` / `lint.py --only` on touched files.
 - Backlink symmetry across the whole wiki, dangling-node detection, cross-entity consistency, edge dedup, and full-wiki lint counts belong to `/check`. Never run or report a full-wiki audit inside an ingest.

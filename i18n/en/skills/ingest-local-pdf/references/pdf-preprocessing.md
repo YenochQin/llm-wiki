@@ -83,13 +83,13 @@ A successful preprocessing pass produces:
 
 From this point on, treat the prepared `.md` as the canonical source for `/ingest`. Do not re-copy the PDF into `raw/papers/`; the original path remains the user-owned artifact.
 
-Prepared math should already use `$...$` and `$$...$$`. If you need to repair an existing prepared source, inspect first:
+Prepared math should already use `$...$` and `$$...$$`. During ingest, do not run a broad LaTeX repair dry-run on `@configured-sources-papers`; source OCR noise can overwhelm the run and should not block paper-page generation. After the downstream `/ingest` writes the paper page, inspect only that generated page:
 
 ```shell
-uv run python -X utf8 tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'
+uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check '<paper-slug>'
 ```
 
-Only run without `--dry-run` after confirming the report is limited to math-span repairs.
+If maintaining an existing prepared source outside an ingest run, inspect that one source file explicitly before rewriting it.
 
 ## Failure modes
 
