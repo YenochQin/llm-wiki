@@ -45,6 +45,8 @@ Do not add follow-up ingest queues, not-yet-ingested bibliography recommendation
 
 > **Single source of truth.** This block is the *only* canonical definition of the Evidence Pack card shape and its citation syntax for the whole repo. Skills and references must point here (`docs/runtime-page-templates.en.md` §papers) instead of restating the ASCII shape or the forbidden-variant list. If this spec changes, it changes here only.
 
+For `/ingest`, `/ingest-light`, and `/reingest`, agents must not hand-write Evidence Pack card Markdown. They must pass structured card parameters to `tools/evidence_pack.py` and paste the helper output. The helper owns the `## Evidence Pack` heading, prepared markdown link, `^E*` block id, and blockquote markers. This is mandatory because display math blocks are fragile: the helper prefixes only the opening `$$` line with `>`, leaving formula continuation lines and the closing `$$` unquoted so the `>` marker is never injected into LaTeX.
+
 The leading `>` before the source fragment is Markdown blockquote syntax, not source text and not LaTeX. Treat `$$...$$` display math as one indivisible LaTeX block: only the opening `$$` line may carry the Evidence Pack quote marker, and no line inside the block may start with `>` after the list indentation. The closing `$$` line is also part of the math block and must not be prefixed with `>`. If an equation is inline within an already quoted sentence, do not add an extra `>` immediately before the formula.
 
 Valid display-math quote shape:

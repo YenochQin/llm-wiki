@@ -50,7 +50,7 @@ Required sections:
 
 ## Evidence Pack
 
-(Evidence Pack cards — use the canonical card shape and citation syntax from `docs/runtime-page-templates.en.md` §papers; identical to full `/ingest`.)
+(Evidence Pack cards — rendered with `tools/evidence_pack.py` from structured card parameters; card shape and citation syntax remain canonical in `docs/runtime-page-templates.en.md` §papers.)
 
 ## Problem
 
@@ -108,7 +108,7 @@ Known limitations, scope limits, or reasons this paper is background-only.
 
 - Keep it compact: one to three paragraphs per prose section.
 - Do not invent details absent from metadata/prepared source.
-- `## Evidence Pack` is mandatory. Use the canonical card shape and citation syntax defined once in `docs/runtime-page-templates.en.md` §papers (forbidden-variant list included there); do not restate it here.
+- `## Evidence Pack` is mandatory. Generate it with `tools/evidence_pack.py`; do not hand-write the card Markdown or restate the canonical shape here.
 - Prefer Zotero BibTeX. Never put BibTeX in YAML frontmatter.
 - Use Obsidian wikilinks for internal pages and ordinary markdown links for prepared source files.
 - `## Related` must follow `.claude/skills/shared-references/ingest-invariants.md` §8 exactly: fixed labels/order, `- <Label>: [[slug]]` bullet shape, no prose, no anchors, no not-yet-ingested papers.

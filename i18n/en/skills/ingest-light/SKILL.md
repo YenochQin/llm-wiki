@@ -11,7 +11,7 @@ Light ingest is for papers whose main purpose is dissertation-introduction or ba
 It reuses the shared ingest pipeline but runs a reduced subset, **printing each phase's Gate block** as it goes:
 
 - **Phase A** — `.claude/skills/shared-references/ingest-phases/phase-a-source-identity.md` (resolve + prepare + identity)
-- **Phase B** — `.claude/skills/shared-references/ingest-phases/phase-b-evidence-pack.md` (light Evidence Pack; concepts/claims counts are 0 unless this run explicitly touches them)
+- **Phase B** — `.claude/skills/shared-references/ingest-phases/phase-b-evidence-pack.md` (light Evidence Pack rendered with `tools/evidence_pack.py`; concepts/claims counts are 0 unless this run explicitly touches them)
 - **Light paper page** — this skill's own light variant (below + `references/light-paper-page.md`); Evidence Pack still required per `docs/runtime-page-templates.en.md`
 - **Summary update** — `references/summary-update.md`
 - **Finalize** — index + log + scoped lint (Phase E, reduced)
@@ -50,7 +50,7 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 1. **Phase A** — resolve + prepare the source and settle identity, per the phase file. Stop if `usable: false`; do not read MinerU cache intermediates as a substitute. Print Gate A.
-2. **Phase B** — extract the light Evidence Pack from the prepared source and print Gate B. Use the shared phase, with the light page's populated interpretive sections as the coverage target; concept/claim counts are `0` unless this run explicitly updates existing concept/claim pages.
+2. **Phase B** — extract structured card parameters from the prepared source, render the light Evidence Pack with `tools/evidence_pack.py`, and print Gate B. Use the shared phase, with the light page's populated interpretive sections as the coverage target; concept/claim counts are `0` unless this run explicitly updates existing concept/claim pages.
 3. **Light paper page** — follow `references/light-paper-page.md`:
    - Frontmatter = normal paper fields + tags containing `thesis-introduction`, the selected role, and `light-ingest`. Fill `paper_type`/`research_modes`/`research_object_tags` conservatively, else `other`/`[]`/`[]`.
    - Light body sections: `## Evidence Pack` (first, per template), `## Problem`, `## Key idea`, `## Research classification`, `## Introduction use`, `## Evidence notes`, `## Limitations`, `## BibTeX`, `## Related`.

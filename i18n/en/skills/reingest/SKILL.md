@@ -16,12 +16,12 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 - Phase D — `.claude/skills/shared-references/ingest-phases/phase-d-knowledge-graph.md` (run as **entity migration**)
 - Phase E — `.claude/skills/shared-references/ingest-phases/phase-e-navigation-finalize.md`
 
-Phase B re-extracts cards from the refreshed source and prints Gate B before Phase C rewrites `## Evidence Pack` as the first body section.
+Phase B re-extracts structured card parameters from the refreshed source, renders `## Evidence Pack` with `tools/evidence_pack.py`, and prints Gate B before Phase C rewrites the paper page's first body section.
 
 ## Always-on references
 
 - `.claude/skills/shared-references/ingest-invariants.md` — path / Zotero / slug / LaTeX / wikilink / BibTeX / edge rules
-- `docs/runtime-page-templates.en.md` — page shape + Evidence Pack card shape (single source of truth)
+- `docs/runtime-page-templates.en.md` — page shape + Evidence Pack card shape (single source of truth); `tools/evidence_pack.py` renders the actual paper Evidence Pack Markdown
 - `.claude/skills/shared-references/source-grounding.md` — anti-hallucination discipline
 
 ## Scope
@@ -47,7 +47,7 @@ Phase B re-extracts cards from the refreshed source and prints Gate B before Pha
 - Read the existing page and preserve `cited_by`, stable identity not in the new source (`external_ids`, `code_url`, curated `importance` rationale), existing `## Related` links still valid, and any non-template custom section.
 
 ### Phase C delta — write to the existing page
-Regenerate analysis into the existing page (do not create a new one), regenerating `## Evidence Pack` first. Use the retained bibliography to resolve inline references; do not cite references absent from bibliography/metadata.
+Regenerate analysis into the existing page (do not create a new one), regenerating `## Evidence Pack` first through `tools/evidence_pack.py`. Use the retained bibliography to resolve inline references; do not cite references absent from bibliography/metadata.
 
 ### Phase D delta — entity migration + template migration (skip if `--paper-only`)
 Review entities connected to the old or regenerated page: pages in old/new `## Related`; concepts whose `key_papers` include this paper; claims whose `source_papers`/`evidence[].source` include it; linked people; graph neighbors (`tools/research_wiki.py neighbors '@configured' papers/<slug>`). For each, compare old statement vs regenerated source **and** audit current page shape against `docs/runtime-page-templates.en.md`. A source-faithful entity is not automatically skippable: if its frontmatter, provenance shape, required sections, or source anchors are stale, migrate it to the current template even when the prose meaning is already correct.
