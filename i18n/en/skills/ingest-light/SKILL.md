@@ -80,4 +80,4 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 
 ## Upgrade path
 
-If a light-ingested paper later becomes core evidence, run `/ingest` or `/reingest` on the same slug to upgrade it to full graph participation. Preserve `thesis-introduction` tags and the Summary link unless the user asks to remove them. See `/promote-light-ingest` to find candidates.
+If a light-ingested paper later becomes core evidence, run `/ingest`, `/reingest`, or `/reingest-force` on the same slug to upgrade it to full graph participation. Use `/reingest-force` when the existing paper page is badly wrong and old wiki state should not steer the rebuild. Preserve `thesis-introduction` tags and the Summary link unless the user asks to remove them. See `/promote-light-ingest` to find candidates.

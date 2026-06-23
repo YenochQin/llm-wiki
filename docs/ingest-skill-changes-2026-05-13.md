@@ -101,7 +101,7 @@ These changes do not retroactively fix the May 13 ingest. To bring `YenochWiki/w
 
 1. Restore the 3050-line MinerU-converted chapter Markdown at `YenochWiki/wiki/sources/papers/relativistic-quantum-theory-atoms-molecules-chapter.md` — either re-run `/ingest-local-pdf` or copy from one of the other wiki candidates that still has it.
 2. Create `YenochWiki/wiki/Summary/research-direction.md` describing the active research direction (ML CSF selection on GRASP2018).
-3. Run `/reingest relativistic-quantum-theory-atoms-molecules-chapter` so the concept pages pick up the new `## My understanding` rule and the topic-placement report line.
+3. Run `/reingest relativistic-quantum-theory-atoms-molecules-chapter` so the concept pages pick up the new `## My understanding` rule and the topic-placement report line. If the existing page is severely corrupted by a bad prior ingest, prefer `/reingest-force` instead.
 
 The order matters: step 1 must complete before step 3, otherwise step 3 will trigger the prepared-source and research-direction self-checks.
 

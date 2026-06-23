@@ -220,6 +220,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 | `/zotero-collection-list` | `skills/zotero-collection-list/SKILL.md` | 手动（按 Zotero 分类/子分类列出 citationKey、title、DOI） |
 | `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | 手动 |
 | `/reingest` | `skills/reingest/SKILL.md` | 手动（重新 ingest 已有论文页面） |
+| `/reingest-force` | `skills/reingest-force/SKILL.md` | 手动（当旧 wiki 状态不可信时，对已有论文页做 clean-room 重建） |
 | `/discover` | `skills/discover/SKILL.md` | 手动 / 内部调用（由 `/ingest --discover` 调用） |
 | `/ask` | `skills/ask/SKILL.md` | 手动 |
 | `/edit` | `skills/edit/SKILL.md` | 手动 |

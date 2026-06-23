@@ -214,6 +214,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 | `/zotero-collection-list` | `skills/zotero-collection-list/SKILL.md` | manual (list citationKey, title, and DOI by Zotero collection/subcollection) |
 | `/ingest-local-pdf` | `skills/ingest-local-pdf/SKILL.md` | manual |
 | `/reingest` | `skills/reingest/SKILL.md` | manual (regenerate an existing paper page) |
+| `/reingest-force` | `skills/reingest-force/SKILL.md` | manual (clean-room rebuild of an existing paper page when old wiki state is unreliable) |
 | `/discover` | `skills/discover/SKILL.md` | manual / internal (called by `/ingest --discover`) |
 | `/ask` | `skills/ask/SKILL.md` | manual |
 | `/edit` | `skills/edit/SKILL.md` | manual |
