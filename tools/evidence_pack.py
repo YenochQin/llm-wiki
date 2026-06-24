@@ -13,7 +13,7 @@ from typing import Any
 
 
 EVIDENCE_ID_RE = re.compile(r"^E[1-9][0-9]*$")
-SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+SLUG_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$")
 
 
 @dataclass(frozen=True)
