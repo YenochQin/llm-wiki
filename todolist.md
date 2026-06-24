@@ -1,1 +1,0 @@
-ingest skills 的Evidence Pack需要进行重新设计，换用python或其他程序，通过输入对应的文本参数，来输出每个Evidence Pack block条目，而不是llm自己来输出
