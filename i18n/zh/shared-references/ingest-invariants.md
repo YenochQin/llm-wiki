@@ -51,6 +51,7 @@ These invariants always hold, in every phase, in every ingest-family skill. A ph
 ## 7. Page shape and Evidence Pack are template-defined
 
 - The Evidence Pack card shape, its citation syntax `[[#^E1]]`, the forbidden-variant list, the per-page frontmatter/body structure, the `## Source excerpts` shape, and the claim YAML provenance shape are all defined **once** in `docs/runtime-page-templates.en.md`. Emit per that template; do **not** restate the ASCII shapes in skill or phase prose.
+- Evidence Pack `short_label` fields carry the refined meaning of the source block. Evidence Pack `excerpt` fields are compact exact anchors for locating the original evidence, not whole-paragraph or whole-subsection copies. Preserve complete formal units only when the formal unit itself is the necessary anchor; otherwise anchor long formulas/tables by a short source sentence plus label/section and keep the full source in prepared markdown.
 - claim YAML provenance is structured data: `source_papers` and `evidence[].source` are paper slugs only; `evidence[].source_anchor` is the Evidence Pack id only (`E1`). Never put `[[...]]`, `#`, `^`, or `[[#^E1]]` in claim YAML.
 
 ## 8. Graph edge invocation contract

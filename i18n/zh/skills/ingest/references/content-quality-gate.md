@@ -11,6 +11,7 @@ Open this reference before drafting or revising Step 3/4 outputs. It turns the c
 - Directory-prefixed wikilinks: emitting `[[wiki/...]]`, `[[wiki_glm/...]]`, `[[wiki_back.../...]]`, `[[topics/slug]]`, or other path-qualified wikilinks that become polluted or brittle in Obsidian vaults with multiple candidate wiki directories.
 - Overclaiming: high confidence or "necessary/sufficient" language without direct proof and clear scope.
 - Equation format mismatch: using code fences or `\(` `\)` notation instead of Obsidian-compatible `$`/`$$` math.
+- Bulk-pasted Evidence Pack excerpts: card titles should refine the source block's meaning, while excerpts should be compact exact anchors (key sentence/formula/row), not whole paragraphs or subsections copied from the prepared source.
 - Vacuous guidance: "When to use" or "Known limitations" sections that could apply to any concept in the field.
 
 ## Paper page floor
@@ -19,6 +20,7 @@ A paper page should let a later agent reconstruct what the source contributed wi
 
 - Use the prepared MinerU frontmatter (`sections`, `figures`, `abstract_excerpt`) as the outline anchor.
 - Map `## Method` and `## Results` to source sections when the source has clear sections. For chapters, preserve chapter subsection structure and reference section numbers (e.g. "Sec 6.3"); for empirical papers, name datasets, instruments, protocols, tables, figures, and main metrics; for theory papers, name definitions, assumptions, propositions, equations, and derivation steps.
+- For each Evidence Pack card, make `short_label` the compressed meaning of the source block and make `excerpt` the shortest exact anchor that identifies it. Do not copy a whole source paragraph when one decisive sentence, equation label, compact formula, table row, or phrase is enough to locate the evidence.
 - Preserve key equations in LaTeX when the source contains formulas. Prefer one or two central equations over a long dump.
 - `## Limitations` and `## Open questions` should be source-grounded when possible, then clearly label any agent inference as "Inferred".
 - `## Related` must expose all new/updated concepts, claims, foundations, and people touched by the ingest.

@@ -12,6 +12,7 @@ Open this reference before drafting or revising Step 3/4 outputs. It turns the c
 - Overclaiming: high confidence or "necessary/sufficient" language without direct proof and clear scope.
 - Equation format mismatch: using code fences or `\(` `\)` notation instead of Obsidian-compatible `$`/`$$` math.
 - Hand-written Evidence Pack Markdown: `/ingest`, `/ingest-light`, and `/reingest` must generate paper Evidence Pack cards with `tools/evidence_pack.py` from structured parameters.
+- Bulk-pasted Evidence Pack excerpts: card titles should refine the source block's meaning, while excerpts should be compact exact anchors (key sentence/formula/row), not whole paragraphs or subsections copied from the prepared source.
 - Quote-marker injection into formulas: Evidence Pack display math where continuation lines or the closing `$$` line start with `>` after list indentation.
 - Partial formal evidence: Evidence Pack cards that quote only the first line, first term, or visually convenient prefix of a long equation/definition/theorem/algorithm step while downstream prose treats the excerpt as complete support.
 - Vacuous guidance: "When to use" or "Known limitations" sections that could apply to any concept in the field.
@@ -22,6 +23,7 @@ A paper page should let a later agent reconstruct what the source contributed wi
 
 - Use the prepared MinerU frontmatter (`sections`, `figures`, `abstract_excerpt`) as the outline anchor.
 - Map `## Method` and `## Results` to source sections when the source has clear sections. For chapters, preserve chapter subsection structure and reference section numbers (e.g. "Sec 6.3"); for empirical papers, name datasets, instruments, protocols, tables, figures, and main metrics; for theory papers, name definitions, assumptions, propositions, equations, and derivation steps.
+- For each Evidence Pack card, make `short_label` the compressed meaning of the source block and make `excerpt` the shortest exact anchor that identifies it. Do not copy a whole source paragraph when one decisive sentence, equation label, compact formula, table row, or phrase is enough to locate the evidence.
 - Preserve key equations in LaTeX when the source contains formulas. Prefer one or two central equations over a long dump, but any equation copied into `## Evidence Pack` must be a complete meaning-preserving unit. If the full equation is too long for a card, cite the equation label/section instead of copying a misleading partial formula. Paper Evidence Pack Markdown must come from `tools/evidence_pack.py`; if display math still contains `>` on continuation lines or the closing `$$`, treat it as a failed helper invocation or a hand-edit that must be regenerated.
 - `## Limitations` and `## Open questions` should be source-grounded when possible, then clearly label any agent inference as "Inferred".
 - `## Related` must expose all new/updated concepts, claims, foundations, and people touched by the ingest using the fixed format in `.claude/skills/shared-references/ingest-invariants.md` §8.

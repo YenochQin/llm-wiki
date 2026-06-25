@@ -37,7 +37,8 @@ Before drafting any interpretive prose, build a short evidence set, then draft
    - an id (`E1`, `E2`, …)
    - a link to the source (prepared markdown link, wiki `[[slug]]`, or fetched URL)
    - the section/table/figure/equation label when available
-   - **one short exact quote** in the original language — not a paraphrase
+   - a terse label that refines what this source block contributes
+   - **one short exact quote** in the original language — not a paraphrase — used as a locator anchor, not as a copied archive of the surrounding paragraph
    - for paper `## Evidence Pack` cards, this exact Markdown shape:
 
      ```markdown
@@ -55,8 +56,12 @@ Before drafting any interpretive prose, build a short evidence set, then draft
 4. If no card supports a detail, you have three honest options — pick one, never
    invent: write `unclear`, omit the detail, or move it under an
    `## Open questions` / "needs verification" heading.
-5. Do not replace exact quotes with an LLM summary "for brevity." The quote is
-   the anti-hallucination anchor.
+5. Do not replace exact quotes with an LLM summary "for brevity." Put the
+   summary in the card label or generated prose; the quote is the
+   anti-hallucination anchor.
+6. Do not paste whole paragraphs, subsections, or other large passages into the
+   evidence set just to preserve context. Choose the key sentence/formula/row
+   that locates the evidence, then let the generated page explain it.
 
 If the source is too poor to extract evidence cards, **stop and report a
 source-quality blocker** instead of generating from memory.
