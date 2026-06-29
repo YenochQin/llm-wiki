@@ -105,7 +105,7 @@ class DiscoverRecommendationQualityTests(unittest.TestCase):
 
         self.assertIn("**A Complete Candidate**", markdown)
         self.assertIn("Authors: Ada Lovelace, Grace Hopper, Alan Turing", markdown)
-        self.assertIn("DOI: 10.1234/example", markdown)
+        self.assertIn("DOI: [10.1234/example](https://doi.org/10.1234/example)", markdown)
         self.assertIn("Zotero: collected", markdown)
         self.assertNotIn("`10.1234/example`", markdown)
 

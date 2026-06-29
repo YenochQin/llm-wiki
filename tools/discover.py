@@ -112,6 +112,15 @@ def _candidate_doi(c: dict[str, Any]) -> str:
     return doi
 
 
+def _format_doi_markdown(doi: str) -> str:
+    doi = str(doi or "").strip()
+    if not doi:
+        return "unavailable"
+    doi = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", doi, flags=re.IGNORECASE)
+    url_doi = doi.replace("(", "%28").replace(")", "%29")
+    return f"[{doi}](https://doi.org/{url_doi})"
+
+
 def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> None:
     """Union sources/anchors; keep richer field values from either side."""
     for src in incoming.get("_sources", []):
@@ -640,7 +649,7 @@ def _format_markdown(payload: dict[str, Any]) -> str:
         rationale = c.get("_rationale") or ""
         score = c.get("_score", 0)
         authors = ", ".join(c.get("authors") or []) or "unknown"
-        doi = _candidate_doi(c) or "unavailable"
+        doi = _format_doi_markdown(_candidate_doi(c))
         zotero_status = c.get("_zotero_status") or "unknown"
         lines.append(f"{i}. **{title}**  ")
         lines.append(f"   Authors: {authors}  ")
