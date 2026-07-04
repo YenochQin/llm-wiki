@@ -22,6 +22,7 @@ __pycache__/
 .mineru-cache/
 config/zotero-cache/
 .checkpoints/
+.omo/
 raw/prepared/papers/assets/*
 raw/tmp/
 wiki/
