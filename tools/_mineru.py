@@ -38,7 +38,7 @@ from pathlib import Path
 import _env  # noqa: F401 — load llm-wiki user config for MinerU keys
 
 DEFAULT_API_BASE = "https://mineru.net/api/v4"
-DEFAULT_MODEL_VERSION = "pipeline"
+DEFAULT_MODEL_VERSION = "vlm"
 POLL_INTERVAL_SEC = 3
 POLL_READ_TIMEOUT_SEC = 120
 POLL_TIMEOUT_SEC = 30 * 60  # 30 minutes per PDF
@@ -417,7 +417,7 @@ def _extract_via_local(pdf: Path, cache_dir: Path, language: str) -> None:
 
 
 def _find_library_output(tmp_dir: Path, stem: str) -> Path:
-    """MinerU 2.x writes to <tmp>/<stem>/<method>/. Locate that subdir."""
+    """Locate the MinerU output subdirectory under <tmp>/<stem>/<method>/."""
     stem_dir = tmp_dir / stem
     if not stem_dir.is_dir():
         raise RuntimeError(f"mineru produced no output for stem={stem!r} in {tmp_dir}")
@@ -438,9 +438,9 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
     plus one non-manifest ``.json``. The various MinerU sources name those
     files differently:
 
-    - ``mineru.cli.common.do_parse`` (local)  → ``<stem>.md`` + ``<stem>_content_list.json``
-    - ``mineru.net`` cloud ZIP                → ``full.md`` + ``<task-uuid>_content_list.json``
-    - MinerU 2.x pipeline output              → ``full.md`` + ``<task-uuid>_content_list_v2.json``
+- ``mineru.cli.common.do_parse`` (local)  → ``<stem>.md`` + ``<stem>_content_list.json``
+- ``mineru.net`` cloud ZIP                → ``full.md`` + ``<task-uuid>_content_list.json``
+- Newer MinerU pipeline output            → ``full.md`` + ``<task-uuid>_content_list_v2.json``
 
     Either way, after this function runs the cache contains exactly one
     ``<stem>.md`` and one ``<stem>.json`` that the manifest synthesizer can

@@ -14,7 +14,7 @@ dependencies = [
 # MinerU local backend — downloads several GB of models on first run.
 # Cloud (api) backend is the default and only needs `requests`, already in core deps.
 local = [
-    "mineru[all]>=2.0"
+    "mineru[all]>=3.4.2"
 ]
 
 [dependency-groups]
