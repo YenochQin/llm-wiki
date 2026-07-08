@@ -261,6 +261,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 | `/ideate` | `skills/ideate/SKILL.md` | 手动 |
 | `/exp-design` | `skills/exp-design/SKILL.md` | 手动 |
 | `/exp-eval` | `skills/exp-eval/SKILL.md` | 手动 |
+| `/cal-report-analysis` | `skills/cal-report-analysis/SKILL.md` | 手动（索引 calculation data 并写有证据支撑的分析报告） |
 | `/refine` | `skills/refine/SKILL.md` | 手动 |
 | `/paper-plan` | `skills/paper-plan/SKILL.md` | 手动 |
 | `/paper-draft` | `skills/paper-draft/SKILL.md` | 手动 |

@@ -225,6 +225,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 | `/ideate` | `skills/ideate/SKILL.md` | manual |
 | `/exp-design` | `skills/exp-design/SKILL.md` | manual |
 | `/exp-eval` | `skills/exp-eval/SKILL.md` | manual |
+| `/cal-report-analysis` | `skills/cal-report-analysis/SKILL.md` | manual (index calculation data and write grounded analysis reports) |
 | `/refine` | `skills/refine/SKILL.md` | manual |
 | `/paper-plan` | `skills/paper-plan/SKILL.md` | manual |
 | `/paper-draft` | `skills/paper-draft/SKILL.md` | manual |

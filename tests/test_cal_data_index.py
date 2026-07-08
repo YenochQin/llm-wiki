@@ -1,6 +1,7 @@
 import json
 import contextlib
 import io
+import shutil
 import sys
 import tempfile
 import unittest
@@ -46,6 +47,7 @@ class CalDataIndexTests(unittest.TestCase):
         self.assertIn("```jsonl", content)
         self.assertIn('{"id": 1, "ok": true}', content)
         self.assertIn("![plot.png](../../temp/cal_data/run-2026-07-08/plot.png)", content)
+        self.assertNotIn("## Notes", content)
 
     def test_cli_uses_paths_config_for_configured_wiki_root(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -85,6 +87,69 @@ class CalDataIndexTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn("generated 2 report file(s)", stdout.getvalue())
         self.assertTrue(report_exists)
+
+    def test_build_reports_removes_stale_report_pages(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            wiki = Path(tmp)
+            old_run = wiki / "temp" / "cal_data" / "old-run"
+            new_run = wiki / "temp" / "cal_data" / "new-run"
+            old_run.mkdir(parents=True)
+            (old_run / "metrics.csv").write_text("name,value\nold,1\n", encoding="utf-8")
+
+            cal_data_index.build_reports(cal_data_index.IndexRequest(wiki_root=wiki))
+            old_report = wiki / "experiments" / "cal_reports" / "old-run.md"
+            old_report.write_text(
+                old_report.read_text(encoding="utf-8").replace(
+                    "<!-- generated_by: cal_data_index -->\n", ""
+                ),
+                encoding="utf-8",
+            )
+            shutil.rmtree(old_run)
+            new_run.mkdir()
+            (new_run / "metrics.csv").write_text("name,value\nnew,2\n", encoding="utf-8")
+
+            cal_data_index.build_reports(cal_data_index.IndexRequest(wiki_root=wiki))
+
+            report_root = wiki / "experiments" / "cal_reports"
+            self.assertFalse((report_root / "old-run.md").exists())
+            self.assertTrue((report_root / "new-run.md").exists())
+
+    def test_build_reports_preserves_user_authored_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            wiki = Path(tmp)
+            run_dir = wiki / "temp" / "cal_data" / "run"
+            report_root = wiki / "experiments" / "cal_reports"
+            run_dir.mkdir(parents=True)
+            report_root.mkdir(parents=True)
+            (run_dir / "metrics.csv").write_text("name,value\nx,1\n", encoding="utf-8")
+            manual_note = report_root / "manual-notes.md"
+            manual_note.write_text("# Manual notes\n\nKeep this.\n", encoding="utf-8")
+
+            cal_data_index.build_reports(cal_data_index.IndexRequest(wiki_root=wiki))
+
+            self.assertEqual(manual_note.read_text(encoding="utf-8"), "# Manual notes\n\nKeep this.\n")
+
+    def test_build_reports_disambiguates_slug_collisions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            wiki = Path(tmp)
+            run_a = wiki / "temp" / "cal_data" / "Run-A"
+            run_b = wiki / "temp" / "cal_data" / "run_a"
+            run_a.mkdir(parents=True)
+            run_b.mkdir()
+            (run_a / "metrics.csv").write_text("name,value\nfirst,1\n", encoding="utf-8")
+            (run_b / "metrics.csv").write_text("name,value\nsecond,2\n", encoding="utf-8")
+
+            result = cal_data_index.build_reports(cal_data_index.IndexRequest(wiki_root=wiki))
+            report_root = wiki / "experiments" / "cal_reports"
+            index_content = (report_root / "index.md").read_text(encoding="utf-8")
+            report_names = {path.name for path in report_root.glob("*.md")}
+
+        self.assertEqual(result.run_count, 2)
+        self.assertEqual(result.report_count, 3)
+        self.assertIn("run-a.md", report_names)
+        self.assertIn("run-a-2.md", report_names)
+        self.assertIn("[[run-a]]", index_content)
+        self.assertIn("[[run-a-2]]", index_content)
 
 
 if __name__ == "__main__":

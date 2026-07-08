@@ -1,0 +1,4 @@
+interface:
+  display_name: "Calculation Report Analysis"
+  short_description: "Analyze calculation-data report pages"
+  default_prompt: "Use $cal-report-analysis to index calculation data and write an analysis report."

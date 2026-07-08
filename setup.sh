@@ -235,6 +235,21 @@ $ARGUMENTS
 ```
 EOF
 
+cat > ".claude/commands/cal-report-analysis.md" <<'EOF'
+---
+description: Index calculation data and write a grounded analysis report.
+argument-hint: "[scope] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--write]"
+---
+
+Read and follow @skills/cal-report-analysis/SKILL.md exactly.
+
+Use these user-provided invocation arguments for the skill:
+
+```
+$ARGUMENTS
+```
+EOF
+
 echo "$LANG_CODE" > .claude/.current-lang
 echo "$LANG_CODE" > .agents/.current-lang
 ok "Language files activated ($LANG_CODE)"
@@ -280,6 +295,7 @@ check_tool_import "tools/fetch_literature.py" "from fetch_literature import sear
 check_tool_import "tools/research_wiki.py" "from research_wiki import slugify"
 check_tool_import "tools/lint.py" "from lint import check_missing_fields"
 check_tool_import "tools/list_zotero_collection.py" "from list_zotero_collection import list_collection"
+check_tool_import "tools/cal_data_index.py" "from cal_data_index import build_reports"
 
 # MinerU API token diagnostic (warn-only). The api backend reads process env or
 # the unified llm-wiki user config.

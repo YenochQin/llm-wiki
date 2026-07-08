@@ -18,6 +18,7 @@ DEFAULT_DATA_DIR: Final = "temp/cal_data"
 DEFAULT_REPORT_DIR: Final = "experiments/cal_reports"
 CLI_DESCRIPTION: Final = "Generate Obsidian-browsable reports for wiki-local calculation data."
 MAX_CELL_CHARS: Final = 80
+GENERATED_BY: Final = "generated_by: cal_data_index"
 TEXT_EXTENSIONS: Final = {".txt", ".log", ".md", ".yaml", ".yml", ".json", ".toml"}
 IMAGE_EXTENSIONS: Final = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
 
@@ -136,8 +137,10 @@ def _discover_runs(data_root: Path) -> tuple[RunSource, ...]:
     if not data_root.exists():
         return ()
     runs: list[RunSource] = []
+    slug_counts: dict[str, int] = {}
     direct_files = tuple(sorted(path for path in data_root.iterdir() if path.is_file()))
     if direct_files:
+        slug_counts["cal-data-root"] = 1
         runs.append(
             RunSource(
                 name="cal_data root files",
@@ -148,7 +151,11 @@ def _discover_runs(data_root: Path) -> tuple[RunSource, ...]:
         )
     for child in sorted(path for path in data_root.iterdir() if path.is_dir()):
         files = tuple(sorted(path for path in child.rglob("*") if path.is_file()))
-        runs.append(RunSource(name=child.name, slug=_slugify(child.name), path=child, files=files))
+        base_slug = _slugify(child.name)
+        count = slug_counts.get(base_slug, 0) + 1
+        slug_counts[base_slug] = count
+        slug = base_slug if count == 1 else f"{base_slug}-{count}"
+        runs.append(RunSource(name=child.name, slug=slug, path=child, files=files))
     return tuple(runs)
 
 
@@ -194,6 +201,7 @@ def _report_content(run: RunSource, report_dir: Path, request: IndexRequest) -> 
     preview = _preview_sections(run, report_dir, request)
     preview_section = preview if preview else "No previewable files found."
     return (
+        "<!-- generated_by: cal_data_index -->\n"
         f"# {run.name}\n\n"
         "## Summary\n\n"
         f"- source_dir: [{_wiki_path(run.path.relative_to(request.wiki_root))}]({source_link})\n"
@@ -203,15 +211,14 @@ def _report_content(run: RunSource, report_dir: Path, request: IndexRequest) -> 
         "## Files\n\n"
         f"{_file_table(run, report_dir)}\n\n"
         "## Previews\n\n"
-        f"{preview_section}\n\n"
-        "## Notes\n\n"
-        "- \n"
+        f"{preview_section}\n"
     )
 
 
 def _index_content(runs: tuple[RunSource, ...], request: IndexRequest) -> str:
     generated = datetime.now(timezone.utc).date().isoformat()
     lines = [
+        "<!-- generated_by: cal_data_index -->",
         "# Calculation reports",
         "",
         "## Summary",
@@ -235,19 +242,17 @@ def build_reports(request: IndexRequest) -> IndexResult:
     report_root = (request.wiki_root / request.report_dir).resolve()
     report_root.mkdir(parents=True, exist_ok=True)
     runs = _discover_runs(data_root)
+    for old_report in report_root.glob("*.md"):
+        report_text = old_report.read_text(encoding="utf-8", errors="ignore")
+        if GENERATED_BY in report_text or ("## Summary\n\n- source_dir:" in report_text and "\n## Files\n\n" in report_text and "\n## Previews\n\n" in report_text):
+            old_report.unlink()
     for run in runs:
         (report_root / f"{run.slug}.md").write_text(
             _report_content(run, report_root, request),
             encoding="utf-8",
         )
     (report_root / "index.md").write_text(_index_content(runs, request), encoding="utf-8")
-    return IndexResult(
-        wiki_root=request.wiki_root,
-        data_root=data_root,
-        report_root=report_root,
-        run_count=len(runs),
-        report_count=len(runs) + 1,
-    )
+    return IndexResult(request.wiki_root, data_root, report_root, len(runs), len(runs) + 1)
 
 
 def _build_parser() -> argparse.ArgumentParser:
