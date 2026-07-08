@@ -1638,7 +1638,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27,<1.0" },
-    { name = "mineru", extras = ["all"], marker = "extra == 'local'", specifier = ">=2.0" },
+    { name = "mineru", extras = ["all"], marker = "extra == 'local'", specifier = ">=3.4.2" },
     { name = "python-frontmatter", specifier = ">=1.1.0,<2.0" },
     { name = "requests", specifier = ">=2.31.0" },
 ]
@@ -1939,7 +1939,7 @@ wheels = [
 
 [[package]]
 name = "mineru"
-version = "3.3.1"
+version = "3.4.2"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -1973,7 +1973,7 @@ dependencies = [
     { name = "uvicorn" },
 ]
 wheels = [
-    { url = "https://mirrors.aliyun.com/pypi/packages/03/8c/d72028f31417d239b4e4b78dcd4538d554579ea753db505901d3699d199d/mineru-3.3.1-py3-none-any.whl", hash = "sha256:922fbebd566ef3f35b5f14a02104f59aa496a710b2a3101cb728b9de06717d49" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/78/5e/6b28b36c0f4d3a9051317c7660323043851d7db68b06ec7a16cba1f179a7/mineru-3.4.2-py3-none-any.whl", hash = "sha256:897b70c7bac0637d432de732bcee58d7baac9eb1075881cb58db29800185f87d" },
 ]
 
 [package.optional-dependencies]
@@ -1992,6 +1992,7 @@ all = [
     { name = "pyclipper" },
     { name = "pyyaml" },
     { name = "qwen-vl-utils", marker = "sys_platform == 'win32'" },
+    { name = "safetensors" },
     { name = "shapely" },
     { name = "torch" },
     { name = "torchvision" },
