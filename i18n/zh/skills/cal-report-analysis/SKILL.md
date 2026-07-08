@@ -1,7 +1,7 @@
 ---
 name: cal-report-analysis
-description: Use when the user wants to index wiki-local calculation outputs and write an analysis report from generated calculation report pages. Trigger for requests to analyze `temp/cal_data`, compare calculation runs, summarize CSV/JSONL/text/image result artifacts, or create an archived report based on `tools/cal_data_index.py` outputs.
-argument-hint: "[scope] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--write]"
+description: Use when the user wants to index wiki-local calculation outputs and write an archived analysis report from generated calculation report pages. Trigger for requests to analyze `temp/cal_data`, compare calculation runs, summarize CSV/JSONL/text/image result artifacts, or create a durable report based on `tools/cal_data_index.py` outputs.
+argument-hint: "[scope] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--no-write]"
 ---
 
 # /cal-report-analysis
@@ -24,13 +24,14 @@ User manual: `/cal-report-analysis [scope] [...]`
 - `--report-dir` optional，默认 `experiments/cal_reports`：indexer 写入 report pages 的 wiki-relative 目录。
 - `--table-rows` optional，默认 `8`：每个 CSV/TSV 文件预览的行数。
 - `--text-lines` optional，默认 `20`：每个 JSONL/text/log/config 文件预览的行数。
-- `--write` optional：将最终分析归档为 `wiki/outputs/cal-report-analysis-{slug}-{date}.md`。
+- `--no-write` optional：跳过归档，只在响应中返回最终分析。
 
 ## Outputs
 
 - `experiments/cal_reports/index.md` 和每个 calculation run 的 generated report page。
 - 响应中的简洁分析报告。
-- With `--write`：`wiki/outputs/cal-report-analysis-{slug}-{date}.md` 和一条 log entry。
+- 默认写入：`wiki/outputs/cal-report-analysis-{slug}-{date}.md` 和一条 log entry。
+- With `--no-write`：不写入 archived analysis artifact，也不追加 log entry。
 
 ## Wiki Interaction
 
@@ -42,8 +43,9 @@ User manual: `/cal-report-analysis [scope] [...]`
 
 ### Writes
 - 在 `--report-dir` 下写入 generated calculation report pages；这些页面会由 indexer 重新生成，不适合作为手写 notes 的持久位置。
-- With `--write`：在 `wiki/outputs/` 下写入一个 analysis artifact。
-- With `--write`：通过 `tools/research_wiki.py log` 追加 weekly log entry。
+- 默认在 `wiki/outputs/` 下写入一个 analysis artifact。
+- 默认通过 `tools/research_wiki.py log` 追加 weekly log entry。
+- With `--no-write`：不写入 analysis artifact 或 log entry。
 
 ### Graph edges created
 - 默认不创建。
@@ -134,7 +136,9 @@ uv run python -X utf8 tools/cal_data_index.py @configured --data-dir temp/cal_da
 - metadata 缺失时保留不确定性。
 - 避免可套用于任何实验的 generic prose。
 
-### Step 5: Archive (`--write` only)
+### Step 5: Archive by Default
+
+只有当用户提供 `--no-write` 时才跳过本步骤。
 
 1. 根据 scope 生成 slug：
 
@@ -178,12 +182,12 @@ uv run python -X utf8 tools/cal_data_index.py @configured --data-dir temp/cal_da
 ## Constraints
 
 - 将 generated report pages 视为 evidence index，而非自动证明；对决定性数值或诊断 claim，要读取 linked source files。
-- 将 generated report pages 视为 disposable indexer output。不要在这些页面里写持久 hand-written notes；持久解读应放入 `--write` analysis artifact，或放入单独的 user-authored Markdown file。
+- 将 generated report pages 视为 disposable indexer output。不要在这些页面里写持久 hand-written notes；持久解读应放入 archived analysis artifact，或放入单独的 user-authored Markdown file。
 - 不要手动编辑 `wiki/graph/`。
 - 除非用户明确要求 crystallization into experiment entities，不要把 report pages 转换为普通 `experiments/` pages。
 - 不要覆盖用户拥有的 calculation data under `temp/cal_data/`。
 - 如果文件是 binary 或 unsupported，只在 inventory 中说明，不要从文件名推断内容。
-- 如果未提供 `--write`，不要归档；只在响应中返回分析。
+- 默认归档。只有当用户提供 `--no-write` 时，才跳过 `wiki/outputs/` 和 log 写入。
 
 ## Dependencies
 

@@ -238,7 +238,7 @@ EOF
 cat > ".claude/commands/cal-report-analysis.md" <<'EOF'
 ---
 description: Index calculation data and write a grounded analysis report.
-argument-hint: "[scope] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--write]"
+argument-hint: "[scope] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--no-write]"
 ---
 
 Read and follow @skills/cal-report-analysis/SKILL.md exactly.
