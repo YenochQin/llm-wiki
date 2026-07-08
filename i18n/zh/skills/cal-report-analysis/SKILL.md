@@ -1,7 +1,7 @@
 ---
 name: cal-report-analysis
-description: Use when the user wants to index wiki-local calculation outputs and write an archived analysis report from generated calculation report pages. Trigger for requests to analyze `temp/cal_data`, compare calculation runs, summarize CSV/JSONL/text/image result artifacts, or create a durable report based on `tools/cal_data_index.py` outputs.
-argument-hint: "[scope] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--no-write]"
+description: Use when the user wants to index configured calculation outputs and write an archived analysis report from generated calculation report pages. Trigger for requests to analyze `raw_root/cal_data`, compare calculation runs, summarize CSV/JSONL/text/image result artifacts, or create a durable report based on `tools/cal_data_index.py` outputs.
+argument-hint: "[scope] [--data-root <dir>] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--no-write]"
 ---
 
 # /cal-report-analysis
@@ -9,22 +9,25 @@ argument-hint: "[scope] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N]
 > 中文运行提示：除非用户特别要求英文输出，执行本 skill 时请用中文向用户汇报；命令、路径、YAML 字段、slug、frontmatter key、工具参数和 wikilink 语法保持原样。
 
 > 用 `tools/cal_data_index.py` 生成可在 Obsidian 浏览的 calculation report pages，然后基于这些 report pages 和它们链接的源文件写有证据支撑的分析报告。
-> 适用于 configured wiki root 下的计算输出目录、实验结果 dump、metric 表、JSONL 样本、日志、配置和图像。
+> 适用于 configured raw root 下的计算输出目录、实验结果 dump、metric 表、JSONL 样本、日志、配置和图像。
 
 ## Trigger
 
 User manual: `/cal-report-analysis [scope] [...]`
 
-当用户要求分析计算输出、比较 calculation runs、总结本地 metric/result artifacts，或基于 `temp/cal_data` 及其他 wiki-local calculation data 目录生成报告时，使用本 skill。
+当用户要求分析计算输出、比较 calculation runs、总结本地 metric/result artifacts，或基于 configured `raw_root/cal_data` 及其他 calculation data 目录生成报告时，使用本 skill。
 
 ## Inputs
 
 - `scope` optional：run 名称、report slug、data 子目录，或自然语言分析问题。省略时分析所有发现的 runs。
-- `--data-dir` optional，默认 `temp/cal_data`：包含计算输出文件的 wiki-relative 目录。
+- `--data-dir` optional，默认 `cal_data`：包含计算输出文件的数据目录。**路径相对于 `--data-root`**（默认：`config/paths.json` 中的 `raw_root`）。例如 raw_root 为 `/path/to/raw` 时，`--data-dir cal_data/Ni_Ca-like` 解析为 `/path/to/raw/cal_data/Ni_Ca-like`。
+- `--data-root` optional，默认 `raw_root`：`--data-dir` 的根目录。使用 `@configured` 可指向 wiki root。
 - `--report-dir` optional，默认 `experiments/cal_reports`：indexer 写入 report pages 的 wiki-relative 目录。
 - `--table-rows` optional，默认 `8`：每个 CSV/TSV 文件预览的行数。
 - `--text-lines` optional，默认 `20`：每个 JSONL/text/log/config 文件预览的行数。
 - `--no-write` optional：跳过归档，只在响应中返回最终分析。
+
+**Data location**：默认情况下，calculation data 应放在 `raw/cal_data/`。如果工具输出 "No calculation data found"，请把 CSV/JSONL 文件放到该位置。若要分析 wiki root 下的数据，请传 `--data-root @configured`。
 
 ## Outputs
 
@@ -36,7 +39,7 @@ User manual: `/cal-report-analysis [scope] [...]`
 ## Wiki Interaction
 
 ### Reads
-- 默认读取 `temp/cal_data/`，或用户通过 `--data-dir` 指定的目录。
+- 默认读取 configured `raw_root` 下的 `cal_data/`，或用户通过 `--data-root` + `--data-dir` 指定的目录。
 - 读取 indexer 生成的 `experiments/cal_reports/index.md` 和选中的 run report pages。
 - 当结论依赖精确数值、完整日志或超出 preview 的图像信息时，读取 report page 链接的源文件。
 - 只有当用户要求把分析连接到既有 wiki knowledge 时，才读取现有 `wiki/claims/`、`wiki/experiments/`、`wiki/ideas/` 和 `wiki/papers/`。
@@ -60,7 +63,11 @@ User manual: `/cal-report-analysis [scope] [...]`
 除非用户明确要求使用现有 report pages 不刷新，否则分析前先运行 indexer：
 
 ```shell
-uv run python -X utf8 tools/cal_data_index.py @configured --data-dir temp/cal_data --report-dir experiments/cal_reports --table-rows 8 --text-lines 20
+# Default: data under raw_root (raw/cal_data)
+uv run python -X utf8 tools/cal_data_index.py @configured --data-dir cal_data/Ni_Ca-like --report-dir experiments/cal_reports
+
+# When data lives under wiki_root instead
+uv run python -X utf8 tools/cal_data_index.py @configured --data-root @configured --data-dir temp/cal_data/Ni_Ca-like --report-dir experiments/cal_reports
 ```
 
 只有当用户提供了参数，或请求范围确实需要不同 data/report directory 时，才调整 flags。该工具会发现 direct files 和 run subdirectories，给每个 run 写一个 page，并嵌入 CSV/TSV preview、JSONL/text snippets、image links、file sizes 和 item counts。
@@ -160,12 +167,13 @@ uv run python -X utf8 tools/cal_data_index.py @configured --data-dir temp/cal_da
    slug: "cal-report-analysis-{slug}-{date}"
    artifact_type: cal_report_analysis
    date_created: YYYY-MM-DD
+   data_root: "{data-root}"
    data_dir: "{data-dir}"
    report_index: "experiments/cal_reports/index.md"
    source_reports:
      - "experiments/cal_reports/{run}.md"
    source_files:
-     - "temp/cal_data/{run}/{file}"
+     - "{data-dir}/{run}/{file}"
    ---
    ```
 
@@ -185,7 +193,7 @@ uv run python -X utf8 tools/cal_data_index.py @configured --data-dir temp/cal_da
 - 将 generated report pages 视为 disposable indexer output。不要在这些页面里写持久 hand-written notes；持久解读应放入 archived analysis artifact，或放入单独的 user-authored Markdown file。
 - 不要手动编辑 `wiki/graph/`。
 - 除非用户明确要求 crystallization into experiment entities，不要把 report pages 转换为普通 `experiments/` pages。
-- 不要覆盖用户拥有的 calculation data under `temp/cal_data/`。
+- 不要覆盖 configured `raw_root/cal_data/` 下用户拥有的 calculation data。
 - 如果文件是 binary 或 unsupported，只在 inventory 中说明，不要从文件名推断内容。
 - 默认归档。只有当用户提供 `--no-write` 时，才跳过 `wiki/outputs/` 和 log 写入。
 

@@ -16,7 +16,7 @@ from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
 
 DEFAULT_DATA_DIR: Final = "cal_data"
 DEFAULT_REPORT_DIR: Final = "experiments/cal_reports"
-CLI_DESCRIPTION: Final = "Generate Obsidian-browsable reports for wiki-local calculation data."
+CLI_DESCRIPTION: Final = "Generate Obsidian-browsable reports for configured calculation data."
 MAX_CELL_CHARS: Final = 80
 GENERATED_BY: Final = "generated_by: cal_data_index"
 TEXT_EXTENSIONS: Final = {".txt", ".log", ".md", ".yaml", ".yml", ".json", ".toml"}
@@ -264,7 +264,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("wiki_root", nargs="?", default="@configured")
     parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path)
     parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR,
-                        help=f"Data directory relative to --data-root (default: wiki_root). Default: {DEFAULT_DATA_DIR}")
+                        help=f"Data directory relative to --data-root. Default: {DEFAULT_DATA_DIR}")
     parser.add_argument("--data-root", default=None,
                         help="Root path for --data-dir. Default: raw_root from config/paths.json. "
                         "Use @configured for wiki_root.")
