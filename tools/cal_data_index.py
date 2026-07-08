@@ -14,7 +14,7 @@ from typing import Final
 from _cli_io import configure_utf8_stdio
 from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
 
-DEFAULT_DATA_DIR: Final = "temp/cal_data"
+DEFAULT_DATA_DIR: Final = "cal_data"
 DEFAULT_REPORT_DIR: Final = "experiments/cal_reports"
 CLI_DESCRIPTION: Final = "Generate Obsidian-browsable reports for wiki-local calculation data."
 MAX_CELL_CHARS: Final = 80
@@ -30,6 +30,7 @@ class IndexRequest:
     report_dir: str = DEFAULT_REPORT_DIR
     table_rows: int = 8
     text_lines: int = 20
+    data_root: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,11 +201,12 @@ def _report_content(run: RunSource, report_dir: Path, request: IndexRequest) -> 
     source_link = _relative_link(report_dir, run.path)
     preview = _preview_sections(run, report_dir, request)
     preview_section = preview if preview else "No previewable files found."
+    resolved_root = request.data_root or request.wiki_root
     return (
         "<!-- generated_by: cal_data_index -->\n"
         f"# {run.name}\n\n"
         "## Summary\n\n"
-        f"- source_dir: [{_wiki_path(run.path.relative_to(request.wiki_root))}]({source_link})\n"
+        f"- source_dir: [{_wiki_path(run.path.relative_to(resolved_root))}]({source_link})\n"
         f"- generated_at: {generated}\n"
         f"- file_count: {len(run.files)}\n"
         "- related: \n\n"
@@ -217,6 +219,7 @@ def _report_content(run: RunSource, report_dir: Path, request: IndexRequest) -> 
 
 def _index_content(runs: tuple[RunSource, ...], request: IndexRequest) -> str:
     generated = datetime.now(timezone.utc).date().isoformat()
+    resolved_root = request.data_root or request.wiki_root
     lines = [
         "<!-- generated_by: cal_data_index -->",
         "# Calculation reports",
@@ -233,12 +236,13 @@ def _index_content(runs: tuple[RunSource, ...], request: IndexRequest) -> str:
     if not runs:
         lines.append("No calculation data found.")
     for run in runs:
-        lines.append(f"- [[{run.slug}]] — `{_wiki_path(run.path.relative_to(request.wiki_root))}`")
+        lines.append(f"- [[{run.slug}]] — `{_wiki_path(run.path.relative_to(resolved_root))}`")
     return "\n".join(lines) + "\n"
 
 
 def build_reports(request: IndexRequest) -> IndexResult:
-    data_root = (request.wiki_root / request.data_dir).resolve()
+    resolved_root = request.data_root or request.wiki_root
+    data_root = (resolved_root / request.data_dir).resolve()
     report_root = (request.wiki_root / request.report_dir).resolve()
     report_root.mkdir(parents=True, exist_ok=True)
     runs = _discover_runs(data_root)
@@ -259,7 +263,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=CLI_DESCRIPTION)
     parser.add_argument("wiki_root", nargs="?", default="@configured")
     parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path)
-    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR)
+    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR,
+                        help=f"Data directory relative to --data-root (default: wiki_root). Default: {DEFAULT_DATA_DIR}")
+    parser.add_argument("--data-root", default=None,
+                        help="Root path for --data-dir. Default: raw_root from config/paths.json. "
+                        "Use @configured for wiki_root.")
     parser.add_argument("--report-dir", default=DEFAULT_REPORT_DIR)
     parser.add_argument("--table-rows", default=8, type=int)
     parser.add_argument("--text-lines", default=20, type=int)
@@ -273,6 +281,9 @@ def _main(argv: list[str] | None = None) -> int:
     if wiki_root is None:
         print("wiki_root could not be resolved", file=sys.stderr)
         return 2
+    data_root = base_paths.raw_root
+    if args.data_root:
+        data_root = resolve_runtime_path(args.data_root, base_paths, role="data_root")
     result = build_reports(
         IndexRequest(
             wiki_root=wiki_root,
@@ -280,8 +291,16 @@ def _main(argv: list[str] | None = None) -> int:
             report_dir=args.report_dir,
             table_rows=max(args.table_rows, 0),
             text_lines=max(args.text_lines, 0),
+            data_root=data_root,
         )
     )
+    if result.run_count == 0:
+        print(
+            f"No calculation data found under {result.data_root}.\n"
+            f"Place your CSV/JSONL/text files in {result.data_root}/ (or a subdirectory) "
+            f"and run again.",
+            file=sys.stderr,
+        )
     print(
         f"generated {result.report_count} report file(s) for {result.run_count} run(s) "
         f"under {result.report_root}"
