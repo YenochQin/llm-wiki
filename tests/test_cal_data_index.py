@@ -184,6 +184,70 @@ class CalDataIndexTests(unittest.TestCase):
 
             self.assertEqual(manual_note.read_text(encoding="utf-8"), "# Manual notes\n\nKeep this.\n")
 
+    def test_scoped_refresh_preserves_reports_from_other_data_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wiki = root / "wiki"
+            raw = root / "raw"
+            ca_like = raw / "cal_data" / "Ni_Ca-like"
+            ni_ml = raw / "cal_data" / "Ni_I_ML"
+            ca_like.mkdir(parents=True)
+            ni_ml.mkdir(parents=True)
+            (ca_like / "levels.csv").write_text("name,value\nca,1\n", encoding="utf-8")
+            (ni_ml / "levels.csv").write_text("name,value\nni,2\n", encoding="utf-8")
+
+            cal_data_index.build_reports(
+                cal_data_index.IndexRequest(
+                    wiki_root=wiki,
+                    data_root=raw.resolve(),
+                    data_dir="cal_data/Ni_Ca-like",
+                )
+            )
+            cal_data_index.build_reports(
+                cal_data_index.IndexRequest(
+                    wiki_root=wiki,
+                    data_root=raw.resolve(),
+                    data_dir="cal_data/Ni_I_ML",
+                )
+            )
+
+            report_root = wiki / "experiments" / "cal_reports"
+            report_names = {path.name for path in report_root.glob("*.md")}
+            index_content = (report_root / "index.md").read_text(encoding="utf-8")
+
+        self.assertIn("ni-ca-like.md", report_names)
+        self.assertIn("ni-i-ml.md", report_names)
+        self.assertIn("[[ni-ca-like]]", index_content)
+        self.assertIn("[[ni-i-ml]]", index_content)
+        self.assertIn("run_count: 2", index_content)
+
+    def test_separate_scoped_refreshes_disambiguate_slug_collisions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            wiki = root / "wiki"
+            raw = (root / "raw").resolve()
+            for directory, value in (("Run-A", "first"), ("run_a", "second")):
+                run = raw / "cal_data" / directory
+                run.mkdir(parents=True)
+                (run / "metrics.csv").write_text(
+                    f"name,value\n{value},1\n", encoding="utf-8"
+                )
+                cal_data_index.build_reports(
+                    cal_data_index.IndexRequest(
+                        wiki_root=wiki,
+                        data_root=raw,
+                        data_dir=f"cal_data/{directory}",
+                    )
+                )
+
+            report_root = wiki / "experiments" / "cal_reports"
+            report_names = {path.name for path in report_root.glob("*.md")}
+            index_content = (report_root / "index.md").read_text(encoding="utf-8")
+
+        self.assertIn("run-a.md", report_names)
+        self.assertIn("run-a-2.md", report_names)
+        self.assertIn("run_count: 2", index_content)
+
     def test_build_reports_disambiguates_slug_collisions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

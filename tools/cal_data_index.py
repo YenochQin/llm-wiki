@@ -50,6 +50,12 @@ class RunSource:
     files: tuple[Path, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class ReportRef:
+    slug: str
+    source_dir: str
+
+
 def _slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug or "cal-data"
@@ -160,6 +166,62 @@ def _discover_runs(data_root: Path) -> tuple[RunSource, ...]:
     return tuple(runs)
 
 
+def _source_slug(path: Path, resolved_root: Path) -> str:
+    parts = list(path.relative_to(resolved_root).parts)
+    if DEFAULT_DATA_DIR in parts:
+        parts = parts[parts.index(DEFAULT_DATA_DIR) + 1 :]
+    return _slugify("-".join(parts)) if parts else "cal-data-root"
+
+
+def _assign_source_slugs(
+    runs: tuple[RunSource, ...], resolved_root: Path, reserved_slugs: set[str] | None = None
+) -> tuple[RunSource, ...]:
+    used_slugs = set(reserved_slugs or ())
+    assigned: list[RunSource] = []
+    for run in runs:
+        base_slug = _source_slug(run.path, resolved_root)
+        slug = base_slug
+        suffix = 2
+        while slug in used_slugs:
+            slug = f"{base_slug}-{suffix}"
+            suffix += 1
+        used_slugs.add(slug)
+        assigned.append(RunSource(run.name, slug, run.path, run.files))
+    return tuple(assigned)
+
+
+def _is_generated_report(text: str) -> bool:
+    return GENERATED_BY in text or (
+        "## Summary\n\n- source_dir:" in text
+        and "\n## Files\n\n" in text
+        and "\n## Previews\n\n" in text
+    )
+
+
+def _report_source_dir(text: str) -> str | None:
+    match = re.search(r"^- source_dir: \[([^]]+)]", text, flags=re.MULTILINE)
+    return match.group(1) if match else None
+
+
+def _source_is_within(source_dir: str, scope_dir: str) -> bool:
+    scope = scope_dir.rstrip("/")
+    return source_dir == scope or source_dir.startswith(scope + "/")
+
+
+def _generated_report_refs(report_root: Path) -> tuple[ReportRef, ...]:
+    refs: list[ReportRef] = []
+    for report in report_root.glob("*.md"):
+        if report.name == "index.md":
+            continue
+        text = report.read_text(encoding="utf-8", errors="ignore")
+        if not _is_generated_report(text):
+            continue
+        source_dir = _report_source_dir(text)
+        if source_dir is not None:
+            refs.append(ReportRef(report.stem, source_dir))
+    return tuple(sorted(refs, key=lambda ref: (ref.source_dir, ref.slug)))
+
+
 def _file_table(run: RunSource, report_dir: Path) -> str:
     lines = ["| file | type | size | rows/items | link |", "|---|---:|---:|---:|---|"]
     for path in run.files:
@@ -201,7 +263,7 @@ def _report_content(run: RunSource, report_dir: Path, request: IndexRequest) -> 
     source_link = _relative_link(report_dir, run.path)
     preview = _preview_sections(run, report_dir, request)
     preview_section = preview if preview else "No previewable files found."
-    resolved_root = request.data_root or request.wiki_root
+    resolved_root = (request.data_root or request.wiki_root).resolve()
     return (
         "<!-- generated_by: cal_data_index -->\n"
         f"# {run.name}\n\n"
@@ -217,45 +279,55 @@ def _report_content(run: RunSource, report_dir: Path, request: IndexRequest) -> 
     )
 
 
-def _index_content(runs: tuple[RunSource, ...], request: IndexRequest) -> str:
+def _index_content(reports: tuple[ReportRef, ...]) -> str:
     generated = datetime.now(timezone.utc).date().isoformat()
-    resolved_root = request.data_root or request.wiki_root
     lines = [
         "<!-- generated_by: cal_data_index -->",
         "# Calculation reports",
         "",
         "## Summary",
         "",
-        f"- data_dir: `{request.data_dir}`",
         f"- generated_at: {generated}",
-        f"- run_count: {len(runs)}",
+        f"- run_count: {len(reports)}",
         "",
         "## Runs",
         "",
     ]
-    if not runs:
+    if not reports:
         lines.append("No calculation data found.")
-    for run in runs:
-        lines.append(f"- [[{run.slug}]] — `{_wiki_path(run.path.relative_to(resolved_root))}`")
+    for report in reports:
+        lines.append(f"- [[{report.slug}]] — `{report.source_dir}`")
     return "\n".join(lines) + "\n"
 
 
 def build_reports(request: IndexRequest) -> IndexResult:
-    resolved_root = request.data_root or request.wiki_root
+    resolved_root = (request.data_root or request.wiki_root).resolve()
     data_root = (resolved_root / request.data_dir).resolve()
     report_root = (request.wiki_root / request.report_dir).resolve()
     report_root.mkdir(parents=True, exist_ok=True)
-    runs = _discover_runs(data_root)
+    scope_dir = _wiki_path(data_root.relative_to(resolved_root))
+    existing_refs = _generated_report_refs(report_root)
+    reserved_slugs = {
+        ref.slug for ref in existing_refs if not _source_is_within(ref.source_dir, scope_dir)
+    }
+    runs = _assign_source_slugs(_discover_runs(data_root), resolved_root, reserved_slugs)
     for old_report in report_root.glob("*.md"):
         report_text = old_report.read_text(encoding="utf-8", errors="ignore")
-        if GENERATED_BY in report_text or ("## Summary\n\n- source_dir:" in report_text and "\n## Files\n\n" in report_text and "\n## Previews\n\n" in report_text):
+        source_dir = _report_source_dir(report_text)
+        if (
+            old_report.name != "index.md"
+            and _is_generated_report(report_text)
+            and source_dir is not None
+            and _source_is_within(source_dir, scope_dir)
+        ):
             old_report.unlink()
     for run in runs:
         (report_root / f"{run.slug}.md").write_text(
             _report_content(run, report_root, request),
             encoding="utf-8",
         )
-    (report_root / "index.md").write_text(_index_content(runs, request), encoding="utf-8")
+    reports = _generated_report_refs(report_root)
+    (report_root / "index.md").write_text(_index_content(reports), encoding="utf-8")
     return IndexResult(request.wiki_root, data_root, report_root, len(runs), len(runs) + 1)
 
 
