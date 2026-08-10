@@ -32,7 +32,7 @@ When a BibTeX entry **cannot** be fetched from any authoritative source:
 
 ### DBLP (preferred for CS)
 
-```shell
+```bash
 # Search by title
 WebFetch: https://dblp.org/search/publ/api?q={url-encoded-title}&format=json&h=3
 
@@ -42,7 +42,7 @@ WebFetch: https://dblp.org/search/publ/api?q={url-encoded-title}&format=json&h=3
 
 ### CrossRef (preferred for DOI)
 
-```shell
+```bash
 # Search by title
 WebFetch: https://api.crossref.org/works?query.bibliographic={url-encoded-title}&rows=3
 
@@ -52,7 +52,7 @@ WebFetch: https://api.crossref.org/works?query.bibliographic={url-encoded-title}
 
 ### CrossRef wrapper (fallback for DOI/title lookup)
 
-```shell
+```bash
 # Uses no-key Crossref APIs
 python3 tools/fetch_literature.py search "<title>"
 # Returns paperId, title, authors, year, venue, externalIds

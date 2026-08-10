@@ -35,6 +35,7 @@
 - 执行某个 skill 时必须把该 skill 文档视为只读运行规范：如果发现 skill 描述、模板、命令或约束有问题，可以在汇报中指出并建议修改；除非用户明确要求“修改/修复/更新 skill”，否则不得在执行该 skill 的过程中自行编辑 `skills/`、`i18n/*/skills/`、`CLAUDE.md` 或 `AGENTS.md`
 - `/init` 是这个模式的第一个具体例子：先读 `skills/init/SKILL.md`，需要时再打开 `skills/init/references/*`
 - `skills/` 是 `setup.sh` 创建的符号链接，指向 `i18n/{lang}/skills/`；修改 skill 内容应编辑 `i18n/` 下的原件
+- `AGENTS.md` 是正式页面语言规范与论文 Evidence Pack / 防幻觉规范的 canonical source；所有由 skill 生成或重写的 wiki 页面都必须应用这些章节。
 
 ### `raw/` 和 `config/`
 
@@ -171,9 +172,8 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 ## Python 环境
 
 - 本项目由 **uv 管理**：`setup.sh` 通过 `uv sync` 从 `pyproject.toml` 创建/更新 `.venv`
-- `.venv/` 存在时优先使用 `.venv/bin/python`（Unix/macOS）或 `.venv/Scripts/python.exe`（Windows）
-- 否则回退到 `python3`（Unix/macOS）或 `python`（Windows）
-- skill 通过 `uv run python -X utf8 tools/<name>.py …` 运行工具（uv 会按 `pyproject.toml` 自动定位 `.venv`）；当 `.venv/` 已存在时，等价写法是 `.venv/bin/python tools/<name>.py …`
+- **强制要求**：所有 Python 命令、脚本和 inline code 都必须通过项目的 uv-managed environment 运行。使用 `uv run python`（工具使用 `uv run python -X utf8`）；不要直接调用 `python3`、`python`、`.venv/bin/python` 或系统 Python。
+- `uv run` 会根据 `pyproject.toml` 自动定位 `.venv` 并确保依赖正确；系统 Python 可能缺少依赖或版本不兼容。
 - Python 工具通过 `tools/_env.py` 自动加载 API key：先读进程环境，再读 `~/.config/llm-wiki/.env`（或 `$XDG_CONFIG_HOME/llm-wiki/.env`）；项目根目录 `.env` 和 `~/.env` 只是 legacy fallback
 - 路径配置通过 `config/paths.json`（或环境变量 `LLM_WIKI_WIKI_ROOT`、`LLM_WIKI_RAW_ROOT`）指定外部 `wiki_root` / `raw_root`；`active_profile: auto` 会按系统选择 `macos`、`windows` 或 `linux`，也可用 `LLM_WIKI_PATH_PROFILE` 临时指定；未配置时回退到仓库内 `wiki/` 和 `raw/`
 - `@configured`、`@raw-root`、`@configured-sources-papers` 等别名只由支持 `tools/_paths.py` 的 Python 工具解析。对直接文件编辑、`cat`、`cp`、`mkdir`、shell 重定向等普通文件操作，必须先运行 `uv run python -X utf8 tools/resolve_path_alias.py ...` 得到绝对路径，再使用绝对路径；禁止创建字面目录 `@configured/` 或 `@raw-root/`。

@@ -76,6 +76,23 @@ class EvidencePackTests(unittest.TestCase):
         self.assertIn("\n\n- `E2` Limitations", rendered)
         self.assertTrue(rendered.endswith("A limitation sentence."))
 
+    def test_render_card_accepts_citation_key_source_slug_characters(self) -> None:
+        card = EvidenceCard(
+            evidence_id="E1",
+            use_label="Method",
+            short_label="citation-key source",
+            source_slug="Smith2024.foo+bar",
+            source_section="Methods",
+            excerpt="A source sentence.",
+        )
+
+        rendered = render_card(card)
+
+        self.assertIn(
+            "[prepared markdown](../sources/papers/Smith2024.foo+bar.md)",
+            rendered,
+        )
+
     def test_rejects_invalid_evidence_id(self) -> None:
         with self.assertRaises(ValueError):
             EvidenceCard(
@@ -83,6 +100,17 @@ class EvidencePackTests(unittest.TestCase):
                 use_label="Method",
                 short_label="bad id",
                 source_slug="sample-paper",
+                source_section="Sec. 1",
+                excerpt="Text.",
+            )
+
+    def test_rejects_source_slug_path_separators(self) -> None:
+        with self.assertRaises(ValueError):
+            EvidenceCard(
+                evidence_id="E1",
+                use_label="Method",
+                short_label="bad source path",
+                source_slug="../sample-paper",
                 source_section="Sec. 1",
                 excerpt="Text.",
             )
@@ -100,12 +128,15 @@ class EvidencePackTests(unittest.TestCase):
                 }
             ]
         }
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json") as f:
-            json.dump(payload, f)
-            f.flush()
+        with tempfile.TemporaryDirectory() as tmp:
+            input_path = Path(tmp) / "cards.json"
+            input_path.write_text(json.dumps(payload), encoding="utf-8")
             stdout = StringIO()
 
-            with patch("sys.argv", ["evidence_pack.py", "--input", f.name]), redirect_stdout(stdout):
+            with (
+                patch("sys.argv", ["evidence_pack.py", "--input", str(input_path)]),
+                redirect_stdout(stdout),
+            ):
                 main()
 
         self.assertIn("## Evidence Pack", stdout.getvalue())

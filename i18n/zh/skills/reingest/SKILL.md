@@ -20,12 +20,12 @@ Regenerate an existing `wiki/papers/{slug}.md` from a raw PDF or prepared `miner
 - Phase D — `.claude/skills/shared-references/ingest-phases/phase-d-knowledge-graph.md` (run as **entity migration**)
 - Phase E — `.claude/skills/shared-references/ingest-phases/phase-e-navigation-finalize.md`
 
-Phase B re-extracts cards from the refreshed source and prints Gate B before Phase C rewrites `## Evidence Pack` as the first body section.
+Phase B re-extracts structured card parameters from the refreshed source, renders `## Evidence Pack` with `tools/evidence_pack.py`, and prints Gate B before Phase C rewrites the paper page's first body section.
 
 ## Always-on references
 
 - `.claude/skills/shared-references/ingest-invariants.md` — path / Zotero / slug / LaTeX / wikilink / BibTeX / edge rules
-- `docs/runtime-page-templates.en.md` — page shape + Evidence Pack card shape (single source of truth)
+- `docs/runtime-page-templates.en.md` — page shape + Evidence Pack card shape (single source of truth); `tools/evidence_pack.py` renders the actual paper Evidence Pack Markdown
 - `.claude/skills/shared-references/source-grounding.md` — anti-hallucination discipline
 
 ## Scope
@@ -51,21 +51,25 @@ Phase B re-extracts cards from the refreshed source and prints Gate B before Pha
 - Read the existing page and preserve `cited_by`, stable identity not in the new source (`external_ids`, `code_url`, curated `importance` rationale), existing `## Related` links still valid, and any non-template custom section.
 
 ### Phase C delta — write to the existing page
-Regenerate analysis into the existing page (do not create a new one), regenerating `## Evidence Pack` first. Use the retained bibliography to resolve inline references; do not cite references absent from bibliography/metadata.
+Regenerate analysis into the existing page (do not create a new one), regenerating `## Evidence Pack` first through `tools/evidence_pack.py`. Use the retained bibliography to resolve inline references; do not cite references absent from bibliography/metadata.
 
 ### Phase D delta — entity migration + template migration (skip if `--paper-only`)
 Review entities connected to the old or regenerated page: pages in old/new `## Related`; concepts whose `key_papers` include this paper; claims whose `source_papers`/`evidence[].source` include it; linked people; graph neighbors (`tools/research_wiki.py neighbors '@configured' papers/<slug>`). For each, compare old statement vs regenerated source **and** audit current page shape against `docs/runtime-page-templates.en.md`. A source-faithful entity is not automatically skippable: if its frontmatter, provenance shape, required sections, or source anchors are stale, migrate it to the current template even when the prose meaning is already correct.
 - **Concepts**: update Definition, Source excerpts (exact excerpts linked to refreshed prepared markdown), Variants, Known limitations, Open problems, aliases, related_concepts, `date_updated`; keep `key_papers`.
 - **Claims**: always audit every connected claim against the current claim template before deciding it needs no edit. Required checks: frontmatter has all current keys (`status`, `confidence`, `tags`, `domain`, `source_papers`, `evidence`, `conditions`, dates); `source_papers` and `evidence[].source` are slug-only; each evidence item has `source_anchor`, `type`, `strength`, `source_section`, and `detail`; `source_anchor` is an Evidence Pack id only (`E1`, not `^E1` or `[[#^E1]]`); body has `## Statement`, `## Evidence summary`, `## Conditions and scope`, `## Counter-evidence`, `## Linked ideas`, and `## Open questions`. If any check fails, edit the claim even if the claim statement is already supported by the paper. Update Statement/Evidence/Conditions/Counter-evidence/`confidence`/`status`/`date_updated` when needed; **append** new evidence/counter-evidence, do not delete old. Provenance YAML stays structured (invariants §7).
 - **People**: refresh affiliation/areas/recent work/collaborators/key papers.
-- New concept/claim → `find-similar-*` first; prefer migrating over creating duplicates. Ensure reverse links/evidence for every regenerated link. Add semantic edges with `add-edge` (invariants §8). Do not auto-remove old edges; report ones the regenerated page no longer supports as "possibly stale".
+- New concept/claim → `find-similar-*` first; prefer migrating over creating duplicates. Ensure reverse links/evidence for every regenerated link. Add semantic edges with `add-edge` (invariants §9). Do not auto-remove old edges; report ones the regenerated page no longer supports as "possibly stale".
+- Regenerate the paper page's `## Related` with the fixed labels, order, and bullet shape in invariants §8; preserve only still-valid existing links.
 
 ### Phase E delta — rebuild + validate
 Run `rebuild-index`, `rebuild-context-brief`, `rebuild-open-questions`, then scoped `lint.py` and `grounding_lint.py --only` on touched `papers/`/`concepts/`/`claims/`, then `log "reingest | refreshed papers/<slug> | updated: <list>"`. Fix any `grounding_lint` `level: red` before reporting; fix deterministic `lint` issues unless that would delete user-authored content. The final report must state how many connected claims were template-audited and how many were migrated for template/schema reasons even when their source-grounded content was already acceptable.
 
+### After Phase E: optional discovery (only if `--discover`)
+Skip unless the user passed `--discover`. When active, follow `/ingest`'s optional discovery rule: run `/discover` anchored on the refreshed paper's DOI when available, otherwise its title, then append only gated candidates to `@configured/outputs/ingest-candidates.md`. Never write follow-up candidates into `papers/{slug}.md`, including under `## Related` or a `### Suggested follow-up ingests` heading. The final report should state only the candidate count and queue path.
+
 ## Report
 
-Summarize: refreshed source path + warnings; paper page updated; entity migration summary (reviewed/updated/created/marked-stale); edges/citations added; stale or ambiguous old links needing review; lint + grounding_lint result. Close with:
+Summarize: refreshed source path + warnings; paper page updated; entity migration summary (reviewed/updated/created/marked-stale); edges/citations added; stale or ambiguous old links needing review; optional `--discover` queue count/path; lint + grounding_lint result. Close with:
 
 ```text
 Wiki: reingested papers/<slug> | updated: <list> | lint: <summary>

@@ -55,6 +55,8 @@ Run commands from the repository root.
 uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
+If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+
 ### Step 1: Initialize wiki structure
 
 ```shell
@@ -71,11 +73,12 @@ uv run python -X utf8 tools/init_discovery.py prepare --raw-root '@raw-root' --w
 
 - before running `prepare`, inspect each local PDF and write the recovery handoff to `.checkpoints/init-pdf-titles.json` as either `{ "raw/papers/foo.pdf": "Recovered Paper Title" }`, `{ "@raw-root/papers/foo.pdf": "Recovered Paper Title" }`, or `{ "raw/papers/foo.pdf": { "title": "Recovered Paper Title" } }`
 - use `uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <local-path> [--title "<recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]` for local paper normalization; the helper also attempts Zotero metadata enrichment and uses the citation key for source naming when available; enrichment failure is non-blocking and falls back to `author_year_veryshorttitle` source naming
-- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown at `wiki/sources/papers/<source-slug>.md`; `<source-slug>` uses the sanitized Zotero citation key when metadata enrichment finds one, otherwise `author_year_veryshorttitle`
+- local PDF recovery order: agent-recovered title from the first page -> MinerU produces structured markdown under `@configured-sources-papers/<source-slug>.md`; `<source-slug>` uses the sanitized Zotero citation key when metadata enrichment finds one, otherwise `author_year_veryshorttitle`
+- never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured-sources` and `@configured-sources-papers`.
 - when the agent supplied a PDF title, treat that title as authoritative for the prepared manifest; fetched/source titles are sanitized fallback metadata only and must not overwrite it
 - metadata or filename titles may remain as provisional display labels only; they are not trusted identity or title-search inputs
 - keep notes/web on their original source paths; `/init` reads them directly during scaffolding
-- set each local paper's `canonical_ingest_path` to a prepared `wiki/sources/` path when available; if preparation fails, mark the paper skipped instead of handing off the original `raw/papers/...` path
+- set each local paper's `canonical_ingest_path` to the prepared configured source path when available; if preparation fails, mark the paper skipped instead of handing off the original `raw/papers/...` path
 - record warnings for failed decode / title recovery rather than aborting `/init`
 - see `references/prepare.md` for the prepare decision tree and source-preference rules
 

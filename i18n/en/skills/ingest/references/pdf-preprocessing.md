@@ -35,7 +35,7 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
 Once you have the title (possibly empty), run:
 
 ```shell
-uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <zotero-pdf-path> [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"] [--title "<zotero-or-agent-recovered-title>"]
+uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<zotero-pdf-path>' [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"] [--title "<zotero-or-agent-recovered-title>"]
 ```
 
 - Pass `--title` when Zotero metadata or first-page inspection gives a confident title. Do not pass a title derived from PDF metadata or from the filename — those poison the literature enrichment lookup.

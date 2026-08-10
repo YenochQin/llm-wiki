@@ -16,7 +16,8 @@ These invariants always hold, in every phase, in every ingest-family skill. A ph
 ## 2. Zotero discipline
 
 - `--item-key` is **internal only**. Never expose or accept it as a user-facing paper selector in any ingest-family skill.
-- DOI/title lookup flow: `tools/find_zotero_pdf.py --doi <doi>` or `--title "<title>"` → select an **unambiguous** candidate (exactly one existing PDF attachment, match reason `doi` / `exact-title` / clearly unambiguous title / filename-like match) → only then call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` for enrichment.
+- DOI/title lookup flow: `tools/find_zotero_pdf.py --doi <doi>` or `--title "<title>"` → select an **unambiguous** candidate (exactly one existing PDF attachment, match reason `doi` / `exact-title` / clearly unambiguous title / filename-like match) → call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` → require `status: ok` before preprocessing the PDF.
+- A Zotero Local API timeout, connection refusal, or any `fetch_zotero_metadata.py` result whose `status` is not `ok` is a **hard stop for `/ingest` Zotero lookup mode**. Do not follow the tool's SQLite/Crossref fallback hint, do not preprocess the PDF, and do not continue with partial metadata. Tell the user to open Zotero Desktop, ensure local API access is enabled, and rerun `/ingest` from the beginning.
 - Never pass DOI or title to `tools/fetch_zotero_metadata.py`; it accepts only `--item-key` (or `--ping`).
 - Metadata alone is **not** a content source. With no PDF / prepared markdown / notes / web content, do not create a paper page.
 - When `--zotero-root` is omitted, read the active profile's `zotero_roots` in `config/paths.json`.

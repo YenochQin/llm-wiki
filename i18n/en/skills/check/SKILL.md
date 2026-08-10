@@ -51,6 +51,8 @@ Run commands from the repository root.
 uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
+If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+
 ### Step 1: Run the Automated Lint Tool
 
 **Default mode (report only)**:
@@ -72,6 +74,16 @@ Previews what would be fixed without applying any changes.
 
 Parse the JSON output to obtain all automatically detected issues (and fix results).
 
+### Step 1b: Run the Source-Grounding Gate
+
+Run the mechanical grounding checker after the structural lint. This catches generated paper/concept/claim pages that lack source anchors or quote excerpts that do not occur in the prepared markdown:
+
+```shell
+uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --json
+```
+
+Treat every `red` grounding issue as 🔴 Fix Immediately. The grounding gate is report-only; do not auto-fix unsupported content. If the user asks for `--fix`, structural deterministic fixes may still be applied by `tools/lint.py`, but source-grounding failures require source review, `/source-audit`, or manual correction.
+
 ### Step 2: Structural Completeness (automated coverage)
 
 The automated tool checks:
@@ -88,6 +100,8 @@ The automated tool checks:
    - experiments: title, slug, status, target_claim, hypothesis, tags
    - claims: title, slug, status, confidence, tags, source_papers, evidence
 4. **Concept source grounding**: every concept page has `## Source excerpts`, prepared markdown links under `wiki/sources/papers/`, and at least one blockquoted original fragment
+5. **Paper source grounding**: generated paper pages have `## Evidence Pack` entries linked to prepared markdown with exact source excerpts, and the pack meets the coverage floor (a card per populated interpretive section plus per generated concept/claim, not a thin fixed-three pack); `grounding_lint.py` flags thin packs as a `warn`-level `thin-evidence-pack`
+6. **Claim source grounding**: claim evidence items include a `source_anchor` or explicit source-anchor marker
 
 ### Step 3: Field Value Validation (automated coverage)
 
@@ -187,5 +201,6 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "check | report: 
 
 ### Tools
 - `uv run python -X utf8 tools/lint.py --wiki-dir '@configured' [--json] [--fix] [--dry-run] [--suggest]` — automated structural check + fix (core dependency)
+- `uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' [--json] [--only <path>]` — report-only source-grounding gate for papers, concepts, and claims
 - `uv run python -X utf8 tools/research_wiki.py log '@configured' "<message>"` — append log
 - `uv run python -X utf8 tools/research_wiki.py stats '@configured'` — get statistics (optional, for the report)

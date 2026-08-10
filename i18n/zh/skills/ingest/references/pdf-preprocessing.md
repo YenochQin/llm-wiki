@@ -1,10 +1,12 @@
 # /ingest PDF Preprocessing
 
-Open this reference when `/ingest` has selected a Zotero PDF attachment and needs to convert it into structured markdown before ingest can proceed.
+Open this reference when `/ingest` has selected a Zotero PDF attachment and needs to convert it into structured markdown before ingest can proceed. Direct local PDFs and PDF directories belong to `/ingest-local-pdf`.
 
 ## Why preprocessing exists
 
 A PDF attachment is a poor ingest source by itself: text extraction varies, equations and captions are easy to miss, and figure regions are not addressable. The MinerU pipeline turns the Zotero-selected PDF into a structured markdown file with a YAML frontmatter that already lists `sections`, `figures`, and a clean body where heading depth tracks dotted section numbers. The rest of `/ingest` then works from one uniform input shape.
+
+This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when `/init` batch-processes local PDFs, but the source path here comes from `tools/find_zotero_pdf.py`, not from a user-specified local path.
 
 ## Pipeline
 
@@ -26,14 +28,14 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
    - a confident paper title from the first-page title when Zotero metadata is unavailable or incomplete
    Zotero Local API metadata remains preferred for title/DOI/authors when available.
 2. **Zotero metadata.**
-   After `/ingest` has selected a DOI/title-matched Zotero candidate, prefer `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>` for identity fields and the derived `bibtex` entry. This is an internal enrichment call only; do not expose `--item-key` as a user-facing `/ingest` selector.
+   Prefer `tools/fetch_zotero_metadata.py --item-key <key>` for identity fields and the derived `bibtex` entry.
 
 ## Invocation
 
 Once you have the title (possibly empty), run:
 
 ```shell
-uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<zotero-pdf-path>' [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"] [--title '<zotero-or-agent-recovered-title>']
+uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<zotero-pdf-path>' [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"] [--title "<zotero-or-agent-recovered-title>"]
 ```
 
 - Pass `--title` when Zotero metadata or first-page inspection gives a confident title. Do not pass a title derived from PDF metadata or from the filename — those poison the literature enrichment lookup.
@@ -91,13 +93,13 @@ droppedHeadings: ["URL stub", "Contents"]
 
 Use the frontmatter as your structural anchor when extracting concepts, claims, and figure references. Do not re-derive section structure from the body; the adapter already did it. The bibliography is intentionally retained: use it to resolve inline `(Author, year)` references and to expand citation/discovery paths.
 
-Prepared math should already use `$...$` and `$$...$$`. If you still see visibly broken formulas in the prepared markdown, run a dry report first:
+Prepared math should already use `$...$` and `$$...$$`. During `/ingest`, do not run a broad LaTeX repair dry-run on `@configured-sources-papers`; source OCR noise can be large and is not the ingest gate. After writing `papers/<slug>.md`, inspect only the generated paper page:
 
 ```shell
-uv run python -X utf8 tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'
+uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check '<paper-slug>'
 ```
 
-Only rewrite existing prepared sources after confirming the report is limited to math-span repairs.
+If maintaining an existing prepared source outside an ingest run, inspect that one source file explicitly before rewriting it.
 
 ## Output
 

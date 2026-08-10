@@ -15,7 +15,7 @@ Light ingest is for papers whose main purpose is dissertation-introduction or ba
 It reuses the shared ingest pipeline but runs a reduced subset, **printing each phase's Gate block** as it goes:
 
 - **Phase A** — `.claude/skills/shared-references/ingest-phases/phase-a-source-identity.md` (resolve + prepare + identity)
-- **Phase B** — `.claude/skills/shared-references/ingest-phases/phase-b-evidence-pack.md` (light Evidence Pack; concepts/claims counts are 0 unless this run explicitly touches them)
+- **Phase B** — `.claude/skills/shared-references/ingest-phases/phase-b-evidence-pack.md` (light Evidence Pack rendered with `tools/evidence_pack.py`; concepts/claims counts are 0 unless this run explicitly touches them)
 - **Light paper page** — this skill's own light variant (below + `references/light-paper-page.md`); Evidence Pack still required per `docs/runtime-page-templates.en.md`
 - **Summary update** — `references/summary-update.md`
 - **Finalize** — index + log + scoped lint (Phase E, reduced)
@@ -54,12 +54,12 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
 1. **Phase A** — resolve + prepare the source and settle identity, per the phase file. Stop if `usable: false`; do not read MinerU cache intermediates as a substitute. Print Gate A.
-2. **Phase B** — extract the light Evidence Pack from the prepared source and print Gate B. Use the shared phase, with the light page's populated interpretive sections as the coverage target; concept/claim counts are `0` unless this run explicitly updates existing concept/claim pages.
+2. **Phase B** — extract structured card parameters from the prepared source, render the light Evidence Pack with `tools/evidence_pack.py`, and print Gate B. Use the shared phase, with the light page's populated interpretive sections as the coverage target; concept/claim counts are `0` unless this run explicitly updates existing concept/claim pages.
 3. **Light paper page** — follow `references/light-paper-page.md`:
    - Frontmatter = normal paper fields + tags containing `thesis-introduction`, the selected role, and `light-ingest`. Fill `paper_type`/`research_modes`/`research_object_tags` conservatively, else `other`/`[]`/`[]`.
    - Light body sections: `## Evidence Pack` (first, per template), `## Problem`, `## Key idea`, `## Research classification`, `## Introduction use`, `## Evidence notes`, `## Limitations`, `## BibTeX`, `## Related`.
    - `## Introduction use` states the primary role and why this paper belongs in it.
-   - `## Related` includes `[[{target-summary}]]` unless `--depth paper-only`.
+   - `## Related` follows the fixed paper Related format in ingest invariants §8; include `[[{target-summary}]]` under `Summary` unless `--depth paper-only`.
    - Do not create concept/claim/people pages; link existing pages only when clearly useful. If the page already exists, update only missing/stale light metadata — never overwrite a full `/ingest` page with a lighter one.
    - Print Gate C (template shape check + scoped `grounding_lint --only` on the paper page; fix red).
 4. **Summary update** (skip for `--depth paper-only`) — follow `references/summary-update.md`: add the paper under a role-based subsection in `Summary/{target-summary}.md`, preserving prose; create the Summary from template if absent.
@@ -84,4 +84,4 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 
 ## Upgrade path
 
-If a light-ingested paper later becomes core evidence, run `/ingest` or `/reingest` on the same slug to upgrade it to full graph participation. Preserve `thesis-introduction` tags and the Summary link unless the user asks to remove them. See `/promote-light-ingest` to find candidates.
+If a light-ingested paper later becomes core evidence, run `/ingest`, `/reingest`, or `/reingest-force` on the same slug to upgrade it to full graph participation. Use `/reingest-force` when the existing paper page is badly wrong and old wiki state should not steer the rebuild. Preserve `thesis-introduction` tags and the Summary link unless the user asks to remove them. See `/promote-light-ingest` to find candidates.

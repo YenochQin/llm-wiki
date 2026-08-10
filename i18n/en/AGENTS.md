@@ -28,11 +28,19 @@ Keep this mental map in immediate context:
 ### Formatting guardrail
 
 - Open `docs/runtime-page-templates.en.md` before drafting or repairing wiki page structure, YAML, or body sections
+- **LaTeX format is mandatory**: both generated wiki content and conversational llm-wiki output must use `$...$` for inline math and `$$...$$` for display math.
 - For copyable page starter templates, use `docs/templates/`; do not keep a root-level template library
 - Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log/` format
 - `SKILL.md` is the immediate entrypoint for a skill; some larger skills may also provide local on-demand reference files under their skill directory
 - Treat skill documents as read-only runtime specifications while executing a skill: if you discover a problem in a skill description, template, command, or constraint, report it and suggest the needed change; unless the user explicitly asks to modify/fix/update the skill, do not edit `skills/`, `i18n/*/skills/`, `CLAUDE.md`, or `AGENTS.md` during that skill run
 - `/init` is the first concrete example of this pattern: read `skills/init/SKILL.md` first, then open `skills/init/references/*` only when needed
+
+### Formal page language
+
+- Formal wiki pages default to English, especially reusable research assets under `wiki/papers/`, `wiki/concepts/`, `wiki/claims/`, `wiki/experiments/`, and `wiki/Summary/`.
+- Unless the user explicitly asks for Chinese, generate or rewrite formal page bodies in English. User conversation, run reports, `wiki/log/`, temporary notes, and personal drafts may use Chinese.
+- Chinese papers or sources may retain Chinese titles, terminology, and necessary explanations, but analytical prose should still prefer English; give bilingual terminology on first use when helpful.
+- `## Source excerpts`, blockquotes, BibTeX, titles, author names, and original metadata retain the source language and spelling.
 
 ### `raw/` and `config/`
 
@@ -62,6 +70,33 @@ Every `papers/{slug}.md` must first classify the paper by research direction and
 - `research_object_tags`: list the research objects, such as materials, celestial bodies, systems, samples, populations, model objects, or datasets.
 
 The body must include `## Research classification`, explaining which of theory/computation/experiment apply, what specific theory/computational scheme/experimental process was used, and what objects were studied. If the source does not make something clear, write `unclear` rather than inventing it.
+
+### Paper Evidence Pack and anti-hallucination rules
+
+Every skill-generated or rewritten `papers/{slug}.md` must contain `## Evidence Pack` before interpretive prose.
+
+- Extract the Evidence Pack only from the canonical prepared source, usually `wiki/sources/papers/{source-slug}.md`.
+- Each evidence card must include an evidence id such as `E1`, prepared-markdown link, source section/figure/table/equation location when available, a short exact source blockquote, and one use label from `Problem`, `Method`, `Results`, `Limitations`, `Concept`, or `Claim`.
+- Generate Evidence Pack Markdown with `tools/evidence_pack.py` from structured card parameters; do not hand-write or reorder the card markers.
+- Each generated card follows this fixed shape:
+
+```markdown
+- `E1` <UseLabel> — <short label> ([prepared markdown](../sources/papers/<source-slug>.md), <source section>): ^E1
+  > exact source fragment
+```
+
+- The readable evidence id stays at the start as `` `E1` `` and the Obsidian block id stays at the end of the same bullet header as `^E1`. Prose citations use the complete literal block link `[[#^E1]]`, separated from the preceding word by one literal space. Keep the outer brackets in `[[...]]` and the leading `#`; forbidden variants include `[#^E1]`, `[[^E1]]`, `#^E1`, bare `^E1`, legacy `[!E1]`, or cards that begin with `- ^E1`.
+- Coverage scales with the content: each populated interpretive section needs at least one matching card, each concept created or materially rewritten needs a `Concept` card, and each generated claim needs a `Claim` card. A fixed three-card pack is not a target.
+- `## Method`, `## Results`, `## Limitations`, concept definitions, and claim evidence may use only traceable facts from the Evidence Pack or `## Source excerpts`.
+- Numbers, units, signs, sample sizes, dataset names, mechanisms/causality, SOTA/first/best wording, and necessary/sufficient claims require direct source evidence.
+- When evidence is insufficient, write `unclear`, omit the assertion, or place it under `## Open questions`; never fill it from model memory.
+- After writing or rewriting paper/concept/claim pages, run a scoped grounding gate on touched files:
+
+```shell
+uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "concepts/{slug}.md" --only "claims/{slug}.md" --json
+```
+
+Fix every red issue or stop and report a source-quality blocker; do not downgrade it to a warning.
 
 ### BibTeX Placement
 
@@ -109,7 +144,7 @@ All internal links use Obsidian wikilinks:
 [[flash-attention]]          ← links to concepts/flash-attention.md
 ```
 
-**Naming convention**: all lowercase, hyphen-separated, no spaces.
+**Naming convention**: non-paper pages are lowercase, hyphen-separated, with no spaces. Paper pages use `citationKey` or `author_year_veryshorttitle`, so they may contain mixed case, underscores, dots, plus signs, or hyphens.
 
 ---
 
@@ -174,6 +209,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 - skills run tools as `uv run python -X utf8 tools/<name>.py …` (uv automatically resolves `.venv` from `pyproject.toml`); the equivalent direct invocation is `.venv/bin/python tools/<name>.py …` when `.venv/` exists
 - Python tools load API keys through `tools/_env.py`: first process environment, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`); project-root `.env` and `~/.env` are legacy fallbacks only
 - Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`) to set external `wiki_root` / `raw_root`; `active_profile: auto` chooses `macos`, `windows`, or `linux` from the current OS, and `LLM_WIKI_PATH_PROFILE` can override it temporarily; without config, tools fall back to in-repo `wiki/` and `raw/`
+- `@configured`, `@raw-root`, `@configured-sources-papers`, and related aliases are resolved only by Python tools that support `tools/_paths.py`. For direct file editing, `cat`, `cp`, `mkdir`, or shell redirection, first run `uv run python -X utf8 tools/resolve_path_alias.py ...` and use the resolved absolute path. Never create literal `@configured/` or `@raw-root/` directories.
 - the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
 
 ---
@@ -189,7 +225,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 - **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`). `/ingest-local-pdf` and `/init` produce/consume the prepared `wiki/sources/papers/<slug>.md`; `/ingest` only consumes already prepared `wiki/sources/papers/<slug>.md`, the INIT MODE handoff path, or Zotero-located paper sources — never the raw PDF directly.
 - **index.md updated on every ingest**; log entries go through the weekly `log/` files.
 - **lint default is report-only**: `--fix` auto-fixes deterministic issues (xref backlinks, missing field defaults); `--suggest` outputs suggestions for non-deterministic issues; `--fix --dry-run` previews fixes.
-- **Slug generation rule**: paper title keywords, hyphen-joined, all lowercase.
+- **Slug generation rule**: `papers/{slug}.md` uses the Zotero/Better BibTeX `citationKey`; without a citation key, use `author_year_veryshorttitle`. Non-paper pages continue to use lowercase, hyphen-joined title-keyword slugs.
 - **Importance scoring**: 1 = niche, 2 = useful, 3 = field-standard, 4 = influential, 5 = seminal.
 - **Failed ideas must record reason**: `failure_reason` is anti-repetition memory — prevents re-exploring known dead ends.
 - **Claim confidence range**: 0.0-1.0; re-evaluate every time evidence changes.
@@ -218,6 +254,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 | `/discover` | `skills/discover/SKILL.md` | manual / internal (called by `/ingest --discover`) |
 | `/ask` | `skills/ask/SKILL.md` | manual |
 | `/edit` | `skills/edit/SKILL.md` | manual |
+| `/code-analyze` | `skills/code-analyze/SKILL.md` | manual (analyze a code repository's architecture/flow/risk/tests, optionally archive to outputs) |
 | `/check` | `skills/check/SKILL.md` | biweekly/manual |
 | `/source-audit` | `skills/source-audit/SKILL.md` | manual (audit wiki interpretations against original source text) |
 | `/novelty` | `skills/novelty/SKILL.md` | manual |

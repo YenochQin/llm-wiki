@@ -76,12 +76,15 @@ uv run python -X utf8 tools/cal_data_index.py @configured --data-root @configure
 
 ### Step 2: Select the Evidence Set
 
+**硬性规则——分析范围由用户定义，不由目录决定。** 当用户明确点名文件（例如“分析 `even1_cc1as2_rmcdhf.csv`、`even1_cc2as2_rmcdhf.csv`”）时，只分析这些文件。即使同目录的其他文件看起来相关或可能提供背景，也不要读取或纳入分析；只有用户明确要求分析整个目录时才扩大范围。
+
 1. 读取 `experiments/cal_reports/index.md`。
 2. 按用户 scope 选择 report pages：
    - 明确 run/report slug：读取该 page。
    - data 子目录：读取 source path 匹配的 pages。
    - comparison request：读取所有匹配的 run pages。
    - 未提供 scope：读取所有 run pages；若数量很多，先说明选择范围。
+   - 明确点名文件：只读取用户列出的文件，不要加入同目录中未点名的文件。
 3. 对每个选中的 run，检查：
    - file inventory 和 file types。
    - row/item counts。
@@ -195,6 +198,7 @@ uv run python -X utf8 tools/cal_data_index.py @configured --data-root @configure
 - 除非用户明确要求 crystallization into experiment entities，不要把 report pages 转换为普通 `experiments/` pages。
 - 不要覆盖 configured `raw_root/cal_data/` 下用户拥有的 calculation data。
 - 如果文件是 binary 或 unsupported，只在 inventory 中说明，不要从文件名推断内容。
+- **文件范围由用户定义。** 只分析用户明确点名的文件。除非用户要求分析整个目录，否则不要读取或纳入同目录的其他文件。用户点名 3 个 CSV 时，就只分析这 3 个。
 - 默认归档。只有当用户提供 `--no-write` 时，才跳过 `wiki/outputs/` 和 log 写入。
 
 ## Dependencies

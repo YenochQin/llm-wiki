@@ -4,9 +4,9 @@ The deterministic ranking lives in `tools/discover.py` — this file documents w
 
 ## Anchor-mode candidate channels
 
-Anchor mode gathers from no-key Crossref channels per anchor:
+Anchor mode gathers from OpenAlex-first search and Crossref metadata/reference channels per anchor:
 
-- **`recommend`** — approximates related papers by looking up the anchor, extracting title keywords, and searching Crossref.
+- **`recommend`** — approximates related papers by looking up the anchor, extracting title keywords, and searching OpenAlex first with Crossref fallback.
 - **`references`** — surfaces older work when Crossref has deposited reference lists for the anchor DOI.
 - **`citations`** — currently best-effort and often empty because the no-key providers used here do not expose a full citing-works graph.
 
@@ -23,7 +23,18 @@ Anchor mode (rough weight order):
 5. **Freshness** — mild bonus for recent years. Recent ≠ better, so the curve is flat-ish (1.0 / 0.85 / 0.6 / 0.4 / 0.25 across age buckets).
 6. **Author h-index** (max across authors) — capped tie-breaker. The list endpoints do not return `authors.hIndex`, so this signal mostly fires for topic-mode candidates that came via the richer single-paper graph API.
 
-Topic / wiki mode: same signals minus anchor overlap and minus the anchor-influence edge (no anchor exists in topic mode; wiki-derived anchors do score the edge signal). Influence and freshness carry more weight to compensate.
+Wiki mode uses the anchor signals above. Topic mode uses a separate objective:
+
+1. **Topic relevance (58%)** — lexical coverage of the canonical query or an equivalent scoped query variant, with title matches weighted above abstract/venue matches.
+2. **Freshness (30%)** — favors current work within the requested time window.
+3. **Citation influence (10%)** — a log-scaled tie-breaker, not the main ranking signal.
+4. **Channel diversity (2%)** — a small bonus when multiple retrieval paths surface the same work.
+
+Topic mode defaults to the current year minus 10 and drops candidates outside that window. It also applies a hard lexical relevance gate before ranking, so an old or broadly cited paper cannot outrank a direct topic match merely through citation count.
+
+For topics with independent hard qualifiers, `--required-term-group` adds an AND-of-ORs scope gate after lexical relevance: each group is required, while pipe-separated alternatives inside a group are interchangeable. This prevents generic terms such as `neutral`, `atom`, and `metal` from combining across an off-topic catalyst paper and masquerading as a neutral-atom structure calculation.
+
+`--required-title-term-group` applies the same logic to titles only. Use it when an abstract-level mention is insufficient evidence that the paper directly studies the requested object or task.
 
 ## Age/citation gate
 
@@ -43,7 +54,7 @@ After scoring, anchor mode and wiki mode apply a hard relevance gate before the 
 - it is surfaced by two or more anchors;
 - a provider marks an explicit influential anchor-candidate edge.
 
-A single `recommend` / title-search hit is not enough, even if the candidate is highly cited. This keeps post-`/ingest --discover` suggestions focused on papers that are heavily connected to the current wiki context. Topic mode stays exploratory and does not use this hard gate.
+A single `recommend` / title-search hit is not enough, even if the candidate is highly cited. This keeps post-`/ingest --discover` suggestions focused on papers that are heavily connected to the current wiki context. Topic mode does not use the anchor relation gate; it uses the topic-coverage gate described above.
 
 ### Why keep edge influence in the schema?
 
@@ -63,7 +74,8 @@ If a future ranking signal seems shared between `/init` and `/discover`, prefer 
 
 `tools/fetch_literature.py` deliberately uses no-key providers:
 
-- Crossref supplies DOI metadata, citation counts when deposited, and references when publishers provide them.
+- OpenAlex is primary for broad works search and supplies abstracts, citation counts, and stable OpenAlex IDs.
+- Crossref contributes a small supplementary topic pool after OpenAlex, fills deficits when OpenAlex is sparse, and supplies DOI metadata and references when publishers provide them. All candidates share the same downstream gates and ranking.
 - A full citing-works graph is not available from these no-key paths, so citation expansion is best-effort.
 
 Do not reintroduce a required API key for discovery. If a richer provider is added later, make it optional and preserve the Crossref fallback.

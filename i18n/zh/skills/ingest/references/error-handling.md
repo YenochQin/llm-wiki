@@ -1,6 +1,6 @@
 # /ingest Error Handling
 
-Open this reference when a step fails. `/ingest` prefers to degrade gracefully: record what happened, continue with what remains, and surface the gap in the final report.
+Open this reference when a step fails. `/ingest` prefers to degrade gracefully except at the explicit hard-stop gates below: record what happened, continue only where this reference permits it, and surface the gap in the final report.
 
 ## Source parsing
 
@@ -11,6 +11,7 @@ Open this reference when a step fails. `/ingest` prefers to degrade gracefully: 
 
 ## External APIs
 
+- **Zotero Local API unavailable** (`fetch_zotero_metadata.py` times out, refuses the connection, or returns any `status` other than `ok` during Zotero lookup mode): stop immediately. Do not follow a SQLite/Crossref fallback hint, do not run `prepare_paper_source.py`, and do not continue with incomplete Zotero metadata. Tell the user: `Open Zotero Desktop, ensure local API access is enabled, then rerun /ingest from the beginning.`
 - **Literature lookup unavailable** (`fetch_literature.py paper` errors): skip external enrichment, default `importance` to 3, and note in the report that the paper's importance is provisional. Skip the citation backfill step entirely for this ingest.
 
 ## Slug collisions
@@ -43,6 +44,7 @@ If an ingest fails after some writes have landed (paper page written, but concep
 Stop outright when:
 
 - no source can be read at all
+- Zotero Local API metadata lookup fails in Zotero lookup mode
 - the paper is already ingested (slug + DOI/title match an existing page)
 - a slug collision would silently overwrite a different existing paper
 

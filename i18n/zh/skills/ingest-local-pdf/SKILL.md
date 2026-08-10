@@ -54,7 +54,7 @@ If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias
 
 - `uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source '<local-path>' [--title '<recovered-title>']` — optional metadata-only Zotero enrichment; returns `.bibtex` when confident
 - `uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source '<local-path>' [--title '<recovered-title>'] [--citation-key '<zotero-citation-key>'] [--authors '<author-list>'] [--year <year>] [--bibtex "$BIBTEX"]`
-- `uv run python -X utf8 tools/repair_latex_math.py --dry-run '@configured-sources-papers/<source-slug>.md'` — optional inspection command for existing prepared markdown; `prepare_paper_source.py` already runs this repair during new PDF preprocessing
+- `uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check '<paper-slug>'` — downstream `/ingest` paper-page inspection only; do not run broad source checks during ingest
 
 ### Skills
 

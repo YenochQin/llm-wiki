@@ -77,6 +77,7 @@
 
 - Evidence Pack 必须只由 canonical prepared source（通常是 `wiki/sources/papers/{source-slug}.md`）抽取。
 - 每条 evidence card 必须包含证据 id（如 `E1`）、prepared markdown 链接、源章节/图表/公式位置（可用时）、一段简短原文 blockquote，以及该卡的用途标签（`Problem`/`Method`/`Results`/`Limitations`/`Concept`/`Claim` 之一）。
+- Evidence Pack Markdown 必须由 `tools/evidence_pack.py` 根据结构化 card 参数生成；不要手写或重新排列 card 标记。
 - 每条 evidence card 的 Markdown 形状固定，只替换占位符，不改变标记顺序：
 
 ```markdown

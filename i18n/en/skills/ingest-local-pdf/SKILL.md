@@ -22,6 +22,8 @@ Run commands from the repository root.
 uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
+If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+
 1. Resolve the input path.
    - If the input is a single PDF, inspect the first page and recover a confident title only when the title is clear.
    - If the input is a directory, enumerate readable PDFs in deterministic order and process each file separately.
@@ -29,8 +31,8 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
    ```shell
    uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<agent-recovered-title>"]
    ```
-   If it returns `status: ok`, capture `.bibtex` exactly and pass it to `prepare_paper_source.py` with `--bibtex`; also pass `.citation_key`, `.authors`, and `.year` when present so the prepared source filename can use the Zotero citation key or fall back to `author_year_veryshorttitle`. If it returns `not_found` or `metadata_error`, continue without BibTeX and mention the reason in the report; do not block PDF ingest.
-3. Preprocess each PDF with `tools/prepare_paper_source.py` into `wiki/sources/papers/<source-slug>.md`. This step includes the conservative LaTeX math repair pass documented in `references/pdf-preprocessing.md`; report any `latex math repaired: ...` warning in the final summary.
+   If it returns `status: ok`, capture `.bibtex` exactly and pass it to `prepare_paper_source.py` with `--bibtex`; also pass `.citation_key`, `.authors`, and `.year` when present so the prepared source filename can use the Zotero citation key or fall back to `author_year_veryshorttitle`. Preserve `.paper_slug` for the downstream `/ingest` paper page slug when present. If it returns `not_found` or `metadata_error`, continue without BibTeX and mention the reason in the report; do not block PDF ingest.
+3. Preprocess each PDF with `tools/prepare_paper_source.py --output-dir '@configured-sources-papers' --cache-root '@mineru-cache'` into the configured wiki source directory. This step includes the conservative LaTeX math repair pass documented in `references/pdf-preprocessing.md`; report any `latex math repaired: ...` warning in the final summary.
 4. If `prepare_paper_source.py` reports `usable: false`, surface the warnings and skip that file.
 5. Hand each prepared `wiki/sources/papers/<source-slug>.md` to `/ingest` for the paper-page workflow, preserving the prepared source's `## BibTeX` block as the preferred BibTeX when present.
 6. If the source is already a prepared `wiki/sources/papers/*.md`, skip preprocessing and pass it straight to `/ingest`.
@@ -41,7 +43,8 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 - Do not write directly to `wiki/papers/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/people/` from this skill.
 - Do not generate paper `## Evidence Pack` content here. The downstream `/ingest` owns it; the card shape and citation syntax are defined once in `docs/runtime-page-templates.en.md` §papers — never restate them in this skill.
 - Do not generate paper `## Related` content here. The downstream `/ingest` owns it and must use the fixed format in `.claude/skills/shared-references/ingest-invariants.md` §8.
-- Keep raw PDFs in their original location; only the prepared markdown and extracted assets belong under `wiki/sources/`.
+- Keep raw PDFs in their original location; only the prepared markdown and extracted assets belong under the configured wiki source directory.
+- Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured-sources-papers`.
 - If the directory contains mixed file types, ignore non-PDF files unless the user explicitly points at a prepared markdown file.
 
 ## Dependencies

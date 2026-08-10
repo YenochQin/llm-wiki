@@ -84,7 +84,7 @@ Append only gated candidates (Phase E candidate gate: title + authors + year + D
 
 ## Error Handling
 
-See `.claude/skills/ingest/references/error-handling.md`. Highlights: MinerU API failure → local backend if installed, else hand off; `usable: false` blocks ingest; literature outage → `importance` 3 and skip citation backfill; paper slug collision with a different paper → stop and report.
+See `.claude/skills/ingest/references/error-handling.md`. Highlights: Zotero Local API timeout/unavailable in Zotero lookup mode → stop before PDF preprocessing and ask the user to open Zotero and rerun `/ingest`; MinerU API failure → local backend if installed, else hand off; `usable: false` blocks ingest; literature outage → `importance` 3 and skip citation backfill; paper slug collision with a different paper → stop and report.
 
 ## Dependencies
 

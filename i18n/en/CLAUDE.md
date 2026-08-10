@@ -28,12 +28,14 @@ Keep this mental map in immediate context:
 ### Formatting guardrail
 
 - Open `docs/runtime-page-templates.en.md` before drafting or repairing wiki page structure, YAML, or body sections
+- **LaTeX format is mandatory**: both generated wiki content and conversational llm-wiki output must use `$...$` for inline math and `$$...$$` for display math.
 - For copyable page starter templates, use `docs/templates/`; do not keep a root-level template library
 - Open `docs/runtime-support-files.en.md` when you need graph-derived file details or `index.md` / `log/` format
 - `SKILL.md` is the immediate entrypoint for a skill; some larger skills may also provide local on-demand reference files under their skill directory
 - Treat skill documents as read-only runtime specifications while executing a skill: if you discover a problem in a skill description, template, command, or constraint, report it and suggest the needed change; unless the user explicitly asks to modify/fix/update the skill, do not edit `skills/`, `i18n/*/skills/`, `CLAUDE.md`, or `AGENTS.md` during that skill run
 - `/init` is the first concrete example of this pattern: read `skills/init/SKILL.md` first, then open `skills/init/references/*` only when needed
 - `skills/` is a symlink created by `setup.sh`, pointing to `i18n/{lang}/skills/`; edit skill content in `i18n/`, not the symlink target
+- `AGENTS.md` is the canonical source for the formal-page-language and paper Evidence Pack / anti-hallucination rules; apply those sections to every skill-generated or rewritten wiki page.
 
 ### `raw/` and `config/`
 
@@ -64,6 +66,24 @@ Every `papers/{slug}.md` must first classify the source form, research direction
 
 The body must include `## Research classification`, explaining which of theory/computation/experiment apply, what specific theory/computational scheme/experimental process was used, and what objects were studied. If the source does not make something clear, write `unclear` rather than inventing it.
 
+### BibTeX Placement
+
+`papers/{slug}.md` YAML frontmatter must not contain a `bibtex` field. BibTeX belongs in the body under `## BibTeX` as a fenced code block:
+
+````markdown
+## BibTeX
+
+```bibtex
+@article{key,
+  author = {...},
+  title = {...},
+  year = {...}
+}
+```
+````
+
+BibTeX entries must stay citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`. Do not include URL, tags/keywords, abstract, language, rights, or note-like fields in the BibTeX block.
+
 ### Concept Source Grounding
 
 Every `concepts/{slug}.md` page must include `## Source excerpts` immediately after `## Definition`.
@@ -92,7 +112,7 @@ All internal links use Obsidian wikilinks:
 [[flash-attention]]          ← links to concepts/flash-attention.md
 ```
 
-**Naming convention**: all lowercase, hyphen-separated, no spaces.
+**Naming convention**: non-paper pages are lowercase, hyphen-separated, with no spaces. Paper pages use `citationKey` or `author_year_veryshorttitle`, so they may contain mixed case, underscores, dots, plus signs, or hyphens.
 
 ---
 
@@ -156,6 +176,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 - `uv run` automatically resolves `.venv` from `pyproject.toml` and ensures the correct dependencies are available; system Python may lack required packages or have incompatible versions
 - Python tools auto-load API keys from process env first, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`) via `tools/_env.py`; project-root `.env` and `~/.env` are legacy fallbacks only
 - Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`) to set external `wiki_root` / `raw_root`; `active_profile: auto` chooses `macos`, `windows`, or `linux` from the current OS, and `LLM_WIKI_PATH_PROFILE` can override it temporarily; without config, tools fall back to in-repo `wiki/` and `raw/`
+- `@configured`, `@raw-root`, `@configured-sources-papers`, and related aliases are resolved only by Python tools that support `tools/_paths.py`. For direct file editing, `cat`, `cp`, `mkdir`, or shell redirection, first run `uv run python -X utf8 tools/resolve_path_alias.py ...` and use the resolved absolute path. Never create literal `@configured/` or `@raw-root/` directories.
 - the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
 - no test suite exists (no `tests/` directory, no `test_*.py` files) and no Python code lint/format is configured (no ruff, black, mypy); `tools/lint.py` is a wiki-content linter, not a Python code linter
 
@@ -172,7 +193,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 - **mineru-md is the canonical ingest format**: PDFs are preprocessed by MinerU (`tools/_mineru.py`) into structured markdown with frontmatter (`sections`, `figures`). `/ingest-local-pdf` and `/init` produce/consume the prepared `wiki/sources/papers/<slug>.md`; `/ingest` only consumes already prepared `wiki/sources/papers/<slug>.md`, the INIT MODE handoff path, or Zotero-located paper sources — never the raw PDF directly.
 - **index.md updated on every ingest**; log entries go through the weekly `log/` files.
 - **lint default is report-only**: `--fix` auto-fixes deterministic issues (xref backlinks, missing field defaults); `--suggest` outputs suggestions for non-deterministic issues; `--fix --dry-run` previews fixes.
-- **Slug generation rule**: paper title keywords, hyphen-joined, all lowercase.
+- **Slug generation rule**: `papers/{slug}.md` uses the Zotero/Better BibTeX `citationKey`; without a citation key, use `author_year_veryshorttitle`. Non-paper pages continue to use lowercase, hyphen-joined title-keyword slugs.
 - **Importance scoring**: 1 = niche, 2 = useful, 3 = field-standard, 4 = influential, 5 = seminal.
 - **Failed ideas must record reason**: `failure_reason` is anti-repetition memory — prevents re-exploring known dead ends.
 - **Claim confidence range**: 0.0-1.0; re-evaluate every time evidence changes.
@@ -180,7 +201,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest-light | a
 - **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
 - **Literature lookup**: `tools/fetch_literature.py` uses no-key Crossref search and metadata. Citation graph coverage is best-effort because public sources expose fewer citation edges than key-gated services.
 - **Repository and wiki can be separated**: use `tools/separate_wiki_repository.py` to copy/move `wiki/` and `raw/` to external absolute paths and write `config/paths.json`; use `tools/clean_wiki_repository.py` to remove leftover in-repo `wiki/` and `raw/`. Cleanup is dry-run by default and deletes only with `--yes`.
-- **Zotero integration**: `tools/find_zotero_pdf.py`, `tools/fetch_zotero_metadata.py`, and `tools/_zotero_snapshot.py` look up PDFs and parent-item metadata in local Zotero databases by `--title`, `--doi`, or `--item-key`; Zotero roots are configured via the selected profile's `zotero_roots` in `config/paths.json` or `--zotero-root`. `/ingest` can use this to auto-locate Zotero attachments and derive plain BibTeX from Zotero metadata; BibTeX is written to the body `## BibTeX` fenced code block, not YAML frontmatter. Raw local PDFs belong to `/ingest-local-pdf`.
+- **Zotero integration**: `tools/find_zotero_pdf.py`, `tools/fetch_zotero_metadata.py`, and `tools/_zotero_snapshot.py` look up PDFs by `--title` or `--doi`, then use the selected candidate's internal `item_key` to read parent-item metadata. `--item-key` is not a user-facing paper selector for `/ingest` or `/reingest`. Zotero roots are configured via the selected profile's `zotero_roots` in `config/paths.json` or `--zotero-root`. `/ingest` can use this to auto-locate Zotero attachments and derive plain BibTeX from Zotero metadata; BibTeX is written to the body `## BibTeX` fenced code block, not YAML frontmatter. Raw local PDFs belong to `/ingest-local-pdf`.
 - **`tools/_schemas.py` bidirectional sync**: this module is the machine-consumable copy of entity schemas (directories, edge types, required fields, enums). Changes here must be synced to the human-readable spec in `i18n/*/CLAUDE.md`, and vice versa.
 
 ---

@@ -40,7 +40,7 @@ uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source <pdf-path> [--ti
 ```
 
 - Use this only to enrich metadata/BibTeX for the same local PDF. Do not switch the content source to Zotero's PDF from this skill.
-- If the helper returns `status: ok`, use the returned `.bibtex` verbatim and pass `.citation_key`, `.authors`, and `.year` to the prep tool when present.
+- If the helper returns `status: ok`, use the returned `.bibtex` verbatim and pass `.citation_key`, `.authors`, and `.year` to the prep tool when present. Preserve `.paper_slug` for the downstream `/ingest` paper-page slug when present.
 - If the helper returns `not_found` or `metadata_error`, continue without BibTeX and report the reason. The user can open Zotero Desktop / enable Local API access and rerun if needed.
 
 Then run:

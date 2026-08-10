@@ -30,6 +30,7 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include
 ## Outputs
 
 - Source-grounded audit report in the conversation.
+- Automated grounding-gate results from `tools/grounding_lint.py`, folded into the report as potential hallucination/unsupported-content blockers.
 - Optional report file: `wiki/outputs/source-audit-{date}.md`.
 - Optional wiki edits only when the user explicitly passes `--fix`.
 - Optional log entry in `wiki/log/` after a completed batch.
@@ -92,7 +93,25 @@ order=sorted filename ascending
 mode=report-only
 ```
 
-### Step 2: Build source-to-wiki alignment evidence
+### Step 2: Run the hallucination grounding gate
+
+Before doing interpretive source-to-wiki judgment, run the same mechanical source-grounding gate used by `/ingest` on the selected batch. This catches common LLM-fabrication failure modes early: paper pages without `## Evidence Pack`, thin Evidence Packs that fall below the coverage floor (flagged `warn`-level `thin-evidence-pack` — a uniform three-card pack on a substantive paper usually means under-extraction), concept pages without exact `## Source excerpts`, quoted excerpts that cannot be found in prepared markdown, dead prepared-source links, and claim evidence without `source_anchor`.
+
+Build one scoped command with every selected page as an `--only` argument:
+
+```shell
+uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only "papers/{slug}.md" --only "concepts/{slug}.md" --only "claims/{slug}.md" --json
+```
+
+Rules:
+
+1. Use only wiki-relative paths under `papers/`, `concepts/`, or `claims/`; even when the user selected `--all`, run the gate only for the current batch's selected targets. When `--include-linked` is set, include both primary targets and expanded linked targets in the same scoped command.
+2. Treat every `level: red` result as a source-grounding finding in the audit report. Do not downgrade it to a warning.
+3. Classify red results as `UNSUPPORTED`, `SOURCE_EXCERPT_MISMATCH`, or `SOURCE_MISSING`/`SOURCE_QUALITY_BLOCKER` according to the concrete message. If the red result means a page has generated interpretation with no recoverable source anchor, describe it as a hallucination-risk blocker.
+4. Continue to Step 3 after recording the gate output. The mechanical gate is a screen, not a substitute for checking whether source-backed-looking prose actually matches the source.
+5. With `--fix`, fix gate failures first, then rerun the same scoped `grounding_lint.py` command before applying deeper wording corrections.
+
+### Step 3: Build source-to-wiki alignment evidence
 
 For each target page:
 
@@ -111,8 +130,9 @@ For each target page:
    - If the wiki says something materially different, record a mismatch.
    - If the wiki omits a source-backed fact needed for faithful interpretation, record `OMISSION`.
    - If the wiki adds a material statement, search the source for its key terms, numbers, entities, and synonyms. If no corresponding source passage is found, record `UNSUPPORTED` and state the targeted searches performed.
-6. Every finding must be anchored in one or more exact source excerpts. Keep quotes short, but include enough original wording to let the user see the mismatch directly.
-7. Use a source-level summary only as navigation. Do not report a finding from a summary alone unless the source OCR is too poor; label that as `SOURCE_QUALITY_BLOCKER`.
+6. Run an explicit hallucination pass over high-risk wiki statements: numbers, units, signs, sample sizes, dataset names, benchmark names, algorithm names, causality/mechanism wording, "first", "best", "SOTA", necessary/sufficient claims, and broad generalizations. For each high-risk statement, search the prepared source for distinctive terms and plausible synonyms. If the source has no corresponding passage, record `UNSUPPORTED` and label the mismatch type as `fabricated or unsupported addition`.
+7. Every finding must be anchored in one or more exact source excerpts. Keep quotes short, but include enough original wording to let the user see the mismatch directly.
+8. Use a source-level summary only as navigation. Do not report a finding from a summary alone unless the source OCR is too poor; label that as `SOURCE_QUALITY_BLOCKER`.
 
 When `--include-linked` added a concept or claim page, audit it as a first-class target:
 
@@ -120,12 +140,12 @@ When `--include-linked` added a concept or claim page, audit it as a first-class
 - Claims: verify `## Statement`, evidence summary, conditions/scope, confidence/status rationale, and YAML evidence against the cited `source_papers` and `evidence[].source` papers. If the claim cites multiple papers, do not treat one paper as supporting the whole claim unless the claim's scope says so.
 - Report linked-page findings under their own page headings, and label the page as `linked from [[paper-slug]]` in the report.
 
-### Step 3: Classify findings
+### Step 4: Classify findings
 
 Use these issue classes:
 
 - `MISREADING`: wiki states the opposite or a materially different meaning from the source.
-- `UNSUPPORTED`: wiki adds a claim not grounded in the source.
+- `UNSUPPORTED`: wiki adds a claim not grounded in the source. Use this for likely LLM hallucinations/fabrications when targeted source searches find no support.
 - `OVERGENERALIZATION`: source claim is narrower than wiki wording.
 - `OMISSION`: source contains a key result, limitation, method detail, scope condition, caveat, or negative finding that the wiki does not represent, and the absence makes the wiki interpretation incomplete or misleading.
 - `NUMBER_UNIT_ERROR`: wrong number, range, sign, unit, uncertainty, date, sample count, isotope/mass, or percentage.
@@ -140,16 +160,16 @@ Severity:
 - `Major`: unsupported or overbroad interpretation that changes scope, missing central limitation, wrong classification affecting downstream retrieval.
 - `Minor`: metadata/title/BibTeX cleanup, wording precision, small omission that does not alter the main interpretation.
 
-### Step 4: Produce the report
+### Step 5: Produce the report
 
 Use this structure for every batch:
 
 ```markdown
-# Source-Grounded Audit - YYYY-MM-DD
+# Source-Grounded Audit — YYYY-MM-DD
 
 ## Batch
 - **Type**: papers
-- **Range**: {first slug} ... {last slug}
+- **Range**: {first slug} … {last slug}
 - **Linked expansion**: off | on, linked pages: N
 - **Mode**: report-only | fix | dry-run
 - **Source root**: `{configured wiki root}/sources`
@@ -159,7 +179,14 @@ Use this structure for every batch:
 - Major: N
 - Minor: N
 - Source blockers: N
+- Grounding gate red issues: N
 - Pages checked: N
+
+## Grounding Gate
+- Command: `uv run python -X utf8 tools/grounding_lint.py ... --json`
+- Result: passed | red issues found
+- Red issues:
+  - `{file}` `[category]`: message, mapped to `[severity][issue-class]`.
 
 ## Findings
 
@@ -170,7 +197,7 @@ Use this structure for every batch:
    - **Source text**: short exact quote from the prepared source.
    - **Wiki location**: `wiki/papers/{slug}.md` field/section/paragraph/table row, or `missing`.
    - **Wiki text / missing coverage**: exact wiki text, or the source-backed point absent from the wiki.
-   - **Mismatch type**: contradiction | unsupported addition | omitted source fact | overgeneralization | wrong number/unit | excerpt mismatch | classification mismatch | metadata mismatch.
+   - **Mismatch type**: contradiction | fabricated or unsupported addition | omitted source fact | overgeneralization | wrong number/unit | excerpt mismatch | classification mismatch | metadata mismatch | grounding-gate failure.
    - **Why this is a problem**: explain the non-correspondence between the quoted source and the wiki.
    - **Required correction**: precise replacement, deletion, or addition.
 
@@ -189,7 +216,7 @@ If no issues are found for a page, include:
 - No source-grounding issues found after source-to-wiki alignment in the audited scope.
 ```
 
-### Step 5: Apply fixes only when requested
+### Step 6: Apply fixes only when requested
 
 Without `--fix`, stop after the report.
 
@@ -202,9 +229,9 @@ With `--fix`:
 5. If editing creates or removes wikilinks, maintain required bidirectional links.
 6. If `--dry-run` is present, show the proposed patch summary but do not write.
 
-After edits, re-read changed files and confirm the correction is present.
+After edits, re-read changed files and confirm the correction is present. Then rerun the same scoped `grounding_lint.py` command from Step 2. If it still reports `level: red`, keep the issue in the final report and do not claim the page is source-grounded.
 
-### Step 6: Log completion
+### Step 7: Log completion
 
 Append a concise log line after a completed batch:
 
@@ -220,6 +247,8 @@ Skip logging only if the user asks for a no-write audit.
 - **Mismatch-first output**: list concrete source-to-wiki non-correspondences. Do not substitute a paper/source summary for the mismatch list.
 - **Exact excerpts required**: every error or omission finding must include one or more short exact source excerpts. For omissions, quote the source passage and name where the wiki should cover it.
 - **Unsupported requires search evidence**: when marking a wiki statement as unsupported, quote the nearest relevant source passage or state `no corresponding source passage found` after targeted searches for the claim's key terms, numbers, entities, and synonyms.
+- **Hallucination gate required**: every selected `papers/`, `concepts/`, or `claims/` page must pass through the scoped `tools/grounding_lint.py` command before final reporting. Red grounding-gate issues are reportable findings, not advisory notes.
+- **High-risk statement sweep**: numbers, units, signs, sample sizes, dataset names, benchmark comparisons, causality, mechanisms, novelty, "first", "best", "SOTA", necessary/sufficient wording, and broad generalizations require direct source support or an `UNSUPPORTED` finding.
 - **No summary-only findings**: do not report a finding from a source-level summary alone. Source summaries may guide navigation but cannot replace exact source evidence.
 - **No memory-only judgments**: if the source does not contain enough evidence, report uncertainty instead of relying on model knowledge.
 - **Prepared markdown is canonical**: for paper audits, use `wiki/sources/papers/*.md`; raw PDFs are fallback only when the user explicitly asks.
