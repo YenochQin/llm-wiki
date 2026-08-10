@@ -42,7 +42,7 @@ Phase B re-extracts structured card parameters from the refreshed source, render
 ## Phase deltas
 
 ### Phase A delta — refresh source + match existing page
-- If input is a PDF, prepare with `--overwrite` (carry `--citation-key`/`--authors`/`--year`; `--title` only when confidently recovered). If input is a prepared `*.md`, use it directly. For DOI/title-only Zotero refresh, follow invariants §2.
+- If input is a PDF, prepare with `--overwrite` (carry `--citation-key`/`--authors`/`--year`; `--title` only when confidently recovered). If input is a prepared `*.md`, use it directly. For DOI/title-only Zotero refresh, use `tools/prepare_zotero_source.py --item-key <key> --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --overwrite`; do not hand-compose a direct `prepare_paper_source.py` command.
 - Resolve the **existing** paper page (slug per invariants §3). Look it up:
   ```shell
   uv run python -X utf8 tools/research_wiki.py find '@configured' papers --slug "<slug>"

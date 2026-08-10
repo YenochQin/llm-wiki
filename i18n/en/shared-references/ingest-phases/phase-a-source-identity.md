@@ -11,12 +11,20 @@ Turn the chosen input into one usable prepared MinerU markdown, and settle the p
 1. **Resolve the source by mode** (first match wins):
    - **INIT MODE** (source path from `.checkpoints/init-sources.json`, or prompt says "INIT MODE"): consume the handed-off `canonical_ingest_path` verbatim. Do not rescan `@raw-root`, do not re-prepare. See `.claude/skills/ingest/references/init-mode.md`.
    - **Prepared markdown** (`@configured-sources-papers/*.md`): use it directly.
-   - **Zotero lookup** (`--title`/`--doi`): follow invariants §2 to select an unambiguous candidate, then call `tools/fetch_zotero_metadata.py --item-key <candidate.item_key>`. Continue only when the JSON result has `status: ok`; on a timeout, connection refusal, or any other non-`ok` status, stop immediately and ask the user to open Zotero Desktop, enable local API access, and rerun `/ingest` from the beginning. Do not use SQLite/Crossref fallback and do not start PDF preprocessing. After metadata succeeds, preprocess the selected PDF with `tools/prepare_paper_source.py`; see `.claude/skills/ingest/references/pdf-preprocessing.md`.
+   - **Zotero lookup** (`--title`/`--doi`): follow invariants §2 to select an unambiguous candidate, then run the single orchestration command below. Do not hand-compose a `prepare_paper_source.py` command and never pass `--item-key` or `--zotero-root` to it. The orchestration command writes a checkpoint metadata bundle and manifest, then prepares the selected PDF. Continue only when its JSON result has `status: ok` or `status: unusable`; a metadata/API error is a hard stop. Do not use SQLite/Crossref fallback for failed Zotero metadata.
    - **Raw local PDF**: not handled here — it must arrive pre-prepared from `/ingest-local-pdf`.
 2. **Stop if the prepared source is unusable** (`usable: false`): surface the `warnings` verbatim and stop. Never substitute raw PDF text or MinerU cache intermediates. See `.claude/skills/ingest/references/error-handling.md`.
 3. **Derive the paper slug** per invariants §3 and run **stop-if-exists**: if `@configured/papers/{slug}.md` exists with matching title/DOI, report and exit; if it collides with a *different* paper, stop per error-handling.
 4. **Enrich bibliographic metadata** when a DOI or confident title is available: `tools/fetch_literature.py paper <doi-or-title>` for `venue`, `year`, `external_ids`, and citation-derived `importance` (1–5; default 3 and mark provisional if citation counts are unavailable). Zotero wins for user-curated identity fields; MinerU is the source of record for content.
 5. **Classify the source** (fields defined in `docs/runtime-page-templates.en.md` §papers): `paper_type`, `research_modes` (∈ theory/computation/experiment), and `theory_tags` / `computation_tags` / `experiment_tags` / `research_object_tags`. Write `unclear` / `[]` rather than inventing.
+
+For Zotero lookup mode, use this command after the candidate has been selected. The tool owns metadata-to-preprocessor wiring and writes `.checkpoints/ingest/<item-key>/metadata.json` and `manifest.json`:
+
+```shell
+uv run python -X utf8 tools/prepare_zotero_source.py --item-key <candidate.item_key> --output-dir '@configured-sources-papers' --cache-root '@mineru-cache'
+```
+
+Read `prepared.canonical_ingest_path`, `prepared.usable`, and `metadata_path` from its JSON output. If `status` is `error`, stop; if `status` is `unusable`, surface the warnings and stop. Do not invoke `prepare_paper_source.py` separately in this mode.
 
 ## Gate A — output this block before Phase B; if any line is ✗, stop and fix
 

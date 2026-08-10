@@ -95,7 +95,7 @@ See `.claude/skills/ingest/references/error-handling.md`. Highlights: Zotero Loc
 ### Tools
 - `tools/research_wiki.py` — `stats`, `paper-slug`, `slug`, `find-similar-concept`, `find-similar-claim`, `add-edge`, `add-citation`, `log`, `rebuild-index`, `rebuild-context-brief`, `rebuild-open-questions` (invocation contracts in invariants §3/§9)
 - `tools/find_zotero_pdf.py`, `tools/fetch_zotero_metadata.py --item-key <key>` — Zotero lookup + internal enrichment (invariants §2)
-- `tools/prepare_paper_source.py …` — MinerU prepare (pdf-preprocessing.md)
+- `tools/prepare_zotero_source.py --item-key …` — Zotero lookup-mode orchestration: resolves the PDF, persists metadata/manifest checkpoints, and invokes MinerU preparation; direct `prepare_paper_source.py` is for non-Zotero prepared-input flows (pdf-preprocessing.md)
 - `tools/fetch_literature.py paper|citations|references <doi-or-title>` — when a DOI/confident title is available
 - `tools/evidence_pack.py --input <cards.json>` — mandatory Phase B renderer for paper `## Evidence Pack`; agents provide structured card parameters and paste helper output, never hand-write card Markdown
 - `tools/grounding_lint.py --wiki-dir '@configured' --only "<touched-file>" --json` — mandatory scoped gate (Phases C/D/E)

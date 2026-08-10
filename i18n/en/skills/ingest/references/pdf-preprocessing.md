@@ -32,6 +32,14 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
 
 ## Invocation
 
+For Zotero lookup mode, prefer the deep orchestration seam, which resolves the item key, metadata, PDF path, and metadata handoff without requiring the agent to compose arguments:
+
+```shell
+uv run python -X utf8 tools/prepare_zotero_source.py --item-key <candidate.item_key> --output-dir '@configured-sources-papers' --cache-root '@mineru-cache'
+```
+
+Use the direct command below only for non-Zotero callers or inside another tool implementation. `--source` always means a PDF path, never a metadata JSON file.
+
 Once you have the title (possibly empty), run:
 
 ```shell
