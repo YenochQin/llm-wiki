@@ -98,6 +98,7 @@ class DiscoverRecommendationQualityTests(unittest.TestCase):
                     rationale="from 1 anchor(s); 2024",
                     zotero="collected",
                 )
+                | {"_providers": ["openalex"]}
             ],
         }
 
@@ -107,7 +108,89 @@ class DiscoverRecommendationQualityTests(unittest.TestCase):
         self.assertIn("Authors: Ada Lovelace, Grace Hopper, Alan Turing", markdown)
         self.assertIn("DOI: [10.1234/example](https://doi.org/10.1234/example)", markdown)
         self.assertIn("Zotero: collected", markdown)
+        self.assertIn("Sources: OpenAlex", markdown)
         self.assertNotIn("`10.1234/example`", markdown)
+
+    def test_topic_relevance_gate_drops_broad_high_citation_hits(self) -> None:
+        queries = ["neutral transition metal atomic structure calculations"]
+        candidates = [
+            candidate(
+                "Atomic structure calculations for neutral transition-metal atoms",
+                authors=["Relevant Author"],
+                year=2024,
+                citation_count=2,
+            )
+            | {"abstract": "Energy levels and transition probabilities are calculated."},
+            candidate(
+                "Transition-metal catalysts for electrochemical reduction",
+                authors=["Broad Author"],
+                year=2025,
+                citation_count=5000,
+            )
+            | {"abstract": "Catalytic materials for energy conversion."},
+        ]
+
+        kept = discover._annotate_and_filter_topic_relevance(candidates, queries)
+
+        self.assertEqual([c["title"] for c in kept], [candidates[0]["title"]])
+
+    def test_topic_score_prioritizes_relevance_over_citations(self) -> None:
+        relevant = candidate(
+            "Relevant recent paper",
+            year=2024,
+            citation_count=5,
+        ) | {"_topic_relevance": 0.8, "influential_citation_count": 0}
+        broad = candidate(
+            "Broad highly cited paper",
+            year=2024,
+            citation_count=10000,
+        ) | {"_topic_relevance": 0.2, "influential_citation_count": 0}
+
+        self.assertGreater(
+            discover._score(relevant, anchor_mode=False, topic_mode=True),
+            discover._score(broad, anchor_mode=False, topic_mode=True),
+        )
+
+    def test_required_term_groups_enforce_all_topic_constraints(self) -> None:
+        groups = [
+            "neutral atom|neutral niobium",
+            "transition probability|transition probabilities|oscillator strength|oscillator strengths",
+            "transition metal|niobium",
+        ]
+        relevant = candidate(
+            "Transition probabilities of neutral niobium",
+            authors=["Relevant Author"],
+        ) | {"abstract": "Oscillator strengths for this transition metal are reported."}
+        catalyst = candidate(
+            "Neutral electrosynthesis with single metal atoms",
+            authors=["Catalyst Author"],
+        ) | {"abstract": "A transition metal catalyst is reported."}
+
+        kept = discover._filter_required_term_groups([relevant, catalyst], groups)
+
+        self.assertEqual(kept, [relevant])
+
+    def test_title_term_groups_reject_abstract_only_matches(self) -> None:
+        groups = [
+            "neutral atom|nb i",
+            "transition probability|transition probabilities|atomic structure",
+        ]
+        direct = candidate(
+            "Transition probabilities of Nb I",
+            authors=["Direct Author"],
+        )
+        abstract_only = candidate(
+            "Solar abundance analysis",
+            authors=["Context Author"],
+        ) | {"abstract": "Transition probabilities of Nb I are used."}
+
+        kept = discover._filter_required_term_groups(
+            [direct, abstract_only],
+            groups,
+            title_only=True,
+        )
+
+        self.assertEqual(kept, [direct])
 
     def test_metadata_enrichment_fills_missing_title_and_authors_from_doi(self) -> None:
         candidates = [

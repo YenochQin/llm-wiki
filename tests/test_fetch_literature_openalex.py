@@ -39,13 +39,63 @@ class OpenAlexSearchTests(unittest.TestCase):
         }
 
         with (
-            mock.patch.object(fetch_literature, "_crossref_search", return_value=[crossref_result]),
+            mock.patch.object(fetch_literature, "_crossref_search", return_value=[crossref_result]) as crossref,
             mock.patch.object(fetch_literature, "_openalex_search", return_value=[openalex_result]),
         ):
             results = fetch_literature.search("neutral atoms", limit=1)
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["_provider"], "openalex")
+        crossref.assert_not_called()
+
+    def test_search_uses_crossref_to_fill_short_openalex_results(self) -> None:
+        openalex_result = {
+            "paperId": "https://openalex.org/W1",
+            "title": "OpenAlex Result",
+            "externalIds": {"OpenAlex": "https://openalex.org/W1"},
+            "_provider": "openalex",
+        }
+        crossref_result = {
+            "paperId": "10.1234/crossref",
+            "title": "Crossref Result",
+            "externalIds": {"DOI": "10.1234/crossref"},
+            "_provider": "crossref",
+        }
+        with (
+            mock.patch.object(fetch_literature, "_openalex_search", return_value=[openalex_result]),
+            mock.patch.object(fetch_literature, "_crossref_search", return_value=[crossref_result]) as crossref,
+        ):
+            results = fetch_literature.search("neutral atoms", limit=2, since_year=2018)
+
+        self.assertEqual([item["_provider"] for item in results], ["openalex", "crossref"])
+        crossref.assert_called_once_with("neutral atoms", limit=1, since_year=2018)
+
+    def test_search_can_add_small_crossref_supplement_after_full_openalex_pool(self) -> None:
+        openalex_result = {
+            "paperId": "https://openalex.org/W1",
+            "title": "OpenAlex Result",
+            "externalIds": {"OpenAlex": "https://openalex.org/W1"},
+            "_provider": "openalex",
+        }
+        crossref_result = {
+            "paperId": "10.1234/crossref",
+            "title": "Crossref Result",
+            "externalIds": {"DOI": "10.1234/crossref"},
+            "_provider": "crossref",
+        }
+        with (
+            mock.patch.object(fetch_literature, "_openalex_search", return_value=[openalex_result]),
+            mock.patch.object(fetch_literature, "_crossref_search", return_value=[crossref_result]) as crossref,
+        ):
+            results = fetch_literature.search(
+                "neutral atoms",
+                limit=1,
+                since_year=2018,
+                crossref_supplement=1,
+            )
+
+        self.assertEqual([item["_provider"] for item in results], ["openalex", "crossref"])
+        crossref.assert_called_once_with("neutral atoms", limit=1, since_year=2018)
 
     def test_openalex_search_uses_works_search_api_and_normalizes_results(self) -> None:
         payload = {
@@ -113,6 +163,19 @@ class OpenAlexSearchTests(unittest.TestCase):
         self.assertEqual(paper["venue"], "Journal of Examples")
         self.assertEqual(paper["publicationTypes"], ["article"])
         self.assertEqual(paper["_provider"], "openalex")
+
+    def test_openalex_search_applies_since_year_filter(self) -> None:
+        with mock.patch.object(fetch_literature.requests, "get") as get:
+            get.return_value = FakeResponse({"results": []})
+
+            fetch_literature._openalex_search(
+                "neutral transition atoms",
+                limit=12,
+                since_year=2018,
+            )
+
+        params = get.call_args.kwargs["params"]
+        self.assertEqual(params["filter"], "from_publication_date:2018-01-01")
 
 
 if __name__ == "__main__":

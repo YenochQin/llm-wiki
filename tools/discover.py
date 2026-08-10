@@ -54,7 +54,13 @@ from _paths import load_paths, resolve_runtime_path
 
 # ---------- candidate normalization ----------------------------------------
 
-def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") -> dict[str, Any]:
+def _normalize_candidate(
+    raw: dict[str, Any],
+    *,
+    source: str,
+    anchor: str = "",
+    query: str = "",
+) -> dict[str, Any]:
     """Flatten a literature provider record into the discover shortlist schema."""
     if not raw:
         return {}
@@ -78,10 +84,12 @@ def _normalize_candidate(raw: dict[str, Any], *, source: str, anchor: str = "") 
         "fields_of_study": raw.get("fieldsOfStudy") or [],
         "publication_types": raw.get("publicationTypes") or [],
         "url": raw.get("url") or "",
+        "_providers": [raw["_provider"]] if raw.get("_provider") else [],
         # True when a provider exposes a per-edge influential-citation flag.
         "is_influential_edge": bool(raw.get("_is_influential_edge")),
         "_sources": [source],
         "_anchors": [anchor] if anchor else [],
+        "_query_variants": [query] if query else [],
     }
 
 
@@ -121,6 +129,14 @@ def _format_doi_markdown(doi: str) -> str:
     return f"[{doi}](https://doi.org/{url_doi})"
 
 
+def _format_provider_name(provider: str) -> str:
+    return {
+        "openalex": "OpenAlex",
+        "crossref": "Crossref",
+        "crossref_reference": "Crossref reference",
+    }.get(str(provider or "").lower(), str(provider or "unknown").replace("_", " "))
+
+
 def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> None:
     """Union sources/anchors; keep richer field values from either side."""
     for src in incoming.get("_sources", []):
@@ -129,6 +145,12 @@ def _merge_candidate(existing: dict[str, Any], incoming: dict[str, Any]) -> None
     for anchor in incoming.get("_anchors", []):
         if anchor and anchor not in existing["_anchors"]:
             existing["_anchors"].append(anchor)
+    for provider in incoming.get("_providers", []):
+        if provider and provider not in existing.setdefault("_providers", []):
+            existing["_providers"].append(provider)
+    for query in incoming.get("_query_variants", []):
+        if query and query not in existing.setdefault("_query_variants", []):
+            existing["_query_variants"].append(query)
     for key in ("abstract", "tldr", "venue", "url"):
         if not existing.get(key) and incoming.get(key):
             existing[key] = incoming[key]
@@ -323,6 +345,138 @@ def _filter_low_cited_old_candidates(candidates: list[dict[str, Any]]) -> list[d
     return kept
 
 
+def _filter_since_year(
+    candidates: list[dict[str, Any]],
+    since_year: int | None,
+) -> list[dict[str, Any]]:
+    """Keep dated papers in the requested recent-publication window."""
+    if not since_year:
+        return candidates
+    kept: list[dict[str, Any]] = []
+    for c in candidates:
+        try:
+            year = int(c.get("year"))
+        except (TypeError, ValueError):
+            continue
+        if year >= int(since_year):
+            kept.append(c)
+    return kept
+
+
+_TOPIC_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+    "in", "into", "is", "of", "on", "or", "the", "to", "using", "via",
+    "with", "within", "toward", "towards", "study", "paper", "research",
+}
+
+
+def _topic_stem(token: str) -> str:
+    """Apply a deliberately small stemmer for search-query matching."""
+    token = token.lower()
+    for suffix in ("ization", "isation", "ational", "fulness", "iveness", "ments", "ment", "ations", "ation", "ities", "ity", "ically", "ical", "ingly", "ing", "ers", "ies", "es", "s"):
+        if token.endswith(suffix) and len(token) - len(suffix) >= 4:
+            stem = token[:-len(suffix)]
+            return stem + "y" if suffix == "ies" else stem
+    return token
+
+
+def _topic_tokens(text: str) -> set[str]:
+    tokens = re.findall(r"[a-z][a-z0-9-]{1,}", (text or "").lower())
+    return {_topic_stem(token) for token in tokens if token not in _TOPIC_STOPWORDS}
+
+
+def _topic_relevance(c: dict[str, Any], queries: list[str]) -> tuple[float, int]:
+    """Return lexical topic coverage, emphasizing exact title terminology."""
+    title_tokens = _topic_tokens(str(c.get("title") or ""))
+    body_tokens = title_tokens | _topic_tokens(
+        " ".join(
+            [
+                str(c.get("abstract") or ""),
+                str(c.get("tldr") or ""),
+                str(c.get("venue") or ""),
+            ]
+        )
+    )
+    best_score = 0.0
+    best_matches = 0
+    for query in queries:
+        query_tokens = _topic_tokens(query)
+        if not query_tokens:
+            continue
+        title_matches = query_tokens & title_tokens
+        body_matches = query_tokens & body_tokens
+        title_coverage = len(title_matches) / len(query_tokens)
+        body_coverage = len(body_matches) / len(query_tokens)
+        score = min(1.0, 0.72 * title_coverage + 0.28 * body_coverage)
+        match_count = len(body_matches)
+        if score > best_score or (score == best_score and match_count > best_matches):
+            best_score = score
+            best_matches = match_count
+    return best_score, best_matches
+
+
+def _annotate_and_filter_topic_relevance(
+    candidates: list[dict[str, Any]],
+    queries: list[str],
+) -> list[dict[str, Any]]:
+    """Drop broad high-citation hits that do not materially match the topic."""
+    kept: list[dict[str, Any]] = []
+    for c in candidates:
+        relevance, matches = _topic_relevance(c, queries)
+        c["_topic_relevance"] = round(relevance, 4)
+        c["_topic_match_count"] = matches
+        shortest_query = min((len(_topic_tokens(q)) for q in queries if _topic_tokens(q)), default=0)
+        required_matches = 1 if shortest_query <= 2 else 2
+        if matches >= required_matches and relevance >= 0.16:
+            kept.append(c)
+    return kept
+
+
+def _matches_required_term_groups(
+    c: dict[str, Any],
+    groups: list[str],
+    *,
+    title_only: bool = False,
+) -> bool:
+    """Require at least one literal alternative from every scoped topic group."""
+    if not groups:
+        return True
+    texts = [str(c.get("title") or "")]
+    if not title_only:
+        texts.extend(
+            [
+                str(c.get("abstract") or ""),
+                str(c.get("tldr") or ""),
+                str(c.get("venue") or ""),
+            ]
+        )
+    haystack = re.sub(
+        r"\s+",
+        " ",
+        " ".join(texts).lower(),
+    )
+    for group in groups:
+        alternatives = [part.strip().lower() for part in group.split("|") if part.strip()]
+        if alternatives and not any(
+            re.search(rf"(?<!\w){re.escape(alternative)}(?!\w)", haystack)
+            for alternative in alternatives
+        ):
+            return False
+    return True
+
+
+def _filter_required_term_groups(
+    candidates: list[dict[str, Any]],
+    groups: list[str],
+    *,
+    title_only: bool = False,
+) -> list[dict[str, Any]]:
+    return [
+        c for c in candidates
+        if _matches_required_term_groups(c, groups, title_only=title_only)
+    ]
+
+
 # ---------- ranking --------------------------------------------------------
 
 def _influence_score(infl: int, total: int) -> float:
@@ -404,7 +558,7 @@ def _filter_heavily_related(candidates: list[dict[str, Any]], *, anchor_mode: bo
     return [c for c in candidates if _is_heavily_related(c)]
 
 
-def _score(c: dict[str, Any], *, anchor_mode: bool) -> float:
+def _score(c: dict[str, Any], *, anchor_mode: bool, topic_mode: bool = False) -> float:
     influence = _influence_score(c.get("influential_citation_count", 0), c.get("citation_count", 0))
     h = _hindex_score(c.get("max_h_index", 0))
     fresh = _freshness_score(c.get("year"))
@@ -426,13 +580,23 @@ def _score(c: dict[str, Any], *, anchor_mode: bool) -> float:
             + 0.15 * fresh
             + 0.10 * h
         )
-    # Topic / wiki mode: no anchor signal — lean harder on influence and freshness.
-    # `is_influential_edge` is always False here (no anchor edge exists), so skip it.
+    if topic_mode:
+        # Topic discovery should find current papers that actually match the user's
+        # terms. Citation count is only a tie-breaker; it must not pull old, broad
+        # classics above direct topical matches.
+        relevance = float(c.get("_topic_relevance") or 0.0)
+        return 0.58 * relevance + 0.30 * fresh + 0.10 * influence + 0.02 * diversity
+    # Wiki mode without a direct topic: lean harder on influence and freshness.
     return 0.45 * influence + 0.25 * fresh + 0.15 * h + 0.15 * diversity
 
 
 def _rationale(c: dict[str, Any], *, anchor_mode: bool) -> str:
     bits: list[str] = []
+    if c.get("_topic_relevance") is not None:
+        bits.append(f"topic match {round(100 * float(c['_topic_relevance']))}%")
+    if c.get("_providers"):
+        providers = ", ".join(_format_provider_name(str(p)) for p in c["_providers"])
+        bits.append(f"via {providers}")
     if anchor_mode and c.get("is_influential_edge"):
         # Lead with this — it is the sharpest signal we have.
         bits.append("influential edge with anchor")
@@ -502,17 +666,28 @@ def _gather_from_anchors(
     return candidates
 
 
-def _gather_from_topic(topic: str, limit: int) -> list[dict[str, Any]]:
+def _gather_from_topic(
+    queries: list[str],
+    limit: int,
+    *,
+    since_year: int | None = None,
+) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
-    try:
-        literature_results = fetch_literature.search(topic, limit=limit)
-    except Exception as exc:
-        print(f"warn: literature search failed for {topic!r}: {exc}", file=sys.stderr)
-        literature_results = []
-    for raw in literature_results:
-        norm = _normalize_candidate(raw, source="literature_search")
-        if norm:
-            candidates.append(norm)
+    for query in queries:
+        try:
+            literature_results = fetch_literature.search(
+                query,
+                limit=limit,
+                since_year=since_year,
+                crossref_supplement=max(8, min(16, limit // 8)),
+            )
+        except Exception as exc:
+            print(f"warn: literature search failed for {query!r}: {exc}", file=sys.stderr)
+            literature_results = []
+        for raw in literature_results:
+            norm = _normalize_candidate(raw, source="literature_search", query=query)
+            if norm:
+                candidates.append(norm)
 
     return candidates
 
@@ -541,8 +716,12 @@ def build_shortlist(
     positive_ids: list[str] | None = None,
     negative_ids: list[str] | None = None,
     topic: str = "",
+    topic_queries: list[str] | None = None,
+    required_term_groups: list[str] | None = None,
+    required_title_term_groups: list[str] | None = None,
+    since_year: int | None = None,
     wiki_root: Path | None = None,
-    limit: int = 10,
+    limit: int = 12,
     per_anchor_limit: int = 50,
     citation_expand: bool = True,
     citation_limit: int = 30,
@@ -571,8 +750,20 @@ def build_shortlist(
     elif mode == "topic":
         if not topic:
             raise ValueError("from-topic requires a query string")
-        candidates = _gather_from_topic(topic, max(20, limit * 4))
-        seed_summary = {"mode": "topic", "topic": topic}
+        queries = list(dict.fromkeys([topic, *(topic_queries or [])]))
+        candidates = _gather_from_topic(
+            queries,
+            max(60, limit * 8),
+            since_year=since_year,
+        )
+        seed_summary = {
+            "mode": "topic",
+            "topic": topic,
+            "query_variants": queries,
+            "since_year": since_year,
+            "required_term_groups": required_term_groups or [],
+            "required_title_term_groups": required_title_term_groups or [],
+        }
     elif mode == "wiki":
         if not wiki_root:
             raise ValueError("from-wiki requires --wiki-root")
@@ -599,9 +790,21 @@ def build_shortlist(
     candidates = _filter_against_wiki(candidates, known)
     _enrich_candidate_metadata(candidates)
     candidates = _filter_low_cited_old_candidates(candidates)
+    if mode == "topic":
+        candidates = _filter_since_year(candidates, since_year)
+        candidates = _annotate_and_filter_topic_relevance(candidates, queries)
+        candidates = _filter_required_term_groups(candidates, required_term_groups or [])
+        candidates = _filter_required_term_groups(
+            candidates,
+            required_title_term_groups or [],
+            title_only=True,
+        )
 
     for c in candidates:
-        c["_score"] = round(_score(c, anchor_mode=anchor_mode), 4)
+        c["_score"] = round(
+            _score(c, anchor_mode=anchor_mode, topic_mode=(mode == "topic")),
+            4,
+        )
         c["_rationale"] = _rationale(c, anchor_mode=anchor_mode)
 
     candidates = _filter_heavily_related(candidates, anchor_mode=anchor_mode)
@@ -631,6 +834,17 @@ def _format_markdown(payload: dict[str, Any]) -> str:
             seed_desc += f" | negatives: {', '.join(seed['negative_ids'])}"
     elif mode == "topic":
         seed_desc = f'topic: "{seed.get("topic", "")}"'
+        variants = seed.get("query_variants") or []
+        if len(variants) > 1:
+            seed_desc += f" | {len(variants)} query variants"
+        if seed.get("since_year"):
+            seed_desc += f" | since {seed['since_year']}"
+        groups = seed.get("required_term_groups") or []
+        if groups:
+            seed_desc += f" | {len(groups)} required concept groups"
+        title_groups = seed.get("required_title_term_groups") or []
+        if title_groups:
+            seed_desc += f" | {len(title_groups)} title groups"
     elif mode == "wiki":
         seed_desc = f"derived from wiki anchors: {', '.join(seed.get('derived_anchors', []))}"
     else:
@@ -651,10 +865,15 @@ def _format_markdown(payload: dict[str, Any]) -> str:
         authors = ", ".join(c.get("authors") or []) or "unknown"
         doi = _format_doi_markdown(_candidate_doi(c))
         zotero_status = c.get("_zotero_status") or "unknown"
+        providers = ", ".join(
+            _format_provider_name(str(provider))
+            for provider in (c.get("_providers") or [])
+        ) or "unknown"
         lines.append(f"{i}. **{title}**  ")
         lines.append(f"   Authors: {authors}  ")
         lines.append(f"   DOI: {doi}  ")
         lines.append(f"   Zotero: {zotero_status}  ")
+        lines.append(f"   Sources: {providers}  ")
         lines.append(f"   Score: {score} — {rationale}")
         if c.get("tldr"):
             lines.append(f"   > {c['tldr']}")
@@ -688,7 +907,7 @@ def main() -> None:
 
     common_args: list[tuple[str, dict[str, Any]]] = [
         ("--wiki-root", {"default": None, "help": "Wiki root for dedup against existing papers. Accepts @configured"}),
-        ("--limit", {"type": int, "default": 10, "help": "Max shortlist size (default 10)"}),
+        ("--limit", {"type": int, "default": 12, "help": "Max shortlist size (default 12)"}),
         ("--per-anchor-limit", {"type": int, "default": 50, "help": "Recs requested per anchor (default 50)"}),
         ("--output-checkpoint", {"default": None, "help": "Also write JSON to this file or directory path"}),
         ("--markdown", {"action": "store_true", "help": "Print human-readable markdown instead of JSON"}),
@@ -710,6 +929,33 @@ def main() -> None:
 
     p_topic = sub.add_parser("from-topic", help="Recommend from a topic / query string")
     p_topic.add_argument("topic", help="Topic or query string")
+    p_topic.add_argument(
+        "--query-variant",
+        dest="topic_queries",
+        action="append",
+        default=[],
+        help="Equivalent scholarly query that preserves the topic scope (repeatable)",
+    )
+    p_topic.add_argument(
+        "--since-year",
+        type=int,
+        default=_dt.date.today().year - 10,
+        help="Keep topic candidates published in this year or later (default: current year minus 10)",
+    )
+    p_topic.add_argument(
+        "--required-term-group",
+        dest="required_term_groups",
+        action="append",
+        default=[],
+        help="Require one literal alternative from this pipe-separated topic concept group (repeatable)",
+    )
+    p_topic.add_argument(
+        "--required-title-term-group",
+        dest="required_title_term_groups",
+        action="append",
+        default=[],
+        help="Require one literal alternative from this pipe-separated group in the title (repeatable)",
+    )
     for flag, kwargs in common_args:
         p_topic.add_argument(flag, **kwargs)
 
@@ -740,6 +986,10 @@ def main() -> None:
         payload = build_shortlist(
             mode="topic",
             topic=args.topic,
+            topic_queries=args.topic_queries,
+            required_term_groups=args.required_term_groups,
+            required_title_term_groups=args.required_title_term_groups,
+            since_year=args.since_year,
             wiki_root=args.wiki_root,
             limit=args.limit,
             per_anchor_limit=args.per_anchor_limit,

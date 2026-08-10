@@ -189,25 +189,39 @@ def _normalize_openalex_item(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _crossref_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
-    data = _get_json(CROSSREF_API_URL, {
+def _crossref_search(
+    query: str,
+    limit: int = 10,
+    since_year: int | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {
         "query.bibliographic": query,
         "rows": max(1, limit),
         "select": "DOI,title,abstract,author,published-print,published-online,issued,is-referenced-by-count,container-title,type,URL,reference",
-    })
+    }
+    if since_year:
+        params["filter"] = f"from-pub-date:{int(since_year)}-01-01"
+    data = _get_json(CROSSREF_API_URL, params)
     items = (data.get("message") or {}).get("items") or []
     return [_normalize_crossref_item(item) for item in items]
 
 
-def _openalex_search(query: str, limit: int = 10) -> list[dict[str, Any]]:
-    data = _get_json(OPENALEX_API_URL, {
+def _openalex_search(
+    query: str,
+    limit: int = 10,
+    since_year: int | None = None,
+) -> list[dict[str, Any]]:
+    params: dict[str, Any] = {
         "search": query,
         "per-page": max(1, limit),
         "select": (
             "id,doi,display_name,abstract_inverted_index,authorships,"
             "publication_year,cited_by_count,primary_location,type"
         ),
-    })
+    }
+    if since_year:
+        params["filter"] = f"from_publication_date:{int(since_year)}-01-01"
+    data = _get_json(OPENALEX_API_URL, params)
     return [_normalize_openalex_item(item) for item in data.get("results") or []]
 
 
@@ -240,20 +254,37 @@ def _dedupe(items: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
     return out
 
 
-def search(query: str, limit: int = 10) -> list[dict[str, Any]]:
-    """Search no-key literature providers."""
-    items: list[dict[str, Any]] = []
+def search(
+    query: str,
+    limit: int = 10,
+    since_year: int | None = None,
+    crossref_supplement: int = 0,
+) -> list[dict[str, Any]]:
+    """Search OpenAlex first, with Crossref as a no-key fallback."""
+    openalex_items: list[dict[str, Any]] = []
     try:
-        items.extend(_openalex_search(query, limit=limit))
+        openalex_items = _openalex_search(query, limit=limit, since_year=since_year)
     except Exception as exc:
         print(f"warn: OpenAlex search failed for {query!r}: {exc}", file=sys.stderr)
+    openalex_results = _dedupe(openalex_items, limit)
+    if len(openalex_results) >= limit and crossref_supplement <= 0:
+        return openalex_results
+
+    items = list(openalex_results)
+    crossref_limit = max(limit - len(openalex_results), int(crossref_supplement or 0))
     try:
-        items.extend(_crossref_search(query, limit=limit))
+        items.extend(
+            _crossref_search(
+                query,
+                limit=max(1, crossref_limit),
+                since_year=since_year,
+            )
+        )
     except Exception as exc:
         print(f"warn: Crossref search failed for {query!r}: {exc}", file=sys.stderr)
     if not items:
         raise RuntimeError(f"all literature providers failed for query: {query}")
-    return _dedupe(items, limit)
+    return _dedupe(items, limit + max(0, int(crossref_supplement or 0)))
 
 
 def paper(identifier: str) -> dict[str, Any]:
