@@ -32,6 +32,39 @@ Foundations are created only by `/prefill`. `/ingest` never creates foundations,
 Papers relate to concepts by using, introducing, extending, or critiquing
 them. Every paper-to-concept semantic edge must include `--confidence high|medium|low`.
 
+## Graph CLI invocation contract
+
+Pass **typed graph IDs**, never bare slugs. The directory prefix is part of
+each endpoint ID; it is not inferred from the edge type. Use these exact
+shapes (substitute the angle-bracket values):
+
+```shell
+# paper -> concept
+uv run python -X utf8 tools/research_wiki.py add-edge '@configured' \
+  --from 'papers/<paper-slug>' --to 'concepts/<concept-slug>' \
+  --type 'uses_concept' --confidence high --evidence '<source-grounded text>'
+
+# paper -> claim
+uv run python -X utf8 tools/research_wiki.py add-edge '@configured' \
+  --from 'papers/<paper-slug>' --to 'claims/<claim-slug>' \
+  --type 'supports' --evidence '<source-grounded text>'
+
+# paper -> paper semantic relation
+uv run python -X utf8 tools/research_wiki.py add-edge '@configured' \
+  --from 'papers/<paper-slug>' --to 'papers/<other-paper-slug>' \
+  --type 'builds_on' --confidence high --evidence '<source-grounded text>'
+
+# bibliographic citation (citations.jsonl, not edges.jsonl)
+uv run python -X utf8 tools/research_wiki.py add-citation '@configured' \
+  --from 'papers/<paper-slug>' --to 'papers/<cited-paper-slug>' \
+  --source literature_api
+```
+
+`add-citation` accepts `--source` only; do **not** pass `--evidence`. The
+evidence field applies to `add-edge`. A failed `add-edge` or `add-citation`
+command must be corrected and rerun before the phase gate can pass. Do not
+replace a rejected `paper -> concept` edge with a broad `supports` edge.
+
 Edge-type selection:
 
 - **`introduces_concept`** — strict novelty only: the paper explicitly proposes, coins, defines, or names the concept as a contribution.
