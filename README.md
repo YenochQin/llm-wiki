@@ -26,12 +26,12 @@ bash setup.sh                # or: ./setup.sh --lang zh
 #    (setup.sh seeded the file from config/.env.example)
 ```
 
-On Windows, run the Nushell setup from an Administrator terminal because it
-creates Git-tracked symlinks for `skills/`, `.claude/skills`, and
-`.agents/skills`:
+On Windows, run the PowerShell setup. It creates Git-tracked symlinks for
+`skills/`, `.claude/skills`, and `.agents/skills`; enable Developer Mode or
+run PowerShell as Administrator if symlink creation is denied:
 
 ```powershell
-nu setup.nu --lang zh
+pwsh -File .\setup.ps1 -Lang zh
 ```
 
 Then pick the agent you want to drive the wiki with.
@@ -61,7 +61,7 @@ read and follow skills/ask/SKILL.md with: <question>
 
 If your Codex build exposes slash commands directly, you can use the same `/setup`, `/init`, `/ingest`, `/ingest-local-pdf`, and `/ask` forms as above. The skill files are self-contained and agent-agnostic.
 
-`setup.sh` copies `i18n/{lang}/{CLAUDE,AGENTS}.md` to the repo root and points `skills/`, `.claude/skills`, and `.agents/skills` at `i18n/{lang}/skills/`. Its prompts are still Claude-oriented, but it installs the shared Codex runtime files too. Edit the originals under `i18n/`, not the root copies.
+`setup.sh` and `setup.ps1` copy `i18n/{lang}/{CLAUDE,AGENTS}.md` to the repo root and point `skills/`, `.claude/skills`, and `.agents/skills` at `i18n/{lang}/skills/`. Their prompts are still Claude-oriented, but they install the shared Codex runtime files too. Edit the originals under `i18n/`, not the root copies.
 
 ## Architecture
 
