@@ -221,6 +221,39 @@ key_papers:
             "[2026-06-03] --fix | repaired lint issues\n",
         )
 
+    def test_prune_dangling_graph_removes_only_rows_with_missing_endpoints(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "papers").mkdir()
+            (root / "concepts").mkdir()
+            (root / "graph").mkdir()
+            (root / "papers" / "kept.md").write_text("# kept\n", encoding="utf-8")
+            (root / "concepts" / "kept.md").write_text("# kept\n", encoding="utf-8")
+            (root / "graph" / "edges.jsonl").write_text(
+                '{"from":"papers/kept","to":"concepts/kept","type":"uses_concept"}\n'
+                '{"from":"papers/missing","to":"concepts/kept","type":"uses_concept"}\n',
+                encoding="utf-8",
+            )
+            (root / "graph" / "citations.jsonl").write_text(
+                '{"from":"papers/kept","to":"papers/kept","type":"cites"}\n'
+                '{"from":"papers/kept","to":"papers/missing","type":"cites"}\n',
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                research_wiki.prune_dangling_graph(str(root))
+
+            payload = json.loads(stdout.getvalue())
+            edges = (root / "graph" / "edges.jsonl").read_text(encoding="utf-8")
+            citations = (root / "graph" / "citations.jsonl").read_text(encoding="utf-8")
+
+        self.assertEqual(payload, {"status": "ok", "edges_removed": 1, "citations_removed": 1})
+        self.assertIn('"papers/kept"', edges)
+        self.assertNotIn('"papers/missing"', edges)
+        self.assertIn('"papers/kept"', citations)
+        self.assertNotIn('"papers/missing"', citations)
+
 
 if __name__ == "__main__":
     unittest.main()

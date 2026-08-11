@@ -23,6 +23,7 @@ Commands:
     batch-edges <wiki_root>                          # reads JSON array from stdin
     dedup-edges <wiki_root>
     dedup-citations <wiki_root>
+    prune-dangling-graph <wiki_root>                 # remove rows whose endpoints no longer exist
 
     # Knowledge queries
     find <wiki_root> <entity_type> [--field value ...]
@@ -946,6 +947,51 @@ def dedup_citations(wiki_root: str) -> None:
         "\n".join(kept) + ("\n" if kept else ""), encoding="utf-8"
     )
     print(json.dumps({"status": "ok", "kept": len(kept), "removed": removed}))
+
+
+def prune_dangling_graph(wiki_root: str) -> None:
+    """Remove derived graph rows whose from/to entity page no longer exists."""
+    root = Path(wiki_root)
+
+    def endpoint_exists(node_id: object) -> bool:
+        if not isinstance(node_id, str) or "/" not in node_id:
+            return False
+        entity_dir, slug = node_id.split("/", 1)
+        return bool(entity_dir and slug) and (root / entity_dir / f"{slug}.md").exists()
+
+    def prune(path: Path) -> int:
+        if not path.exists():
+            return 0
+        kept: list[str] = []
+        removed = 0
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                row = json.loads(stripped)
+            except json.JSONDecodeError:
+                kept.append(stripped)
+                continue
+            if endpoint_exists(row.get("from")) and endpoint_exists(row.get("to")):
+                kept.append(stripped)
+            else:
+                removed += 1
+        path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
+        return removed
+
+    graph_dir = root / DERIVED_DIR
+    edges_removed = prune(graph_dir / "edges.jsonl")
+    citations_removed = prune(graph_dir / "citations.jsonl")
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "edges_removed": edges_removed,
+                "citations_removed": citations_removed,
+            }
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -3532,6 +3578,13 @@ def main():
     )
     p.add_argument("wiki_root")
 
+    # prune-dangling-graph
+    p = sub.add_parser(
+        "prune-dangling-graph",
+        help="Remove derived graph rows whose endpoints do not exist",
+    )
+    p.add_argument("wiki_root")
+
     # rebuild-index
     p = sub.add_parser("rebuild-index", help="Regenerate index.md from entity dirs")
     p.add_argument("wiki_root")
@@ -3709,6 +3762,8 @@ def main():
         )
     elif args.command == "dedup-citations":
         dedup_citations(args.wiki_root)
+    elif args.command == "prune-dangling-graph":
+        prune_dangling_graph(args.wiki_root)
     elif args.command == "rebuild-index":
         rebuild_index(args.wiki_root)
     elif args.command == "topic-backfill":
