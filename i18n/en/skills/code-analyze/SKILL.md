@@ -1,268 +1,279 @@
 ---
 name: code-analyze
-description: Use when the user wants to understand a code repository — its architecture, execution flow, risks, test coverage, onboarding path, or how it maps to the research wiki — optionally archiving the analysis into wiki/outputs.
-argument-hint: "<code-path-or-question> [--mode architecture|flow|risk|tests|onboarding|research] [--write] [--crystallize]"
+description: Analyze public source-code repositories as executable processing systems. Use when the user wants to reconstruct how code runs, computes, transforms data, and produces outputs; explain an end-to-end execution or processing flow; formalize each processing stage with LaTeX; or comprehensively investigate a user-specified implementation direction. Do not perform general security, performance, maintainability, or test-coverage auditing unless the user explicitly requests that direction.
 ---
 
 # /code-analyze
 
-> Analyze source code as a knowledge object. This skill reads a repository or subdirectory,
-> maps architecture and execution flows, identifies risks and test gaps, and connects findings
-> to the research wiki when relevant. It is for understanding and knowledge capture, not for
-> making code changes unless the user explicitly asks for a follow-up edit.
+Analyze code to recover its actual execution and processing model. Treat the repository as a
+pipeline of transformations rather than as a target for general code review. Read source code as
+the primary evidence, trace the runnable path first, then explain every substantive processing
+stage in both implementation language and LaTeX.
 
-## Trigger
-
-User manual: `/code-analyze <code-path-or-question> [...]`
-
-Use this skill when the user asks to understand, audit, explain, map, or summarize a codebase,
-especially when the result should become reusable wiki knowledge.
+Keep the target code read-only. Do not patch it unless the user separately requests an
+implementation change.
 
 ## Inputs
 
-- `code-path-or-question`: one of:
-  - a repository or subdirectory path
-  - a file path
-  - a natural-language question about code in the current workspace
-- `--mode` optional:
-  - `architecture`: module map, dependencies, boundaries, entrypoints
-  - `flow`: execution path, data flow, state transitions
-  - `risk`: bugs, security/privacy issues, operational hazards, maintainability risks
-  - `tests`: coverage surface, missing tests, test strategy
-  - `onboarding`: reader-friendly code tour and mental model
-  - `research`: map code to methods, claims, experiments, datasets, or papers in the wiki
-- `--write` optional: archive the analysis as `wiki/outputs/code-analysis-{slug}-{date}.md`
-- `--crystallize` optional: after writing an output, also propose or create wiki entities only when the finding clearly belongs in `concepts/`, `claims/`, `ideas/`, or `experiments/`
+Accept a repository path, subdirectory, file, or natural-language question about code. If the
+target is omitted, use the current repository.
 
-If `--mode` is omitted, infer the primary mode from the user request and state the choice.
-If the target path is omitted, analyze the current repository.
+- With no specific analysis direction, reconstruct the principal end-to-end run from external
+  input to final output.
+- With a specific direction, make that direction the analysis objective and investigate it
+  comprehensively. Trace enough upstream and downstream context to explain it correctly, but do
+  not broaden the report into unrelated audit categories.
+- With `--write`, archive the report as
+  `outputs/code-analysis-{slug}-{date}.md` under the configured wiki root.
+- With `--crystallize`, first write the report, then create or update research entities only when
+  the findings are durable research knowledge.
 
-## Outputs
+Do not infer omitted user-facing flags from repository state.
 
-- **Always**: a concise analysis report to the user with file references and uncertainty notes
-- **If `--write`**:
-  - `wiki/outputs/code-analysis-{slug}-{date}.md` — archived analysis report
-  - `wiki/index.md` — updated if outputs are indexed in the current wiki
-  - `wiki/log/` — append-only entry via `tools/research_wiki.py log`
-  - `wiki/graph/edges.jsonl` — only if the report cites existing wiki pages and `derived_from` edges are useful
-- **If `--crystallize`**:
-  - suggested or created `concepts/`, `claims/`, `ideas/`, or `experiments/` pages, with required reverse links
+## Default Scope
+
+Focus on:
+
+- how execution is started;
+- how inputs are parsed, represented, and routed;
+- which functions, modules, stages, or kernels perform each transformation;
+- how intermediate data, shapes, state, parameters, and units change;
+- how branching, iteration, aggregation, persistence, and external calls affect the result;
+- how outputs are constructed and returned or stored;
+- how the complete process can be expressed mathematically.
+
+Do not analyze security, privacy, performance, maintainability, style, or test coverage by
+default. Discuss one of these only when the user explicitly makes it the analysis direction, and
+then analyze that direction across the relevant execution flow rather than appending a generic
+checklist.
 
 ## Wiki Interaction
 
 ### Reads
-- `wiki/graph/context_brief.md` — only for `research` mode or when mapping code findings to existing wiki knowledge
-- `wiki/index.md` — locate relevant existing pages
-- `wiki/papers/*.md`, `wiki/concepts/*.md`, `wiki/claims/*.md`, `wiki/ideas/*.md`, `wiki/experiments/*.md` — only pages directly relevant to the code finding
+
+Read wiki material only when the user asks to connect the implementation to research knowledge:
+
+- `wiki/graph/context_brief.md`
+- `wiki/index.md`
+- directly relevant pages under `papers/`, `concepts/`, `claims/`, `ideas/`, and `experiments/`
 
 ### Writes
-- None by default
-- With `--write`: create one report under `wiki/outputs/`
-- With `--crystallize`: create or edit wiki pages only after the finding is grounded and the user requested crystallization
 
-### Graph edges created
-- `outputs/code-analysis-* -> cited wiki page`: `derived_from`
-- Claim/idea/experiment edges only when `--crystallize` creates those entities, following the global cross-reference rules
+- Write nothing by default.
+- With `--write`, create one report under `outputs/`, update the index only if it indexes outputs,
+  and append a log entry through `tools/research_wiki.py log`.
+- With `--crystallize`, create or edit only grounded `concepts/`, `claims/`, `ideas/`, or
+  `experiments/` pages and maintain required reverse links.
+- Create graph edges only through `tools/research_wiki.py`; never edit `wiki/graph/` manually.
 
 ## Workflow
 
-**Pre-condition**: run from the llm-wiki repository root when writing to the wiki. Use `uv run python -X utf8` for llm-wiki tools. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, and resolve aliases before direct file editing.
+When writing to the wiki, run from the llm-wiki repository root and verify the configured wiki:
 
 ```bash
 uv run python -X utf8 tools/research_wiki.py stats @configured --json >/dev/null
 ```
 
-### Step 1: Establish Scope
+### Step 1: Fix the Analysis Objective
 
-1. Resolve the target:
-   - explicit path -> analyze that path
-   - file path -> analyze the file plus its direct callers/callees when discoverable
-   - question only -> infer target from current repository and the question
-2. Record repository snapshot when available:
-   - `git rev-parse --show-toplevel`
-   - `git branch --show-current`
-   - `git rev-parse --short HEAD`
-   - `git status --short`
-3. Treat target code as read-only unless the user explicitly requests implementation changes.
-4. Do not read secrets or private credentials. Skip `.env`, key files, tokens, local databases, and credential stores unless the user explicitly asks and the content is necessary.
+1. Resolve the target path and the user's requested direction.
+2. State one concrete objective, such as “reconstruct the inference pipeline from input records to
+   predictions” or “explain how the solver updates the state at each iteration.”
+3. If the user supplied no direction, select the principal documented run path. If several runs
+   are equally central, list them and analyze the one best supported by entrypoints and docs;
+   explicitly note the scope choice.
+4. Record the repository root, branch, short commit, and dirty status when Git metadata is
+   available.
+5. Skip `.env`, keys, tokens, credential stores, and private local databases.
 
-### Step 2: Inventory the Codebase
+### Step 2: Locate the Runnable Path
 
-Prefer fast local inspection:
+Use `rg --files` first. Exclude generated, vendored, dependency, cache, and build directories
+unless they implement the requested processing stage.
 
-```bash
-rg --files <target>
-```
+Inspect only evidence needed to recover execution:
 
-Exclude generated or vendor-heavy directories unless they are the target:
-- `.git/`
-- `node_modules/`
-- `.venv/`, `venv/`
-- `__pycache__/`
-- `.next/`, `dist/`, `build/`
-- `target/`
-- coverage artifacts and lockfile caches
+- README usage commands and examples;
+- manifests and runtime configuration;
+- CLI, server, application, notebook, or script entrypoints;
+- argument/config parsers and object construction;
+- core functions, modules, models, operators, and data structures reached from the entrypoint;
+- output writers, serializers, callbacks, and persistence boundaries;
+- tests or examples only when they clarify intended execution semantics.
 
-Read only the files needed for the selected mode:
-- project docs: `README*`, `docs/`, `AGENTS.md`, `CLAUDE.md`
-- manifests: `pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`, `requirements*.txt`
-- entrypoints: CLI files, server/app files, notebooks or scripts named by docs
-- tests and CI: `tests/`, `test_*`, `*.test.*`, `.github/workflows/`, CI config
-- core modules suggested by names, imports, route registration, config wiring, or user question
+Build a concrete call path from the external trigger to the result. Do not stop at a directory
+map or import graph.
 
-### Step 3: Analyze by Mode
+### Step 3: Reconstruct the Processing Stages
 
-For all modes, ground claims in actual files and line references when possible.
+Partition the run into ordered stages $T_1, T_2, \ldots, T_n$. For every stage, record:
 
-**architecture**
-- Identify entrypoints, core modules, ownership boundaries, data models, external services, and dependency direction.
-- Note places where boundaries are implicit or circular.
+1. its entry and exit code locations;
+2. input symbols, types, shapes, units, and relevant state;
+3. the exact operation performed;
+4. output symbols, types, shapes, units, and state changes;
+5. conditions, branches, loops, randomness, persistence, or external calls;
+6. the next consumer of the output.
 
-**flow**
-- Trace the requested workflow from input to output.
-- Include parsing, validation, state mutation, persistence, network calls, error paths, and side effects.
+Separate orchestration from substantive transformations. Follow indirect dispatch, registries,
+factories, callbacks, or configuration-selected implementations far enough to identify the
+concrete path. When runtime selection prevents a single answer, describe each supported branch
+and the selection condition.
 
-**risk**
-- Prioritize correctness bugs, unsafe assumptions, security/privacy issues, data loss risks, concurrency hazards, and brittle operational behavior.
-- Separate confirmed issues from hypotheses that need runtime verification.
+Ground every important conclusion in source files and line references. Mark facts inferred only
+from names, docs, or incomplete paths as uncertain.
 
-**tests**
-- Map existing tests to behavior.
-- Identify missing unit, integration, regression, fixture, and end-to-end coverage.
-- Prefer focused test proposals tied to concrete code paths.
+### Step 4: Formalize Every Stage with LaTeX
 
-**onboarding**
-- Produce a compact mental model: what to read first, what each major directory does, where changes usually land, and what invariants matter.
+Define symbols before using them. Start with the global pipeline:
 
-**research**
-- Map implementation choices to wiki entities:
-  - algorithms or mechanisms -> `concepts/`
-  - empirical assertions -> `claims/`
-  - runnable evaluations -> `experiments/`
-  - future directions or gaps -> `ideas/`
-  - associated papers -> `papers/`
-- Only cite existing wiki pages with valid `[[slug]]` wikilinks.
+$$
+x_0 \xrightarrow{T_1} x_1 \xrightarrow{T_2} \cdots
+\xrightarrow{T_n} x_n,
+\qquad
+x_n = (T_n \circ T_{n-1} \circ \cdots \circ T_1)(x_0).
+$$
 
-### Step 4: Produce the Report
+Then give at least one meaningful LaTeX expression for every substantive processing stage. Match
+the expression to the code semantics:
 
-Use this structure unless the user asked for a different shape:
+- transformation: $x_i = T_i(x_{i-1}; \theta_i)$;
+- branch: $x_i = \begin{cases}T_i^{(a)}(x_{i-1}), & c(x_{i-1}) \\ T_i^{(b)}(x_{i-1}), & \text{otherwise}\end{cases}$;
+- iteration: $s_{k+1} = F(s_k, u_k)$;
+- aggregation: $z = \sum_{j=1}^{m} w_j h_j$ or the exact implemented reducer;
+- normalization: write the implemented denominator, axes, constants, and epsilon explicitly;
+- optimization: state the implemented objective and update rule separately;
+- stochastic processing: state the distribution or sampling rule only when present in code;
+- reshape, indexing, filtering, or concatenation: specify shape and index mappings;
+- I/O or orchestration with no numerical computation: use a typed mapping or state transition,
+  such as $(s_{k+1}, o_k) = T(s_k, i_k)$.
+
+Do not invent an algorithm, objective, probability model, variable meaning, or equation that the
+code does not support. If a stage cannot be reduced to a useful numeric formula, formalize its
+mapping, predicate, or state transition and explain the limitation.
+
+### Step 5: Check the Reconstructed Flow
+
+Cross-check the proposed flow against at least two available evidence surfaces, such as:
+
+- entrypoint and downstream implementation;
+- README example and argument parser;
+- producer and consumer of an intermediate value;
+- implementation and a focused test or example;
+- logged/output schema and the code that constructs it.
+
+Run only safe, local, non-mutating commands when they materially resolve an ambiguity and existing
+dependencies are already available. Do not install dependencies, download data, make network
+calls, or execute an untrusted public repository merely to complete the analysis. If execution is
+not safe or available, perform static tracing and state that limitation.
+
+### Step 6: Produce the Report
+
+Use this structure unless the user requests another shape:
 
 ```markdown
-# Code Analysis: {target}
+# Code Process Analysis: {target}
 
-## Scope
-- Target:
-- Mode:
-- Snapshot:
-- Files inspected:
+## Scope and Objective
 
-## Executive Summary
+## Entry Point and End-to-End Summary
 
-## Architecture / Flow / Findings
+## Global Processing Model
 
-## Risks and Unknowns
+## Stage-by-Stage Analysis
 
-## Test and Verification Gaps
+### Stage 1: {name}
+- Code:
+- Input:
+- Processing:
+- Output:
+- Formula:
+- Formula-to-code correspondence:
 
-## Wiki Mapping
+## Branches, Iteration, and State
 
-## Recommended Next Actions
+## Final Output Construction
+
+## Uncertainties and Unresolved Paths
+
+## Research Wiki Mapping
 ```
 
-Rules:
-- Keep code quotations short; prefer paraphrase plus file references.
-- Mark uncertainty explicitly when a conclusion is inferred from naming or incomplete context.
-- Use line-specific local file references in the user-facing answer when available.
-- If the report includes formulas, use `$...$` for inline math and `$$...$$` for display math.
+For every stage, place the implementation explanation beside its formula so the correspondence is
+auditable. After the stage analysis, include the composed end-to-end formula and explain which
+code component implements each operator. Use `$...$` for inline math and `$$...$$` for display
+math in both wiki files and user-facing output.
 
-### Step 5: Archive to Wiki (`--write` only)
+Keep quotations short. Prefer precise paraphrases with line-specific file references. Do not add
+generic risk or test-gap sections outside the user's chosen direction.
 
-1. Generate a slug:
+### Step 7: Archive (`--write` only)
+
+1. Generate the slug:
 
    ```bash
-   uv run python -X utf8 tools/research_wiki.py slug "code analysis {target-name} {mode}"
+   uv run python -X utf8 tools/research_wiki.py slug "code process analysis {target-name}"
    ```
 
-2. Resolve the configured wiki root before direct file writes:
+2. Resolve the configured wiki root before direct edits:
 
    ```bash
    uv run python -X utf8 tools/resolve_path_alias.py @configured
    ```
 
-3. Create `outputs/code-analysis-{slug}-{date}.md` with frontmatter:
-
-   ```yaml
-   ---
-   title: "Code Analysis: {target}"
-   slug: "code-analysis-{slug}-{date}"
-   artifact_type: code_analysis
-   target: "{target}"
-   mode: "{mode}"
-   date_created: YYYY-MM-DD
-   source_pages: []
-   source_repositories:
-     - path: "{repo-or-target-path}"
-       branch: "{branch-or-unknown}"
-       commit: "{commit-or-unknown}"
-       dirty: true
-   ---
-   ```
-
-4. Add `source_pages` for cited existing wiki pages.
-5. If the current `index.md` lists outputs, add the new output entry there.
-6. Append the log entry through the tool:
+3. Create `outputs/code-analysis-{slug}-{date}.md` with `artifact_type: code_analysis`, the
+   objective, target, date, cited wiki pages, and repository path/branch/commit/dirty metadata.
+4. Update `index.md` only if the current index lists outputs.
+5. Append the log through the tool:
 
    ```bash
-   uv run python -X utf8 tools/research_wiki.py log @configured "code-analyze | {target} | mode: {mode} | output: outputs/{slug}.md"
+   uv run python -X utf8 tools/research_wiki.py log @configured "code-analyze | {target} | objective: {objective} | output: outputs/{slug}.md"
    ```
 
-7. If wiki pages were cited, add `derived_from` edges through `tools/research_wiki.py add-edge`. Do not hand-edit `wiki/graph/`.
+6. Add useful `derived_from` edges for cited wiki pages through `research_wiki.py add-edge`.
 
-### Step 6: Crystallize (`--crystallize` only)
+### Step 8: Crystallize (`--crystallize` only)
 
-Only crystallize when the report contains durable research knowledge, not ordinary project notes.
+Crystallize only durable research knowledge, such as an implemented algorithmic mechanism, a
+verifiable claim embodied by the computation, a runnable evaluation, or a research gap revealed
+by the processing design.
 
-Good crystallization candidates:
-- a reusable implementation concept not already captured in `concepts/`
-- a verifiable claim about performance, correctness, reliability, or method behavior
-- an experiment implied by a test harness or benchmark script
-- a failed or promising research idea discovered from code gaps
-
-When creating or editing pages:
-- Open `docs/runtime-page-templates.en.md` before writing structure or YAML.
-- Keep forward and reverse links synchronized.
-- Do not create new page types for code repositories unless the global runtime spec has been updated.
-- For concepts grounded in code rather than papers, explain provenance clearly and avoid fake paper citations.
+Before creating or editing pages, open `docs/runtime-page-templates.en.md`. Keep forward and
+reverse links synchronized. Explain code provenance explicitly and do not fabricate paper
+citations for code-grounded concepts.
 
 ## Constraints
 
-- **Read-only by default**: this skill analyzes code; it does not patch source code unless the user separately asks for implementation.
-- **No secret exposure**: do not print secrets, tokens, private keys, or local credentials.
-- **No dependency installation by default**: do not run package installs or network-dependent setup unless the user approves or explicitly asks.
-- **No generated/vendor deep dives by default**: avoid spending context on generated, vendored, or dependency code.
-- **Evidence-first**: every important finding should point to inspected files, commands, or existing wiki pages.
-- **Respect dirty worktrees**: do not revert or overwrite user changes discovered during analysis.
-- **Graph only via tools**: never manually edit `wiki/graph/`.
-- **Wiki writes are opt-in**: without `--write` or `--crystallize`, report only.
+- Keep source repositories read-only by default.
+- Analyze execution and processing rather than performing a general code audit.
+- Follow the user's explicit analysis direction comprehensively and exclude unrelated categories.
+- Make every important claim traceable to code, documentation, commands, or existing wiki pages.
+- Provide a LaTeX model for every substantive stage and an end-to-end composition.
+- Never manufacture equations to conceal missing implementation evidence.
+- Respect dirty worktrees and never revert user changes.
+- Do not expose secrets or install dependencies by default.
+- Write to the wiki only with `--write` or `--crystallize`.
 
 ## Error Handling
 
-- **Target not found**: report the missing path and list nearby candidates from the current directory.
-- **Target too large**: sample by manifest, entrypoints, imports, and tests; report sampling limits.
-- **Language/tooling unknown**: fall back to file inventory, manifests, and textual dependency tracing.
-- **Tests cannot run**: report why and provide manual verification steps.
-- **Wiki not initialized**: still produce terminal analysis; skip `--write` and tell the user to run `/init`.
-- **Path outside readable scope**: ask the user for an accessible path or permission path, rather than guessing.
+- **Target not found**: report the missing path and list nearby candidates.
+- **Target too large**: prioritize documented entrypoints, the selected run, and reachable core
+  stages; report sampling boundaries.
+- **Several valid run paths**: enumerate them, state which path was selected, and explain why.
+- **Dynamic dispatch unresolved**: show the selection mechanism and candidate implementations;
+  do not pretend one branch is certain.
+- **Formula underdetermined**: give the strongest supported mapping or state transition and mark
+  missing semantics explicitly.
+- **Execution unavailable or unsafe**: use static tracing and report the verification limitation.
+- **Wiki not initialized**: still return the analysis, skip archival, and recommend `/init`.
+- **Path outside readable scope**: request an accessible path or permission.
 
 ## Dependencies
 
-### Tools
-- `rg` / `rg --files` — primary code discovery
-- `git` — repository snapshot when available
-- `uv run python -X utf8 tools/research_wiki.py` — slug, log, graph operations
-- `uv run python -X utf8 tools/resolve_path_alias.py` — resolve `@configured` before direct file writes
+- `rg` / `rg --files` for source discovery
+- `git` for repository snapshots
+- `uv run python -X utf8 tools/research_wiki.py` for slug, log, and graph operations
+- `uv run python -X utf8 tools/resolve_path_alias.py` before direct writes to configured paths
 
-### Optional Follow-ups
-- `/review` — independently review a generated code-analysis report
-- `/edit` — apply approved wiki edits after analysis
-- `/check` — validate wiki health after crystallization
+Optional follow-ups: use `/review` to critique an archived analysis, `/edit` for approved wiki
+changes, and `/check` after crystallizing wiki entities.
