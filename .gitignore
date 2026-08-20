@@ -13,6 +13,9 @@
 .agents/**/*.local.json
 .agents/**/.cache/
 .agents/**/cache/
+.codex
+.codex/*
+
 
 config/paths.json
 .venv/
