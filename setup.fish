@@ -165,18 +165,6 @@ info "Activating language: $LANG_CODE"
 cp "$I18N_DIR/CLAUDE.md" CLAUDE.md; or exit 1
 cp "$I18N_DIR/AGENTS.md" AGENTS.md; or exit 1
 
-function sync_tree
-    set -l src_dir $argv[1]
-    set -l dst_dir $argv[2]
-    mkdir -p "$dst_dir"
-    if command -v rsync &>/dev/null
-        rsync -rt --delete "$src_dir"/ "$dst_dir"/
-    else
-        find "$dst_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-        cp -R "$src_dir"/. "$dst_dir"/
-    end
-end
-
 if test -L "skills"
     rm "skills"
 else
@@ -390,3 +378,7 @@ echo "     /init [your-research-topic]"
 echo ""
 echo "  For more, see README.md"
 echo ""
+
+if test $ERRORS -gt 0
+    exit 1
+end
