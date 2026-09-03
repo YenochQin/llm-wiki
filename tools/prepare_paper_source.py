@@ -614,6 +614,21 @@ def _transform_markdown(
             skip_body = False
             continue
 
+        # Sectionless papers (e.g. Rapid Communications / Letters) can have
+        # Markdown masthead headings that are correctly discarded above while
+        # the authoritative title remains a plain-text line.  In that case,
+        # leave the cover only on an exact normalized title match.
+        if in_cover and has_markdown_headings and detected_title:
+            stripped = raw.strip()
+            if stripped and _same_title_heading(stripped, detected_title):
+                in_cover = False
+                if not title_emitted:
+                    out.append(f"# {stripped}")
+                    out.append("")
+                    title_emitted = True
+                skip_body = False
+                continue
+
         if in_cover and not has_markdown_headings:
             stripped = raw.strip()
             if not stripped:

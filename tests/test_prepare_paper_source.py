@@ -89,6 +89,31 @@ DOI: 10.1103/PhysRevLett.108.210401
             body,
         )
 
+    def test_plain_text_title_starts_body_after_junk_masthead_headings(self) -> None:
+        title = "Nuclear-structure correction to the Lamb shift"
+        full_md = f"""# PHYSICAL REVIEW A
+## ATOMIC, MOLECULAR, AND OPTICAL PHYSICS
+## RAPID COMMUNICATIONS
+
+{title}
+
+K. Pachucki, D. Leibfried, and T. W. Hänsch
+
+The nuclear-structure correction is evaluated for the Lamb shift.
+"""
+
+        body, _, _, _ = prepare_paper_source._transform_markdown(
+            full_md,
+            "pachucki_1993_Nuclearstructure",
+            title,
+        )
+
+        self.assertIn(f"# {title}", body)
+        self.assertIn(
+            "The nuclear-structure correction is evaluated for the Lamb shift.",
+            body,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
