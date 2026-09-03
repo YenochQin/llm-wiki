@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Zotero (safe URL launcher)
+Comment=Zotero launcher that omits a bare -url argument
+Icon=zotero
+Exec=/home/yenoch/Projects/ProjectFiles/llm-wiki/zotero_plugin/launch-zotero.sh %U
+Terminal=false
+Categories=Office;
+MimeType=x-scheme-handler/zotero;

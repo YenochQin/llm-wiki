@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+  "name": "Zotero Wiki Organizer",
+  "version": "0.1.11",
+  "description": "Loopback-only collection bridge for the llm-wiki repository. Manages collections and additive item assignments through Zotero's internal API; never touches zotero.sqlite directly.",
+  "author": "YenochQin",
+  "applications": {
+    "zotero": {
+      "id": "wiki-organizer@llm-wiki.dev",
+      "update_url": "https://github.com/YenochQin/llm-wiki/releases/download/zotero-wiki-organizer/update.json",
+      "strict_min_version": "9.0",
+      "strict_max_version": "10.999"
+    }
+  }
+}

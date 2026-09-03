@@ -30,4 +30,7 @@ raw/prepared/papers/assets/*
 raw/tmp/
 wiki/
 
+# Zotero Wiki Organizer build output (xpi artifacts)
+zotero_plugin/dist/
+
 # todolist.md
