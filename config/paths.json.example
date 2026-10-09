@@ -4,6 +4,7 @@
     "macos": {
       "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
       "raw_root": "/Users/you/Documents/ResearchWiki/raw",
+      "paper_root": "/Users/you/Documents/ResearchWiki/papers",
       "zotero_roots": [
         {
           "label": "macOS default profile candidates",
@@ -20,6 +21,7 @@
     "windows": {
       "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
       "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw",
+      "paper_root": "%USERPROFILE%/Documents/ResearchWiki/papers",
       "zotero_roots": [
         {
           "label": "Windows profile candidates",
@@ -36,6 +38,7 @@
     "linux": {
       "wiki_root": "~/Documents/ResearchWiki/wiki",
       "raw_root": "~/Documents/ResearchWiki/raw",
+      "paper_root": "~/Documents/ResearchWiki/papers",
       "zotero_roots": [
         {
           "label": "Linux default profile candidates",

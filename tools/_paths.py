@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Runtime path configuration for a split llm-wiki codebase and wiki vault."""
+"""Runtime paths for the code repository, wiki vault, sources, and manuscripts."""
 
 from __future__ import annotations
 
@@ -21,6 +21,9 @@ class RuntimePaths:
     config_path: Path
     used_config: bool
     profile: str
+    paper_root: Path | None = None
+    wiki_root_configured: bool = False
+    raw_root_configured: bool = False
 
 
 def find_project_root(start: Path | None = None) -> Path:
@@ -132,6 +135,7 @@ def load_paths(
     project_root: Path | None = None,
     wiki_root: Path | None = None,
     raw_root: Path | None = None,
+    paper_root: Path | None = None,
 ) -> RuntimePaths:
     """Load runtime paths, with explicit args > env vars > config > local defaults."""
     root = (project_root or find_project_root()).resolve()
@@ -142,18 +146,56 @@ def load_paths(
 
     env_wiki = os.environ.get("LLM_WIKI_WIKI_ROOT", "").strip()
     env_raw = os.environ.get("LLM_WIKI_RAW_ROOT", "").strip()
+    env_paper = os.environ.get("LLM_WIKI_PAPER_ROOT", "").strip()
 
-    wiki_value = wiki_root or env_wiki or profile_cfg.get("wiki_root") or cfg.get("wiki_root") or (root / "wiki")
-    raw_value = raw_root or env_raw or profile_cfg.get("raw_root") or cfg.get("raw_root") or (root / "raw")
+    wiki_value = wiki_root or env_wiki or profile_cfg.get("wiki_root") or cfg.get("wiki_root")
+    raw_value = raw_root or env_raw or profile_cfg.get("raw_root") or cfg.get("raw_root")
+    # Manuscripts never fall back to a directory in the code repository.
+    paper_value = paper_root or env_paper or profile_cfg.get("paper_root") or cfg.get("paper_root")
 
     return RuntimePaths(
         project_root=root,
-        wiki_root=expand_path(wiki_value, root),
-        raw_root=expand_path(raw_value, root),
+        wiki_root=expand_path(wiki_value or root / "wiki", root),
+        raw_root=expand_path(raw_value or root / "raw", root),
         config_path=cfg_path,
         used_config=bool(cfg),
         profile=profile_name,
+        paper_root=expand_path(paper_value, root) if paper_value else None,
+        wiki_root_configured=bool(wiki_value),
+        raw_root_configured=bool(raw_value),
     )
+
+
+def _require_external_root(paths: RuntimePaths, name: str) -> Path:
+    """Validate a requested wiki/raw root without requiring unrelated roots."""
+    if not getattr(paths, f"{name}_configured"):
+        raise ValueError(
+            f"{name} is not configured; set it in config/paths.json "
+            f"or LLM_WIKI_{name.upper()} (no in-repository fallback)"
+        )
+    root = getattr(paths, name).resolve()
+    project = paths.project_root.resolve()
+    if root.is_relative_to(project) or project.is_relative_to(root):
+        raise ValueError(f"{name} must be outside the code repository and must not contain it")
+    return root
+
+
+def require_paper_root(paths: RuntimePaths) -> Path:
+    """Require an external manuscript root before resolving or writing papers."""
+    if paths.paper_root is None:
+        raise ValueError(
+            "paper_root is not configured; set it in config/paths.json "
+            "or LLM_WIKI_PAPER_ROOT (no in-repository fallback)"
+        )
+    root = paths.paper_root.resolve()
+    project = paths.project_root.resolve()
+    if root.is_relative_to(project) or project.is_relative_to(root):
+        raise ValueError("paper_root must be outside the code repository and must not contain it")
+    for label, other in (("wiki_root", paths.wiki_root), ("raw_root", paths.raw_root)):
+        other = other.resolve()
+        if root.is_relative_to(other) or other.is_relative_to(root):
+            raise ValueError(f"paper_root must be separate from {label}")
+    return root
 
 
 def display_path(path: Path, project_root: Path) -> str:
@@ -165,8 +207,18 @@ def display_path(path: Path, project_root: Path) -> str:
         return str(resolved)
 
 
-def resolve_runtime_path(value: str | Path | None, paths: RuntimePaths, *, role: str) -> Path | None:
-    """Resolve CLI path tokens, including aliases for configured runtime roots."""
+def resolve_runtime_path(
+    value: str | Path | None,
+    paths: RuntimePaths,
+    *,
+    role: str,
+    require_external: bool = False,
+) -> Path | None:
+    """Resolve paths; strict callers reject missing or in-repository content roots.
+
+    The default retains legacy wiki/raw resolution for migration tools and test
+    fixtures. Skills use the strict resolve_path_alias.py CLI before content I/O.
+    """
     if value is None:
         return None
     text = str(value).strip()
@@ -190,8 +242,30 @@ def resolve_runtime_path(value: str | Path | None, paths: RuntimePaths, *, role:
         "@mineru-cache": paths.project_root / ".checkpoints" / "mineru-cache",
         "@project-checkpoints-mineru-cache": paths.project_root / ".checkpoints" / "mineru-cache",
     }
-    if text in aliases:
-        return aliases[text].resolve()
+    if text.startswith("@"):
+        alias, separator, suffix = text.replace("\\", "/").partition("/")
+        content_root = None
+        if alias in {"@paper-root", "@configured-papers"}:
+            base = require_paper_root(paths)
+        elif alias in aliases:
+            base = aliases[alias].resolve()
+            if require_external:
+                if alias in {
+                    "@wiki-root", "@wiki", "@configured", "@configured-wiki",
+                    "@configured-sources", "@wiki-sources",
+                    "@configured-sources-papers", "@wiki-sources-papers",
+                }:
+                    content_root = _require_external_root(paths, "wiki_root")
+                elif alias in {"@raw-root", "@raw", "@configured-raw"}:
+                    content_root = _require_external_root(paths, "raw_root")
+        else:
+            raise ValueError(f"unknown runtime path alias: {alias}")
+        target = (base / suffix).resolve() if separator else base
+        if not target.is_relative_to(base):
+            raise ValueError(f"{role} escapes runtime root {alias}: {text}")
+        if content_root is not None and not target.is_relative_to(content_root):
+            raise ValueError(f"{role} escapes configured content root: {text}")
+        return target
     return expand_path(text, paths.project_root)
 
 

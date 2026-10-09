@@ -19,7 +19,7 @@ theory_tags: []         # named theories/frameworks/models used or evaluated
 computation_tags: []    # simulation / numerical / statistical / ML / data-analysis schemes
 experiment_tags: []     # observation / lab / field / sample-return / instrument / protocol tags
 research_object_tags: [] # material/system/object under study
-importance: 3           # 1-5
+importance: 3           # 1=niche, 2=useful, 3=field-standard, 4=influential, 5=seminal
 date_added: YYYY-MM-DD
 source_type: tex         # tex | pdf
 external_ids: {}
@@ -34,7 +34,9 @@ Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research 
 
 Do not add follow-up ingest queues, not-yet-ingested bibliography recommendations, or `### Suggested follow-up ingests` sections to paper pages. Candidates for future ingestion belong in `outputs/ingest-candidates.md` as plain-text queue rows until their paper pages exist.
 
-`## Evidence Pack` is mandatory for generated paper pages. It must appear before interpretive sections and contain short source-grounding cards anchored in the prepared MinerU markdown. Each card separates **interpretation** from **source anchoring**: `<short label>` is the agent's terse refinement of what the source block contributes, while the blockquote is only the minimal exact source sentence, phrase, table row, or formula needed to locate and verify that contribution.
+`## Evidence Pack` is mandatory for generated or rewritten paper pages. It must appear before interpretive sections and contain short source-grounding cards anchored in the prepared MinerU markdown. Each card separates **interpretation** from **source anchoring**: `<short label>` is the agent's terse refinement of what the source block contributes, while the blockquote is only the minimal exact source sentence, phrase, table row, or formula needed to locate and verify that contribution.
+
+Each card carries an evidence id, prepared-source link, source section/figure/table/equation location when available, a short exact source blockquote, and one use label from `Problem`, `Method`, `Results`, `Limitations`, `Concept`, or `Claim`.
 
 ```markdown
 ## Evidence Pack
@@ -45,7 +47,7 @@ Do not add follow-up ingest queues, not-yet-ingested bibliography recommendation
 
 > **Single source of truth.** This block is the *only* canonical definition of the Evidence Pack card shape and its citation syntax for the whole repo. Skills and references must point here (`docs/runtime-page-templates.en.md` §papers) instead of restating the ASCII shape or the forbidden-variant list. If this spec changes, it changes here only.
 
-For `/ingest`, `/ingest-light`, and `/reingest`, agents must not hand-write Evidence Pack card Markdown. They must pass structured card parameters to `tools/evidence_pack.py` and paste the helper output. The helper owns the `## Evidence Pack` heading, prepared markdown link, `^E*` block id, and blockquote markers. This is mandatory because display math blocks are fragile: the helper prefixes only the opening `$$` line with `>`, leaving formula continuation lines and the closing `$$` unquoted so the `>` marker is never injected into LaTeX.
+For every skill-generated or rewritten paper page, agents must not hand-write Evidence Pack card Markdown. They must pass structured card parameters to `tools/evidence_pack.py` and paste the helper output. The helper owns the `## Evidence Pack` heading, prepared markdown link, `^E*` block id, and blockquote markers. This is mandatory because display math blocks are fragile: the helper prefixes only the opening `$$` line with `>`, leaving formula continuation lines and the closing `$$` unquoted so the `>` marker is never injected into LaTeX.
 
 The leading `>` before the source fragment is Markdown blockquote syntax, not source text and not LaTeX. Treat `$$...$$` display math as one indivisible LaTeX block: only the opening `$$` line may carry the Evidence Pack quote marker, and no line inside the block may start with `>` after the list indentation. The closing `$$` line is also part of the math block and must not be prefixed with `>`. If an equation is inline within an already quoted sentence, do not add an extra `>` immediately before the formula.
 
@@ -76,7 +78,7 @@ Every card must link to an existing `wiki/sources/papers/{source-slug}.md` prepa
 
 When a card quotes an equation, definition, theorem, algorithm step, table result, or derivation line, the excerpt must preserve the complete meaning-bearing unit. Long formulas must not be shortened to the first line, first term, or a convenient prefix if omitted terms change the meaning. If the complete formula is too long for an Evidence Pack card, use a short source sentence plus equation/table/algorithm label or section as the anchor and state in prose that the full formal unit remains in the prepared source; do not use that shortened card to support formal notation or claims that depend on omitted terms.
 
-**Coverage floor.** The pack is not satisfied by a single card or by a fixed round number (a uniform three-card pack across substantive papers is a laziness smell). Provide at least one card per interpretive section you actually populate (`Problem`, `Method`, `Results`, `Limitations`), plus one card per generated concept page and per generated claim. The card count scales with the paper's substance; a section the source cannot support takes `unclear` instead of a card.
+**Coverage floor.** The pack is not satisfied by a single card or by a fixed round number (a uniform three-card pack across substantive papers is a laziness smell). Provide at least one card per interpretive section you actually populate (`Problem`, `Method`, `Results`, `Limitations`), plus one card per concept created or materially rewritten and per generated claim. The card count scales with the paper's substance; a section the source cannot support takes `unclear` instead of a card.
 
 BibTeX must not be stored in YAML frontmatter. When Zotero/Crossref metadata provides a BibTeX entry, write it in the paper body under `## BibTeX` as a fenced code block:
 
@@ -94,7 +96,18 @@ BibTeX must not be stored in YAML frontmatter. When Zotero/Crossref metadata pro
 
 The BibTeX entry must be citation-core only: entry type, citekey, `author`, `title`, `year`, one venue field (`journal`/`booktitle`/`publisher`/`school`/`institution`/`howpublished`), `volume`, `number`, `pages`, and `doi`. Do not include URL, tags/keywords, abstract, language, rights, or other note-like fields in the BibTeX block.
 
-`## Research classification` should first classify the paper into theory, computation, and/or experiment. For each active direction, name the specific theory, computational scheme, or experimental/observational process used. Always include the research object(s) being studied.
+#### Paper Analysis Classification
+
+Every `papers/{slug}.md` must first classify the paper by research direction and research object:
+
+- `paper_type`: classify the source form as one of `paper`, `review`, `book`, `degree_thesis`, `preprint`, `report`, `chapter`, `dataset`, or `other`. This is separate from `research_modes`: review articles should use `paper_type: review`, while `research_modes` still reflects the evidence types being analyzed or synthesized.
+- `research_modes`: choose one or more of `theory`, `computation`, `experiment`. For review papers, classify by the evidence types being analyzed/synthesized; do not use `review` as a mode.
+- `theory_tags`: list the concrete theories, models, mechanisms, or analytical frameworks used, compared, or tested.
+- `computation_tags`: list the computational/simulation/statistical/ML/data-analysis schemes used; empty list if none.
+- `experiment_tags`: list observations, experiments, sample analyses, instruments, missions, or protocols; empty list if none.
+- `research_object_tags`: list the research objects, such as materials, celestial bodies, systems, samples, populations, model objects, or datasets.
+
+The body must include `## Research classification`, explaining which of theory/computation/experiment apply, what specific theory/computational scheme/experimental process was used, and what objects were studied. If the source does not make something clear, write `unclear` rather than inventing it.
 
 ### concepts/{concept-name}.md
 
@@ -113,7 +126,7 @@ related_concepts: []
 
 Body sections: `## Definition` / `## Source excerpts` / `## Intuition` / `## Formal notation` / `## Variants` / `## Comparison` / `## When to use` / `## Known limitations` / `## Open problems` / `## Key papers` / `## My understanding`
 
-`## Source excerpts` is required for every concept page. Add one short original-language excerpt for each paper that materially grounds the concept, and link the excerpt back to the prepared MinerU markdown:
+`## Source excerpts` is required for every concept page immediately after `## Definition`. Add one short original-language excerpt for each paper that materially grounds the concept, and link the excerpt back to the prepared MinerU markdown:
 
 ```markdown
 - [[paper-slug]] ([prepared markdown](../sources/papers/paper-slug.md)):
@@ -208,6 +221,8 @@ date_resolved: ""
 
 Body sections: `## Motivation` / `## Hypothesis` / `## Approach sketch` / `## Expected outcome` / `## Risks` / `## Pilot results` / `## Lessons learned`
 
+When `status: failed`, `failure_reason` must record the specific reason; it is persistent anti-repetition memory.
+
 ### experiments/{experiment-slug}.md
 
 ```yaml
@@ -245,6 +260,8 @@ remote:
 
 Body sections: `## Objective` / `## Setup` / `## Procedure` / `## Results` / `## Analysis` / `## Claim updates` / `## Follow-up`
 
+Every experiment requires a resolving `target_claim`. Assess user-reported results through iterative conversation, distinguishing observations, interpretation, limitations, and open questions. When the user requests recording, update the experiment and affected claim/idea pages from actual evidence, preserving provenance and reverse links.
+
 ### claims/{claim-slug}.md
 
 ```yaml
@@ -273,3 +290,5 @@ date_updated: YYYY-MM-DD
 Body sections: `## Statement` / `## Evidence summary` / `## Conditions and scope` / `## Counter-evidence` / `## Linked ideas` / `## Open questions`
 
 Claim YAML provenance is data, not Obsidian display syntax. `source_papers` and `evidence[].source` must contain paper slugs only. `evidence[].source_anchor` must contain the Evidence Pack id only (`E1`, not `^E1`, `[[#^E1]]`, or `[[paper#^E1]]`). Put rendered links, if needed, in body prose only.
+
+Claim confidence is in `[0.0, 1.0]` and must be re-evaluated whenever its evidence changes.

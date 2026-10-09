@@ -1,0 +1,66 @@
+---
+name: ingest-local-pdf
+description: Use when adding new papers from local PDF files, PDF directories, or already prepared MinerU markdown for full /ingest. Refreshing an existing paper page belongs to /reingest; /ingest-light handles background-only coverage from Zotero or prepared sources.
+argument-hint: "(<local-pdf-or-dir> | <wiki/sources/papers/*.md>) [--title <str>] [--discover]"
+---
+
+# /ingest-local-pdf
+
+Use this skill when the content source is a local PDF, a directory of PDFs, or already prepared MinerU markdown. The skill normalizes PDFs into `wiki/sources/papers/*.md`, enriches bibliographic metadata from Zotero when the same PDF/item is already in Zotero, then hands the prepared path to `/ingest` so the normal paper/concept/claim workflow stays in one place.
+
+Use this local reference on demand:
+
+- `references/pdf-preprocessing.md` -- local PDF normalization, title recovery, directory batching, and handoff to `/ingest`
+
+## Inputs
+
+- `source`: one local PDF, a directory of PDFs, or a prepared `wiki/sources/papers/*.md` path. Prepared markdown is consumed directly; directory inputs select PDFs only.
+- `--title <str>` (optional): a user-supplied title for a single paper; preserve it instead of replacing it with a recovered title. Without it, recover a confident title per PDF. If a directory is supplied with one title for multiple papers, clarify the per-file mapping before preprocessing those papers.
+- `--discover` (optional, default off): forward only when explicitly supplied, so downstream `/ingest` runs its documented optional discovery. Do not enable it from repository state.
+
+## Workflow
+
+**Pre-condition**: run from the repository root. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources-papers`, and `@mineru-cache`:
+
+Run commands from the repository root.
+
+```shell
+uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
+```
+
+If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+
+1. Resolve the input path.
+   - If the input is a single PDF, retain an explicit `--title`; otherwise inspect the first page and recover a confident title only when the title is clear.
+   - If the input is a directory, enumerate readable PDFs in deterministic order and process each file separately.
+2. Before preprocessing each PDF, try Zotero metadata enrichment:
+   ```shell
+   uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<agent-recovered-title>"]
+   ```
+   If it returns `status: ok`, capture `.bibtex` exactly and pass it to `prepare_paper_source.py` with `--bibtex`; also pass `.citation_key`, `.authors`, and `.year` when present so the prepared source filename can use the Zotero citation key or fall back to `author_year_veryshorttitle`. Preserve `.paper_slug` for the downstream `/ingest` paper page slug when present. If it returns `not_found` or `metadata_error`, continue without BibTeX and mention the reason in the report; do not block PDF ingest.
+3. Preprocess each PDF with `tools/prepare_paper_source.py --output-dir '@configured-sources-papers' --cache-root '@mineru-cache'` into the configured wiki source directory. This step includes the conservative LaTeX math repair pass documented in `references/pdf-preprocessing.md`; report any `latex math repaired: ...` warning in the final summary.
+4. If `prepare_paper_source.py` reports `usable: false`, surface the warnings and skip that file.
+5. Hand each prepared `wiki/sources/papers/<source-slug>.md` to `/ingest` for the paper-page workflow, preserving the prepared source's `## BibTeX` block as the preferred BibTeX when present. Forward `--discover` only if supplied by the user.
+6. If the source is already a prepared `wiki/sources/papers/*.md`, skip preprocessing and pass it straight to `/ingest`.
+
+## Constraints
+
+- Do not use Zotero as the content source here; selected content must still be the user-provided local PDF/prepared markdown. Zotero lookup in this skill is metadata-only, for BibTeX enrichment of the local PDF.
+- Do not write directly to `wiki/papers/`, `wiki/concepts/`, `wiki/claims/`, or `wiki/people/` from this skill.
+- Do not generate paper `## Evidence Pack` content here. The downstream `/ingest` owns it; the card shape and citation syntax are defined once in `docs/runtime-page-templates.en.md` §papers — never restate them in this skill.
+- Do not generate paper `## Related` content here. The downstream `/ingest` owns it and must use the fixed format in `.claude/skills/shared-references/ingest-invariants.md` §8.
+- Keep raw PDFs in their original location; only the prepared markdown and extracted assets belong under the configured wiki source directory.
+- Never pass literal relative output paths such as `wiki/sources` or `wiki/sources/papers`; these resolve inside the code repository when the wiki is split into an external vault. Use `@configured-sources-papers`.
+- If the directory contains mixed file types, ignore non-PDF files unless the user explicitly points at a prepared markdown file.
+
+## Dependencies
+
+### Tools
+
+- `uv run python -X utf8 tools/enrich_local_pdf_bibtex.py --source <local-path> [--title "<recovered-title>"]` -- optional metadata-only Zotero enrichment; returns `.bibtex` when confident
+- `uv run python -X utf8 tools/prepare_paper_source.py --raw-root '@raw-root' --output-dir '@configured-sources-papers' --cache-root '@mineru-cache' --source <local-path> [--title "<recovered-title>"] [--citation-key "<zotero-citation-key>"] [--authors "<author-list>"] [--year <year>] [--bibtex "$BIBTEX"]`
+- `uv run python -X utf8 tools/repair_latex_math.py --dry-run --ingest-check '<paper-slug>'` -- downstream `/ingest` paper-page inspection only; do not run broad source checks during ingest
+
+### Skills
+
+- `/ingest` -- consumes the prepared `wiki/sources/papers/*.md` path and writes the wiki pages

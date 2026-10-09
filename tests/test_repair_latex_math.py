@@ -65,7 +65,7 @@ class RepairLatexMathTests(unittest.TestCase):
 
             target = resolve_ingest_check_target("sample-paper", paths)
 
-            self.assertEqual(target, wiki / "papers" / "sample-paper.md")
+            self.assertEqual(target, (wiki / "papers" / "sample-paper.md").resolve())
 
     def test_ingest_check_cli_reports_only_generated_paper_page(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

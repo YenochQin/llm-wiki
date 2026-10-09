@@ -13,11 +13,10 @@ All llm-wiki API keys live in the user config file `~/.config/llm-wiki/.env`
 creates this file from `config/.env.example`.
 
 Python tools load this file automatically on startup via `tools/_env.py` — no manual
-`export` needed. The Review LLM MCP server reads the same file on startup. Real
-environment variables still take precedence over file values.
+`export` needed. Real environment variables still take precedence over file values.
 
 The `/setup` skill checks which keys are currently set, explains each one, and writes values
-directly into the user config file using the Edit tool.
+directly into the user config file using available file-editing tools.
 
 ---
 
@@ -54,55 +53,11 @@ needed). Leave commented unless MinerU publishes a new endpoint.
 
 ---
 
-## Key 2: Review LLM (three variables)
+## Review Workflow
 
-| Field | Value |
-|-------|-------|
-| Config variables | `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` |
-| Required? | No (optional) |
-| Free? | Depends on provider |
+Reviews run in the current agent and require no additional API key or reviewer service. `/source-audit` checks ingested pages against their canonical prepared sources; `/llm-review` critiques research artifacts. The user can select another agent/model and run the same skill there when a separate assessment is wanted.
 
-**What it does**: Connects llm-wiki to a second LLM (independent of Claude) for
-adversarial cross-model review. The reviewer independently critiques research artifacts
-without seeing Claude's prior analysis, improving review quality.
-
-**Which skills use it**:
-- `/review` — general-purpose cross-model review
-- `/novelty` — second-opinion on novelty assessment
-- `/ideate` — dual-model brainstorm + independent filter
-- `/exp-eval` — verdict gate on experiment results
-- `/exp-design` — review experiment plan
-- `/paper-plan` — review paper outline (mandatory gate)
-- `/paper-draft` — review each section
-- `/rebuttal` — stress-test rebuttal responses
-- `/refine` — review in multi-round improve cycle
-
-**Without these keys**: Skills skip the cross-model review step and proceed with
-Claude-only analysis. Everything still works, but you lose the independent second-opinion.
-The `/review` skill will note that cross-model review is unavailable.
-
-**Works with any OpenAI-compatible API**:
-
-| Provider | LLM_BASE_URL | Example LLM_MODEL |
-|----------|-------------|-------------------|
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
-| OpenAI | `https://api.openai.com/v1` | `gpt-4o` |
-| OpenRouter | `https://openrouter.ai/api/v1` | any model slug |
-| Qwen (DashScope) | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-max` |
-| SiliconFlow | `https://api.siliconflow.cn/v1` | see their docs |
-| Local (Ollama) | `http://localhost:11434/v1` | `llama3.2` |
-
-**How to set up**:
-1. Choose a provider and get an API key from them
-2. Note the base URL and model name from the table above
-3. Set all three variables in the llm-wiki user config file
-4. Restart Claude Code (the MCP server re-reads the config file on startup)
-
-**Optional**: `LLM_FALLBACK_MODEL` — fallback model if the primary fails (defaults to `LLM_MODEL`)
-
-**Reviewer independence principle** (from `shared-references/cross-model-review.md`):
-Never share Claude's analysis with the Review LLM before it gives its independent assessment.
-The value of cross-model review comes from genuine independence.
+Follow `skills/shared-references/review-protocol.md` for provenance and evidence requirements. A self-review remains a self-review; agreement between reports alone does not raise claim confidence. Existing unrelated values in the user's config file are preserved.
 
 ---
 
@@ -111,15 +66,13 @@ The value of cross-model review comes from genuine independence.
 After setting keys, verify they are loaded correctly (uv-based, no venv activation needed):
 
 ```bash
-uv run --python .venv/bin/python python -c "
+uv run python -X utf8 -c "
 import sys; sys.path.insert(0, 'tools')
 import _env, os
-keys = ['MINERU_API_TOKEN', 'LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL']
+keys = ['MINERU_API_TOKEN']
 for k in keys:
     v = os.environ.get(k, '')
     status = '✓ set' if v else '✗ not set'
     print(f'{status}  {k}')
 "
 ```
-
-After adding `LLM_*` variables, restart Claude Code so the MCP server picks them up.

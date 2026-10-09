@@ -169,7 +169,14 @@ class MineruApiTests(unittest.TestCase):
             )
 
             with (
-                mock.patch.object(_mineru, "_config", side_effect=lambda name, default="": "token" if name == "MINERU_API_TOKEN" else default),
+                mock.patch.object(
+                    _mineru,
+                    "_config",
+                    side_effect=lambda name, default="": {
+                        "MINERU_API_TOKEN": "token",
+                        "MINERU_MODEL_VERSION": "pipeline",
+                    }.get(name, default),
+                ),
                 mock.patch.object(_mineru, "_poll_batch_until_done", side_effect=RuntimeError("stop after submit")),
                 self.assertRaisesRegex(RuntimeError, "stop after submit"),
             ):

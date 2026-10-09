@@ -72,7 +72,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 import unicodedata
 from collections import defaultdict
@@ -237,7 +236,7 @@ def _validate_cli_wiki_root(raw_wiki_root: str) -> str:
 def slugify(title: str) -> str:
     """Generate a kebab-case slug from a paper/concept title.
 
-    Rules (from product CLAUDE.md):
+    Non-paper naming follows docs/runtime-support-files.en.md; this helper uses:
       - All lowercase, hyphen-separated, no spaces
       - Extract meaningful keywords from title, drop stop words
       - Keep first 5-6 keywords for reasonable length
@@ -800,9 +799,7 @@ def load_edges(wiki_root: str) -> list[dict]:
 def dedup_edges(wiki_root: str) -> None:
     """Deduplicate edges.jsonl by canonical (from, to, type), keeping first occurrence.
 
-    Intended for use after parallel ingest: multiple agents may have added
-    identical edges in their isolated worktrees, resulting in duplicates after
-    the worktree branches are merged.
+    Removes repeated rows while preserving the original order of unique edges.
     """
     edges_path = Path(wiki_root) / DERIVED_DIR / "edges.jsonl"
     if not edges_path.exists():
@@ -999,43 +996,8 @@ def prune_dangling_graph(wiki_root: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _is_linked_worktree() -> bool:
-    # Linked worktrees have distinct --git-dir and --git-common-dir; the primary
-    # checkout has them equal. Used to block graph rebuilds from /init subagents:
-    # their worktree rebuilds collide on merge with the orchestrator's final one.
-    try:
-        git_dir = subprocess.run(
-            ["git", "rev-parse", "--git-dir"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        common_dir = subprocess.run(
-            ["git", "rev-parse", "--git-common-dir"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return False
-    return Path(git_dir).resolve() != Path(common_dir).resolve()
-
-
-def _refuse_in_linked_worktree(cmd: str) -> None:
-    if _is_linked_worktree():
-        print(
-            f"error: {cmd} is not permitted inside a linked git worktree.\n"
-            "Graph rebuilds must run from the primary checkout; the /init "
-            "orchestrator rebuilds once after all subagent merges. See "
-            "init/SKILL.md INIT MODE.",
-            file=sys.stderr,
-        )
-        sys.exit(2)
-
-
 def rebuild_context_brief(wiki_root: str, max_chars: int = 8000) -> None:
     """Backward-compatible alias for ``compile_context --for general``."""
-    _refuse_in_linked_worktree("rebuild-context-brief")
     compile_context(wiki_root, "general", max_chars)
 
 
@@ -1053,7 +1015,6 @@ def rebuild_open_questions(wiki_root: str) -> None:
       - concepts/: ## Open problems section
       - claims/: status == 'proposed' or 'weakly_supported'
     """
-    _refuse_in_linked_worktree("rebuild-open-questions")
     root = Path(wiki_root)
     gaps: list[str] = []
 
@@ -2570,17 +2531,16 @@ def rebuild_index(wiki_root: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Topic backfill (post-merge sweep for /init INIT MODE)
+# Topic backfill
 # ---------------------------------------------------------------------------
 
 
 def topic_backfill(wiki_root: str) -> None:
     """Append matching papers to each topic's seminal_works / SOTA tracker.
 
-    Re-implements the deterministic half of /ingest Step 5 Part B in a
-    post-merge sweep. /init's INIT MODE tells subagents to skip topic updates
-    so parallel ingest doesn't conflict on shared topic files; this command
-    is what finally repairs them after Phase B merges complete.
+    Backfills topic placement for existing papers using their tags and
+    importance. Normal /ingest runs place papers during Phase E; this helper
+    repairs missing placements when requested.
 
     Matching rule (matches /ingest Part B):
       - paper.tags ∩ topic.tags must be non-empty (or paper.domain in topic.tags)
@@ -3556,7 +3516,7 @@ def main():
 
     # dedup-edges
     p = sub.add_parser(
-        "dedup-edges", help="Deduplicate edges.jsonl after parallel ingest merge"
+        "dedup-edges", help="Deduplicate edges.jsonl"
     )
     p.add_argument("wiki_root")
 
