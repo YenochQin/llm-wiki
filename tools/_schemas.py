@@ -4,10 +4,11 @@ Centralizes the constants that lint.py and research_wiki.py both need:
 entity directories, valid edge types, required frontmatter fields per
 entity, valid enum values, and safe defaults for `lint --fix`.
 
-If you change anything here, also update the matching template comments
-in `i18n/en/CLAUDE.md` and `i18n/zh/CLAUDE.md` (and re-run setup.sh).
-The Cross-Reference table in those files is the human-facing spec; this
-file is the machine-facing copy that the tools actually consume.
+If you change anything here, also update the matching human-readable
+contracts in docs/runtime-page-templates.en.md, docs/templates/, and
+docs/runtime-support-files.en.md. Root AGENTS.md / CLAUDE.md retain only
+the essential runtime rules and conditional links to those documents.
+This file is the machine-facing registry that the tools actually consume.
 """
 
 from __future__ import annotations

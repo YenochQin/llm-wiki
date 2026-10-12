@@ -1,0 +1,15 @@
+# Canonical Prepared Source Resolution
+
+Read this reference whenever resolving a paper source, including a paper cited by a selected concept or claim. Paths and commands below are relative to the llm-wiki repository root unless an external root is explicitly named.
+
+### Resolve canonical prepared sources
+
+Use this precedence for each paper page:
+
+1. **Explicit prepared-markdown links**: read the page's `## Evidence Pack` and collect its `[prepared markdown](...)` targets. Resolve each target relative to the paper page's directory, stripping any `#fragment`, and require it to remain under the configured `sources/papers/` directory. Retain each evidence card's actual source target; if several sources are linked, inspect all of them rather than picking the first. For legacy pages without Evidence Pack links, also inspect explicit prepared-markdown links in other sections.
+2. **Explicit source metadata and manifests**: if links are absent or broken, use the page's explicit `sourceSlug` / `source_slug` when present, or inspect a uniquely matching preparation/handoff record, such as `.checkpoints/init-sources.json` (`sources[].canonical_ingest_path`) or `.checkpoints/ingest/<item-key>/manifest.json` (`prepared.canonical_ingest_path` and its metadata). Resolve source-slug fields under the configured `sources/papers/`; resolve manifest paths through `tools/resolve_path_alias.py`. Match fallback candidates by available DOI, paper/citation identity, or unambiguous bibliographic metadata; a manifest's `candidate_id` is not automatically the paper slug. Conflicting records remain unresolved.
+3. **Legacy same-name lookup**: only when no usable explicit link or source-metadata/manifest mapping is available, try `<resolved-wiki-root>/sources/papers/{paper-slug}.md`. Verify the candidate's bibliographic identity against the paper page where available. File-name equality alone does not establish provenance; conflicting or multiple plausible candidates remain unresolved.
+
+For every resolution method, require the selected source to remain under the configured `sources/papers/` directory, exist, be readable, and be prepared markdown. An unreadable, empty, or unusable conversion is `SOURCE_QUALITY_BLOCKER`. Record the selected path and whether it came from a page link, source metadata, manifest, or legacy lookup. A valid link to a differently named source is normal and must not produce a missing-source finding.
+
+Keep broken or conflicting explicit links as findings even if another source is recovered. When a uniquely identified source is available, report a broken/wrong source pointer as `SOURCE_EXCERPT_MISMATCH` and continue only the judgments supported by that source; do not silently replace the pointer or suppress grounding-gate red issues. Use `SOURCE_MISSING` only when no prepared source can be identified and found. If candidates exist but identity is ambiguous, report the competing mappings as unresolved provenance and withhold the affected judgments rather than guessing or calling the files missing.

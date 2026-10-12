@@ -31,8 +31,8 @@ name = "aliyun"
 url = "https://mirrors.aliyun.com/pypi/simple/"
 default = true
 
-# llm-wiki ships scripts under tools/ and mcp-servers/, not an importable Python package.
-# Tell setuptools not to auto-discover any top-level dirs (raw/, wiki/, i18n/, ...)
+# llm-wiki ships scripts under tools/, not an importable Python package.
+# Tell setuptools not to auto-discover any top-level dirs (raw/, wiki/, skills/, ...)
 # so `uv sync` installs only the dependencies above.
 [build-system]
 requires = ["setuptools>=68"]

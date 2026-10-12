@@ -85,12 +85,12 @@ Frontmatter on `<source-slug>.md` includes `title`, `source`, `ingestedAt`, `tot
 MinerU's raw markdown is flat and noisy. The adapter applies nine passes (mirrors `pdf-source-scripts/pdf_to_source_mineru.py` where applicable):
 
 1. **Title detection.** Picks the first non-junk, non-numbered, non-journal heading from the manifest's `sections`. Falls back to the PDF stem.
-2. **Cover-page normalization.** MinerU emits each visual line on the cover as a separate level-1 block. The adapter merges title fragments and drops author bylines / journal furniture, then emits a single synthetic `# <title>` before the first real section.
+2. **Cover-page normalization.** MinerU emits visual title lines as heading blocks whose levels may vary. The adapter recognizes all positive `text_level` values, merges title fragments, and drops author bylines / journal furniture, then emits a single synthetic `# <title>` before the first real section.
 3. **Heading hierarchy.** Counts dot-separated section numbers (`1.` → `#`, `2.1.` → `##`, `2.1.1.` → `###`). Inserts a missing space between the number and the title when MinerU OCR-glued them.
 4. **Junk filtering.** Drops URL-like headings, "Contents", margin glossaries ending in `:`, and journal-name covers. Unnumbered headings are demoted to bold unless they are in the `KEEP_UNNUMBERED` allowlist (Abstract, Keywords, Introduction, Methods, Results, Discussion, Conclusion, …).
 5. **Reference preservation.** Keeps References, Bibliography, and Literature Cited sections in the canonical markdown so inline `(Author, year)` citations remain resolvable during later discovery and graph expansion.
 6. **Administrative-section skipping.** Skips acknowledgement, disclosure, funding, author-contribution, competing-interest, data-availability, appendix, and supplementary-material sections when they are parsed as standalone headings, without truncating the rest of the document.
-7. **Image relocation.** Rewrites `images/<hash>` references to `assets/<source-slug>/<hash>` and copies only the images that survive the filtering passes.
+7. **Image relocation.** Rewrites `images/<hash>` references to `assets/<source-slug>/<hash>` and copies only the images that survive the filtering passes. Figure metadata recognizes both `image` and `chart` blocks and their corresponding caption fields.
 8. **LaTeX math repair.** Runs `tools/repair_latex_math.py` on the cleaned body before writing. Repair counts are reported through JSON `warnings` as `latex math repaired: ...` and stored in prepared frontmatter fields `latexRepairReplacements`, `latexRepairConvertedDelimiters`, and `latexRepairMathSpans` when nonzero.
 9. **Frontmatter emission.** Writes the YAML described above.
 
@@ -115,7 +115,7 @@ uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers/<sou
 - **MinerU API down / rate-limited**: switch to local backend by installing the `local` extra and re-running. The CLI accepts the same flags.
 - **Title is split or missing**: cover-block sequence broke normalization. Inspect `<explicit-cache-root>/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
 - **Administrative material leaks into body**: the skip heading didn't match any `SKIP_SECTION_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`). Do not add References/Bibliography/Literature Cited to the skip list.
-- **Stale output after editing the adapter**: delete only `manifest.json` inside the per-PDF cache (or the whole `<sha16>/` directory) and re-run; the cached `<stem>.md` / `<stem>.json` from MinerU are reused.
+- **Stale output after editing the adapter**: re-run with `--overwrite` to regenerate an existing prepared source. The adapter rebuilds `manifest.json` on every run and reuses the cached `<stem>.md` / `<stem>.json` from MinerU. Delete the per-PDF cache only when a fresh OCR extraction is needed.
 
 ## Why MinerU instead of the LLMWiki tex-priority chain?
 

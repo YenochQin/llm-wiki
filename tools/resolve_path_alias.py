@@ -11,6 +11,10 @@ Purpose:
 
 Inputs:
     Aliases or paths. With no positional arguments, common aliases are printed.
+    Content aliases require their own configured external root. Pass only the
+    aliases needed by the task; unrelated content roots are not required.
+    Explicit file paths and project/cache aliases remain available without
+    content configuration. A root need not exist yet (for initialization).
 
 Writes:
     Nothing. Results are printed as tab-separated text or JSON.
@@ -71,9 +75,14 @@ def main() -> None:
 
     try:
         runtime_paths = load_paths(config_path=args.paths_config)
-        requested = args.paths or DEFAULT_ALIASES
+        requested = args.paths or [
+            *DEFAULT_ALIASES,
+            *(["@paper-root"] if runtime_paths.paper_root is not None else []),
+        ]
         resolved = {
-            value: str(resolve_runtime_path(value, runtime_paths, role="path-alias"))
+            value: str(resolve_runtime_path(
+                value, runtime_paths, role="path-alias", require_external=True
+            ))
             for value in requested
         }
     except Exception as exc:

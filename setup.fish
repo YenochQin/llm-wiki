@@ -3,17 +3,17 @@
 # llm-wiki — One-Click Setup (uv-based, fish shell)
 # ============================================================================
 # Usage:
-#   chmod +x setup.fish && ./setup.fish       # English (default)
-#   ./setup.fish --lang zh                    # Chinese runtime files
+#   chmod +x setup.fish && ./setup.fish       # Install dependencies and agent entrypoints
+#   ./setup.fish --sync-only                  # Repair agent entrypoints only
 #
 # What it does:
 #   1. Checks prerequisites (uv, Python via uv, Claude Code)
 #   2. Creates .venv and installs dependencies via uv
-#   3. Copies configuration templates and activates language files
+#   3. Copies configuration templates and links the canonical skills
 #   4. Verifies the installation
 #
-# API key configuration (MinerU, Review LLM) is handled
-# interactively by Claude Code — run /setup after starting Claude Code.
+# MinerU API key configuration is handled interactively
+# by the selected agent — run /setup after starting it.
 # ============================================================================
 
 function info
@@ -29,38 +29,20 @@ function fail
     set_color red; echo -n "[FAIL]  "; set_color normal; echo $argv[1]
 end
 
-# ── Language selection ──────────────────────────────────────────────
-set -l LANG_CODE en
-set -l args $argv
-while test (count $args) -gt 0
-    switch $args[1]
-        case '--lang=*'
-            set LANG_CODE (string replace -r '^--lang=' '' -- $args[1])
-            set args $args[2..-1]
-        case '--lang'
-            if test (count $args) -ge 2
-                set LANG_CODE $args[2]
-                set args $args[3..-1]
-            else
-                set args $args[2..-1]
-            end
+# ── Setup options ──────────────────────────────────────────────────
+set -l SYNC_ONLY false
+for option in $argv
+    switch $option
+        case '--sync-only'
+            set SYNC_ONLY true
         case '*'
-            set args $args[2..-1]
+            fail "Unknown option: $option (supported: --sync-only)"
+            exit 1
     end
 end
-
 set -l PROJECT_ROOT (cd (dirname (status --current-filename)) && pwd)
-
-switch $LANG_CODE
-    case en zh
-    case '*'
-        fail "Unknown lang: $LANG_CODE (supported: en, zh)"
-        exit 1
-end
-
-set -l I18N_DIR "$PROJECT_ROOT/i18n/$LANG_CODE"
-if not test -d "$I18N_DIR"
-    fail "i18n/$LANG_CODE not found — run from the project root"
+if not test -d "$PROJECT_ROOT/skills"; or test -L "$PROJECT_ROOT/skills"
+    fail "Expected the canonical skills/ directory — run setup from a current checkout"
     exit 1
 end
 
@@ -69,6 +51,7 @@ if test -z "$XDG_CONFIG_HOME"
     set CONFIG_DIR "$HOME/.config/llm-wiki"
 end
 set -l ENV_FILE "$CONFIG_DIR/.env"
+set -l VENV_PYTHON "$PROJECT_ROOT/.venv/bin/python"
 
 cd "$PROJECT_ROOT"
 
@@ -80,6 +63,7 @@ echo ""
 
 # ── Step 1: Check prerequisites ─────────────────────────────────────────
 
+if test "$SYNC_ONLY" = false
 info "Checking prerequisites..."
 
 # uv
@@ -125,7 +109,6 @@ info "Syncing dependencies from pyproject.toml..."
 uv sync --python ">=3.10"; or exit 1
 ok "Dependencies synced into .venv"
 
-set -l VENV_PYTHON "$PROJECT_ROOT/.venv/bin/python"
 if not test -x "$VENV_PYTHON"
     fail "Expected $VENV_PYTHON but it does not exist"
     exit 1
@@ -159,32 +142,27 @@ else
     ok "Created .claude/settings.local.json"
 end
 
-# ── Step 3b: Activate language files ───────────────────────────────
+end
+
+# ── Step 3b: Link the canonical skills ──────────────────────────────
 echo ""
-info "Activating language: $LANG_CODE"
-cp "$I18N_DIR/CLAUDE.md" CLAUDE.md; or exit 1
-cp "$I18N_DIR/AGENTS.md" AGENTS.md; or exit 1
+info "Linking agent entrypoints to skills/"
+mkdir -p .claude .agents; or exit 1
 
-if test -L "skills"
-    rm "skills"
-else
-    rm -rf "skills"
+function link_skills --argument-names link_path
+    if test -L "$link_path"
+        if test (readlink "$link_path") = "../skills"
+            return 0
+        end
+        rm "$link_path"; or return 1
+    else if test -e "$link_path"
+        fail "$link_path is not a symlink; preserve or move it before retrying"
+        return 1
+    end
+    ln -s "../skills" "$link_path"
 end
-ln -sfn "i18n/$LANG_CODE/skills" "skills"; or exit 1
-ln -sfn "../shared-references" "$I18N_DIR/skills/shared-references"; or exit 1
-
-if test -L ".claude/skills"
-    rm ".claude/skills"
-else
-    rm -rf ".claude/skills"
-end
-if test -L ".agents/skills"
-    rm ".agents/skills"
-else
-    rm -rf ".agents/skills"
-end
-ln -sfn "../skills" ".claude/skills"; or exit 1
-ln -sfn "../skills" ".agents/skills"; or exit 1
+link_skills ".claude/skills"; or exit 1
+link_skills ".agents/skills"; or exit 1
 
 mkdir -p ".claude/commands"; or exit 1
 
@@ -240,22 +218,10 @@ Use these user-provided invocation arguments for the skill:
 $ARGUMENTS
 ```' > ".claude/commands/zotero-collection-list.md"
 
-echo '---
-description: Index calculation data and write a grounded analysis report.
-argument-hint: "[scope] [--data-root <dir>] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--no-write]"
----
-
-Read and follow @skills/cal-report-analysis/SKILL.md exactly.
-
-Use these user-provided invocation arguments for the skill:
-
-```
-$ARGUMENTS
-```' > ".claude/commands/cal-report-analysis.md"
-
-echo "$LANG_CODE" > .claude/.current-lang
-echo "$LANG_CODE" > .agents/.current-lang
-ok "Language files activated ($LANG_CODE)"
+ok "Both agents use the canonical English skills/ directory"
+if test "$SYNC_ONLY" = true
+    exit 0
+end
 
 # ── Step 4: Verify installation ─────────────────────────────────────────
 
@@ -316,9 +282,6 @@ if not check_tool_import "tools/lint.py" "from lint import check_missing_fields"
     set ERRORS (math $ERRORS + 1)
 end
 if not check_tool_import "tools/list_zotero_collection.py" "from list_zotero_collection import list_collection"
-    set ERRORS (math $ERRORS + 1)
-end
-if not check_tool_import "tools/cal_data_index.py" "from cal_data_index import build_reports"
     set ERRORS (math $ERRORS + 1)
 end
 

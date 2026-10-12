@@ -3,17 +3,17 @@
 # llm-wiki — One-Click Setup (uv-based)
 # ============================================================================
 # Usage:
-#   chmod +x setup.sh && ./setup.sh            # English (default)
-#   ./setup.sh --lang zh                       # Chinese runtime files
+#   chmod +x setup.sh && ./setup.sh            # Install dependencies and agent entrypoints
+#   ./setup.sh --sync-only                     # Repair agent entrypoints only
 #
 # What it does:
 #   1. Checks prerequisites (uv, Python via uv, Claude Code)
 #   2. Creates .venv and installs dependencies via uv
-#   3. Copies configuration templates and activates language files
+#   3. Copies configuration templates and links the canonical skills
 #   4. Verifies the installation
 #
-# API key configuration (MinerU, Review LLM) is handled
-# interactively by Claude Code — run /setup after starting Claude Code.
+# MinerU API key configuration is handled interactively
+# by the selected agent — run /setup after starting it.
 # ============================================================================
 
 set -e
@@ -30,22 +30,19 @@ ok()    { echo -e "${GREEN}[OK]${NC}    $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
 fail()  { echo -e "${RED}[FAIL]${NC}  $1"; }
 
-# ── Language selection ──────────────────────────────────────────────
-LANG_CODE="en"
+# ── Setup options ──────────────────────────────────────────────────
+SYNC_ONLY=false
 while [ $# -gt 0 ]; do
   case "$1" in
-    --lang=*) LANG_CODE="${1#*=}"; shift ;;
-    --lang)   LANG_CODE="${2:-en}"; shift 2 ;;
-    *)        shift ;;
+    --sync-only) SYNC_ONLY=true; shift ;;
+    *) fail "Unknown option: $1 (supported: --sync-only)"; exit 1 ;;
   esac
 done
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
-case "$LANG_CODE" in
-    en|zh) ;;
-    *) fail "Unknown lang: $LANG_CODE (supported: en, zh)"; exit 1 ;;
-esac
-I18N_DIR="$PROJECT_ROOT/i18n/$LANG_CODE"
-[ -d "$I18N_DIR" ] || { fail "i18n/$LANG_CODE not found — run from the project root"; exit 1; }
+if [ ! -d "$PROJECT_ROOT/skills" ] || [ -L "$PROJECT_ROOT/skills" ]; then
+    fail "Expected the canonical skills/ directory — run setup from a current checkout"
+    exit 1
+fi
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/llm-wiki"
 ENV_FILE="$CONFIG_DIR/.env"
 cd "$PROJECT_ROOT"
@@ -58,6 +55,7 @@ echo ""
 
 # ── Step 1: Check prerequisites ─────────────────────────────────────────
 
+if [ "$SYNC_ONLY" = false ]; then
 info "Checking prerequisites..."
 
 # uv
@@ -134,45 +132,26 @@ else
     cp config/settings.local.json.example .claude/settings.local.json
     ok "Created .claude/settings.local.json"
 fi
+fi
 
-# ── Step 3b: Activate language files ───────────────────────────────
+# ── Step 3b: Link the canonical skills ──────────────────────────────
 echo ""
-info "Activating language: $LANG_CODE"
-cp "$I18N_DIR/CLAUDE.md" CLAUDE.md
-cp "$I18N_DIR/AGENTS.md" AGENTS.md
+info "Linking agent entrypoints to skills/"
+mkdir -p .claude .agents
 
-sync_tree() {
-    local src_dir="$1"
-    local dst_dir="$2"
-    mkdir -p "$dst_dir"
-    if command -v rsync &>/dev/null; then
-        rsync -rt --delete "$src_dir"/ "$dst_dir"/
-    else
-        find "$dst_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-        cp -R "$src_dir"/. "$dst_dir"/
+link_skills() {
+    local link_path="$1"
+    if [ -L "$link_path" ]; then
+        [ "$(readlink "$link_path")" = "../skills" ] && return 0
+        rm "$link_path"
+    elif [ -e "$link_path" ]; then
+        fail "$link_path is not a symlink; preserve or move it before retrying"
+        return 1
     fi
+    ln -s "../skills" "$link_path"
 }
-
-if [ -L "skills" ]; then
-    rm "skills"
-else
-    rm -rf "skills"
-fi
-ln -sfn "i18n/$LANG_CODE/skills" "skills"
-ln -sfn "../shared-references" "$I18N_DIR/skills/shared-references"
-
-if [ -L ".claude/skills" ]; then
-    rm ".claude/skills"
-else
-    rm -rf ".claude/skills"
-fi
-if [ -L ".agents/skills" ]; then
-    rm ".agents/skills"
-else
-    rm -rf ".agents/skills"
-fi
-ln -sfn "../skills" ".claude/skills"
-ln -sfn "../skills" ".agents/skills"
+link_skills ".claude/skills"
+link_skills ".agents/skills"
 
 mkdir -p ".claude/commands"
 cat > ".claude/commands/ingest.md" <<'EOF'
@@ -235,24 +214,10 @@ $ARGUMENTS
 ```
 EOF
 
-cat > ".claude/commands/cal-report-analysis.md" <<'EOF'
----
-description: Index calculation data and write a grounded analysis report.
-argument-hint: "[scope] [--data-root <dir>] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--no-write]"
----
-
-Read and follow @skills/cal-report-analysis/SKILL.md exactly.
-
-Use these user-provided invocation arguments for the skill:
-
-```
-$ARGUMENTS
-```
-EOF
-
-echo "$LANG_CODE" > .claude/.current-lang
-echo "$LANG_CODE" > .agents/.current-lang
-ok "Language files activated ($LANG_CODE)"
+ok "Both agents use the canonical English skills/ directory"
+if [ "$SYNC_ONLY" = true ]; then
+    exit 0
+fi
 
 # ── Step 4: Verify installation ─────────────────────────────────────────
 
@@ -295,7 +260,6 @@ check_tool_import "tools/fetch_literature.py" "from fetch_literature import sear
 check_tool_import "tools/research_wiki.py" "from research_wiki import slugify"
 check_tool_import "tools/lint.py" "from lint import check_missing_fields"
 check_tool_import "tools/list_zotero_collection.py" "from list_zotero_collection import list_collection"
-check_tool_import "tools/cal_data_index.py" "from cal_data_index import build_reports"
 
 # MinerU API token diagnostic (warn-only). The api backend reads process env or
 # the unified llm-wiki user config.

@@ -3,14 +3,13 @@
   llm-wiki — One-Click Setup (uv-based, PowerShell)
 
   Usage:
-    pwsh -File .\setup.ps1                 # English (default)
-    pwsh -File .\setup.ps1 -Lang zh        # Chinese runtime files
+    pwsh -File .\setup.ps1                 # Install dependencies and agent entrypoints
+    pwsh -File .\setup.ps1 -SyncOnly        # Repair agent entrypoints only
 #>
 
 [CmdletBinding()]
 param(
-    [ValidateSet('en', 'zh')]
-    [string]$Lang = 'en'
+    [switch]$SyncOnly
 )
 
 Set-StrictMode -Version Latest
@@ -28,7 +27,11 @@ function Test-Command([string]$Name) {
 function Set-Symlink([string]$Target, [string]$LinkPath) {
     $existing = Get-Item -LiteralPath $LinkPath -Force -ErrorAction SilentlyContinue
     if ($null -ne $existing) {
-        Remove-Item -LiteralPath $LinkPath -Force -Recurse
+        if (-not ($existing.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "$LinkPath is not a symlink; preserve or move it before retrying"
+        }
+        if ($existing.Target -contains $Target) { return }
+        Remove-Item -LiteralPath $LinkPath -Force
     }
 
     try {
@@ -100,7 +103,8 @@ function Test-ToolImport([string]$Label, [string]$ProjectRoot, [string]$VenvPyth
 }
 
 $projectRoot = $PSScriptRoot
-$i18nDir = Join-Path $projectRoot "i18n\$Lang"
+$skillsDir = Join-Path $projectRoot 'skills'
+$claudeDir = Join-Path $projectRoot '.claude'
 $configBase = if ($env:XDG_CONFIG_HOME) {
     $env:XDG_CONFIG_HOME
 } else {
@@ -109,8 +113,12 @@ $configBase = if ($env:XDG_CONFIG_HOME) {
 $configDir = Join-Path $configBase 'llm-wiki'
 $envFile = Join-Path $configDir '.env'
 
-if (-not (Test-Path -LiteralPath $i18nDir -PathType Container)) {
-    Write-Fail "i18n/$Lang not found — run from the project root"
+if (-not (Test-Path -LiteralPath $skillsDir -PathType Container)) {
+    Write-Fail 'Expected the canonical skills/ directory — run setup from a current checkout'
+    exit 1
+}
+if ((Get-Item -LiteralPath $skillsDir -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    Write-Fail 'The canonical skills/ directory must not be a symlink or junction'
     exit 1
 }
 
@@ -122,6 +130,7 @@ Write-Host '  llm-wiki — Setup'
 Write-Host '============================================'
 Write-Host ''
 
+if (-not $SyncOnly) {
 Write-Info 'Checking prerequisites...'
 if (-not (Test-Command 'uv')) {
     Write-Fail 'uv not found. Install it from https://docs.astral.sh/uv/getting-started/installation/'
@@ -175,7 +184,6 @@ if (Test-Path -LiteralPath (Join-Path $projectRoot '.env') -PathType Leaf) {
     Write-Warn "Legacy project .env detected; tools prefer $envFile"
 }
 
-$claudeDir = Join-Path $projectRoot '.claude'
 New-Item -ItemType Directory -Path $claudeDir -Force | Out-Null
 $claudeSettings = Join-Path $claudeDir 'settings.local.json'
 if (Test-Path -LiteralPath $claudeSettings -PathType Leaf) {
@@ -185,14 +193,11 @@ if (Test-Path -LiteralPath $claudeSettings -PathType Leaf) {
     Write-Ok 'Created .claude/settings.local.json'
 }
 
+}
+
 Write-Host ''
-Write-Info "Activating language: $Lang"
-Copy-Item -LiteralPath (Join-Path $i18nDir 'CLAUDE.md') -Destination (Join-Path $projectRoot 'CLAUDE.md') -Force
-Copy-Item -LiteralPath (Join-Path $i18nDir 'AGENTS.md') -Destination (Join-Path $projectRoot 'AGENTS.md') -Force
-
-Set-Symlink -Target "i18n\$Lang\skills" -LinkPath (Join-Path $projectRoot 'skills')
-Set-Symlink -Target '..\shared-references' -LinkPath (Join-Path $i18nDir 'skills\shared-references')
-
+Write-Info 'Linking agent entrypoints to skills/'
+New-Item -ItemType Directory -Path $claudeDir -Force | Out-Null
 $agentsDir = Join-Path $projectRoot '.agents'
 New-Item -ItemType Directory -Path $agentsDir -Force | Out-Null
 Set-Symlink -Target '..\skills' -LinkPath (Join-Path $claudeDir 'skills')
@@ -204,10 +209,8 @@ Write-CommandFile -Path (Join-Path $commandsDir 'ingest.md') -Description 'Inges
 Write-CommandFile -Path (Join-Path $commandsDir 'ingest-local-pdf.md') -Description 'Prepare and ingest local PDF files into llm-wiki.' -ArgumentHint '(<local-pdf-or-dir> | <wiki/sources/papers/*.md>) [--title <str>] [--discover]' -SkillPath 'skills/ingest-local-pdf/SKILL.md'
 Write-CommandFile -Path (Join-Path $commandsDir 'promote-light-ingest.md') -Description 'Rank light-ingested paper pages for promotion to full ingest.' -ArgumentHint '[--limit N] [--min-score N] [--apply <paper-slug>]' -SkillPath 'skills/promote-light-ingest/SKILL.md'
 Write-CommandFile -Path (Join-Path $commandsDir 'zotero-collection-list.md') -Description 'List Zotero collection papers with citationKey, title, and DOI.' -ArgumentHint '<collection-path> [--zotero-root <dir>] [--no-recursive] [--output-md <path>]' -SkillPath 'skills/zotero-collection-list/SKILL.md'
-Write-CommandFile -Path (Join-Path $commandsDir 'cal-report-analysis.md') -Description 'Index calculation data and write a grounded analysis report.' -ArgumentHint '[scope] [--data-root <dir>] [--data-dir <dir>] [--report-dir <dir>] [--table-rows N] [--text-lines N] [--no-write]' -SkillPath 'skills/cal-report-analysis/SKILL.md'
-Write-TextFile -Path (Join-Path $claudeDir '.current-lang') -Content $Lang
-Write-TextFile -Path (Join-Path $agentsDir '.current-lang') -Content $Lang
-Write-Ok "Language files activated ($Lang)"
+Write-Ok 'Both agents use the canonical English skills/ directory'
+if ($SyncOnly) { exit 0 }
 
 Write-Host ''
 Write-Info 'Verifying installation...'
@@ -223,8 +226,7 @@ $toolImports = @(
     @{ Label = 'tools/fetch_literature.py'; Import = 'from fetch_literature import search' },
     @{ Label = 'tools/research_wiki.py'; Import = 'from research_wiki import slugify' },
     @{ Label = 'tools/lint.py'; Import = 'from lint import check_missing_fields' },
-    @{ Label = 'tools/list_zotero_collection.py'; Import = 'from list_zotero_collection import list_collection' },
-    @{ Label = 'tools/cal_data_index.py'; Import = 'from cal_data_index import build_reports' }
+    @{ Label = 'tools/list_zotero_collection.py'; Import = 'from list_zotero_collection import list_collection' }
 )
 foreach ($tool in $toolImports) {
     if (-not (Test-ToolImport -Label $tool.Label -ProjectRoot $projectRoot -VenvPython $venvPython -ImportStatement $tool.Import)) { $errors++ }

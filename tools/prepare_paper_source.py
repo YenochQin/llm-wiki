@@ -370,6 +370,11 @@ def _cover_title_heading_matches(heading: str, title: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _is_heading_block(block: dict) -> bool:
+    level = block.get("text_level")
+    return isinstance(level, int) and level > 0
+
+
 def _normalize_cover_blocks(blocks: list[dict]) -> list[dict]:
     out: list[dict] = []
     i = 0
@@ -378,8 +383,8 @@ def _normalize_cover_blocks(blocks: list[dict]) -> list[dict]:
 
     while i < n:
         b = blocks[i]
-        is_cover_l1 = b.get("text_level") == 1 and (b.get("page_idx") or 0) == 0
-        if not is_cover_l1:
+        is_cover_heading = _is_heading_block(b) and (b.get("page_idx") or 0) == 0
+        if not is_cover_heading:
             out.append(b)
             i += 1
             continue
@@ -401,7 +406,7 @@ def _normalize_cover_blocks(blocks: list[dict]) -> list[dict]:
             j = i + 1
             while j < n:
                 bj = blocks[j]
-                if not (bj.get("text_level") == 1 and (bj.get("page_idx") or 0) == 0):
+                if not (_is_heading_block(bj) and (bj.get("page_idx") or 0) == 0):
                     break
                 tj = (bj.get("text") or "").strip()
                 if (
@@ -440,7 +445,7 @@ def _synthesize_manifest(md_path: Path, json_path: Path) -> dict:
 
     auto_fig_n = 0
     for block in blocks:
-        if block.get("text_level") == 1:
+        if _is_heading_block(block):
             heading = (block.get("text") or "").strip()
             if not heading:
                 continue
@@ -453,11 +458,16 @@ def _synthesize_manifest(md_path: Path, json_path: Path) -> dict:
                     "tables": [],
                 }
             )
-        elif block.get("type") == "image":
+        elif block.get("type") in {"image", "chart"}:
             img_path = block.get("img_path") or ""
             if not img_path:
                 continue
-            cap_list = block.get("img_caption") or block.get("image_caption") or []
+            cap_list = (
+                block.get("img_caption")
+                or block.get("image_caption")
+                or block.get("chart_caption")
+                or []
+            )
             caption = (
                 " ".join(cap_list).strip()
                 if isinstance(cap_list, list)
@@ -504,11 +514,12 @@ def _normalize_cache(cache_dir: Path, md_path: Path, json_path: Path) -> None:
     if not full_md.exists() or full_md.stat().st_mtime < md_path.stat().st_mtime:
         full_md.write_text(md_path.read_text(encoding="utf-8"), encoding="utf-8")
 
-    if not manifest.exists() or manifest.stat().st_mtime < json_path.stat().st_mtime:
-        data = _synthesize_manifest(md_path, json_path)
-        manifest.write_text(
-            json.dumps(data, ensure_ascii=False, indent=None), encoding="utf-8"
-        )
+    # Rebuild this cheap derived metadata so adapter changes also apply to
+    # existing OCR caches without repeating the cloud extraction.
+    data = _synthesize_manifest(md_path, json_path)
+    manifest.write_text(
+        json.dumps(data, ensure_ascii=False, indent=None), encoding="utf-8"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -688,6 +699,7 @@ def _build_figures_index(
         if not name or name not in used_images:
             continue
         caption = re.sub(r"\s+", " ", (fig.get("caption", "") or "").strip())
+        caption, _ = repair_latex_math(caption)
         figures.append(
             {
                 "label": fig.get("label", ""),
@@ -701,6 +713,13 @@ def _build_figures_index(
 
 
 def _build_abstract_excerpt(body: str, limit: int = 800) -> str:
+    abstract_heading = re.search(
+        r"^#{1,6}[ \t]+(?:abstract|摘要)[ \t]*$", body,
+        flags=re.MULTILINE | re.IGNORECASE,
+    )
+    if abstract_heading:
+        body = body[abstract_heading.end():]
+        body = re.split(r"^#{1,6}[ \t]+", body, maxsplit=1, flags=re.MULTILINE)[0]
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", body)
     text = re.sub(r"^#.*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"\s+", " ", text).strip()

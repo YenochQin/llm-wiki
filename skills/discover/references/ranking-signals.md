@@ -1,0 +1,81 @@
+# /discover ranking signals
+
+The deterministic ranking lives in `tools/discover.py` — this file documents what it weighs and **why it differs from `/init`**, so that future edits do not accidentally re-converge the two.
+
+## Anchor-mode candidate channels
+
+Anchor mode gathers from OpenAlex-first search and Crossref metadata/reference channels per anchor:
+
+- **`recommend`** — approximates related papers by looking up the anchor, extracting title keywords, and searching OpenAlex first with Crossref fallback.
+- **`references`** — surfaces older work when Crossref has deposited reference lists for the anchor DOI.
+- **`citations`** — currently best-effort and often empty because the no-key providers used here do not expose a full citing-works graph.
+
+Together they provide account-free discovery: topical neighbors plus references where available. Coverage is intentionally lighter than key-gated citation graph services.
+
+## What discovery scores on
+
+Anchor mode (rough weight order):
+
+1. **Aggregate influential citation count** — log-scaled. Reflects the candidate's general prestige. Weighted heavier than raw `citationCount`.
+2. **Anchor-influence edge** — provider-specific edge signal when available. The current no-key providers usually do not emit this, so the score mostly comes from overlap, channel diversity, citations, and freshness.
+3. **Anchor overlap** — how many anchors surfaced this candidate. Two anchors pointing to the same paper means it sits at their intersection.
+4. **Channel diversity** — bonus when the same candidate appears in multiple channels (e.g., both `recommend` and `references`). A paper present in all three is rare and usually central to the anchor's neighborhood.
+5. **Freshness** — mild bonus for recent years. Recent ≠ better, so the curve is flat-ish (1.0 / 0.85 / 0.6 / 0.4 / 0.25 across age buckets).
+6. **Author h-index** (max across authors) — capped tie-breaker. The list endpoints do not return `authors.hIndex`, so this signal mostly fires for topic-mode candidates that came via the richer single-paper graph API.
+
+Wiki mode uses the anchor signals above. Topic mode uses a separate objective:
+
+1. **Topic relevance (58%)** — lexical coverage of the canonical query or an equivalent scoped query variant, with title matches weighted above abstract/venue matches.
+2. **Freshness (30%)** — favors current work within the requested time window.
+3. **Citation influence (10%)** — a log-scaled tie-breaker, not the main ranking signal.
+4. **Channel diversity (2%)** — a small bonus when multiple retrieval paths surface the same work.
+
+Topic mode defaults to the current year minus 10 and drops candidates outside that window. It also applies a hard lexical relevance gate before ranking, so an old or broadly cited paper cannot outrank a direct topic match merely through citation count.
+
+For topics with independent hard qualifiers, `--required-term-group` adds an AND-of-ORs scope gate after lexical relevance: each group is required, while pipe-separated alternatives inside a group are interchangeable. This prevents generic terms such as `neutral`, `atom`, and `metal` from combining across an off-topic catalyst paper and masquerading as a neutral-atom structure calculation.
+
+`--required-title-term-group` applies the same logic to titles only. Use it when an abstract-level mention is insufficient evidence that the paper directly studies the requested object or task.
+
+## Age/citation gate
+
+Before scoring and shortlist display, discovery applies one hard quality gate across all modes:
+
+- if `year < 1990`, keep the candidate only when `citation_count > 100`;
+- if `year >= 1990` or year is unknown, this gate does not apply.
+
+This prevents weakly cited older papers from being recommended just because they appear in a reference list or topic search. It is a filter, not a ranking bonus; a pre-1990 paper with exactly 100 citations is dropped.
+
+## Heavy-relation filtering
+
+After scoring, anchor mode and wiki mode apply a hard relevance gate before the shortlist is shown. A candidate must have at least one strong relation signal:
+
+- it appears in a direct `references` or `citations` channel;
+- it appears through multiple channels, such as both `recommend` and `references`;
+- it is surfaced by two or more anchors;
+- a provider marks an explicit influential anchor-candidate edge.
+
+A single `recommend` / title-search hit is not enough, even if the candidate is highly cited. This keeps post-`/ingest --discover` suggestions focused on papers that are heavily connected to the current wiki context. Topic mode does not use the anchor relation gate; it uses the topic-coverage gate described above.
+
+### Why keep edge influence in the schema?
+
+`is_influential_edge` stays in the normalized candidate schema so future no-key or user-configured providers can expose edge-specific importance without changing downstream ranking code. Today it is usually false.
+
+## What discovery does **not** score on
+
+Ranking follows the explicit next-read request:
+
+- **No automatic survey preference**. Rank relevance and the mode's documented signals; a paper being a survey is not itself a bonus.
+- **No "older canonical anchor" bonus**. Age and citation count alone do not justify adding a foundational paper to a next-read shortlist.
+- **No notes/web priority terms**. `/discover` does not read raw notes or web clips to invent intent — its inputs are explicit (anchor, topic, or wiki state).
+
+`/init` prepares user-owned local sources for wiki ingestion; it does not perform literature discovery. Keep source-preparation policy separate from discovery ranking.
+
+## Provider limitations
+
+`tools/fetch_literature.py` deliberately uses no-key providers:
+
+- OpenAlex is primary for broad works search and supplies abstracts, citation counts, and stable OpenAlex IDs.
+- Crossref contributes a small supplementary topic pool after OpenAlex, fills deficits when OpenAlex is sparse, and supplies DOI metadata and references when publishers provide them. All candidates share the same downstream gates and ranking.
+- A full citing-works graph is not available from these no-key paths, so citation expansion is best-effort.
+
+Do not reintroduce a required API key for discovery. If a richer provider is added later, make it optional and preserve the Crossref fallback.

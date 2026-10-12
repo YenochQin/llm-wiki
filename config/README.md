@@ -43,7 +43,7 @@ These are the **minimum permissions** for LLM-Wiki skills to function. Claude Co
 ### `paths.json.example`
 
 Cross-platform paths that connect this code repository to an external wiki
-vault, raw source directory, and Zotero lookup candidates. Copy it to
+vault, raw source directory, manuscript root, and Zotero lookup candidates. Copy it to
 `config/paths.json` and fill in the profiles you use:
 
 ```bash
@@ -59,6 +59,7 @@ Then edit the profile values:
     "macos": {
       "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
       "raw_root": "/Users/you/Documents/ResearchWiki/raw",
+      "paper_root": "/Users/you/Documents/ResearchWiki/papers",
       "zotero_roots": [
         "~/Library/Application Support/Zotero/Profiles/*",
         "~/Zotero"
@@ -67,6 +68,7 @@ Then edit the profile values:
     "windows": {
       "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
       "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw",
+      "paper_root": "%USERPROFILE%/Documents/ResearchWiki/papers",
       "zotero_roots": [
         "%APPDATA%/Zotero/Zotero/Profiles/*",
         "%USERPROFILE%/Zotero"
@@ -75,6 +77,7 @@ Then edit the profile values:
     "linux": {
       "wiki_root": "~/Documents/ResearchWiki/wiki",
       "raw_root": "~/Documents/ResearchWiki/raw",
+      "paper_root": "~/Documents/ResearchWiki/papers",
       "zotero_roots": [
         "~/.zotero/zotero/*",
         "~/Zotero"
@@ -87,13 +90,75 @@ Then edit the profile values:
 With `"active_profile": "auto"`, tools choose `macos`, `windows`, or `linux`
 from the current OS. Set `active_profile` to a concrete profile name to force
 one, or set `LLM_WIKI_PATH_PROFILE` temporarily. Environment variables
-`LLM_WIKI_WIKI_ROOT` and `LLM_WIKI_RAW_ROOT` still override the selected
+`LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`, and `LLM_WIKI_PAPER_ROOT` override the selected
 profile.
 
-The legacy flat format with top-level `wiki_root` and `raw_root` is still
+The legacy flat format with top-level `wiki_root`, `raw_root`, and `paper_root` is still
 accepted, but the profiled format is preferred for synced multi-platform use.
 Most tools read this file automatically; `tools/research_wiki.py` accepts
 `@wiki` as a shortcut for the configured wiki root.
+
+Before skill content operations, run `tools/resolve_path_alias.py` for the
+aliases needed by that task. For example, `@configured` validates only the wiki
+root; it does not require raw or manuscript configuration. Content aliases fail
+with exit code 2 if their root is unconfigured or overlaps the code repository,
+including through a symlink. Explicit environment overrides count as configuration.
+The root may be created later during initialization. Project/cache aliases and
+explicit file paths do not require content-root configuration; legacy low-level
+path defaults are retained for migration tools and disposable test fixtures.
+
+### Independent manuscripts
+
+The code repository holds skills and tools; generated content belongs in the
+configured external roots. `paper_root` stores author manuscripts, distinct
+from literature-summary pages in `wiki_root/papers/`. It must be outside the
+code repository and separate from the wiki and raw roots. There is no
+repository-local fallback when `paper_root` is missing.
+
+Each research topic has a stable directory without a date. Under it, each
+manuscript version uses `YYYY-MM-DD-<purpose>` (a valid calendar date and a
+lowercase slug). Multiple drafts can be created on the same day with different
+purpose names or `-v2`, `-v3` suffixes:
+
+```text
+<paper_root>/
+├── rmcdhf-radial-research/
+│   ├── 2026-10-06-rmcdhf-research/
+│   │   ├── paper.tex
+│   │   ├── draft.json
+│   │   ├── evidence/
+│   │   ├── reviews/
+│   │   └── history/
+│   └── 2026-10-06-structure-v2/
+│       ├── paper.tex
+│       └── reviews/
+└── another-research-topic/
+    └── 2026-10-06-initial-draft/
+```
+
+Use these commands from the code repository:
+
+```bash
+uv run python -X utf8 tools/resolve_path_alias.py '@paper-root' --json
+uv run python -X utf8 tools/paper_workspace.py create another-research-topic 2026-10-06-initial-draft
+uv run python -X utf8 tools/paper_workspace.py resolve rmcdhf-radial-research 2026-10-06-rmcdhf-research
+uv run python -X utf8 tools/paper_workspace.py fork rmcdhf-radial-research 2026-10-06-rmcdhf-research 2026-10-06-structure-v2
+uv run python -X utf8 tools/paper_workspace.py list
+uv run python -X utf8 tools/paper_workspace.py list rmcdhf-radial-research
+uv run python -X utf8 tools/resolve_path_alias.py '@paper-root/rmcdhf-radial-research/2026-10-06-rmcdhf-research/paper.tex'
+```
+
+`create` starts an empty draft. `fork` copies an existing version for major
+structural changes or a separate evaluation, recording its parent in
+`draft.json`; it preserves the original version. Both refuse existing
+destinations. `resolve` and `list` are read-only. The tool returns `paper_dir`
+for the topic and `draft_dir` for the selected manuscript version.
+
+Routine revisions retain the selected draft and source filename. Major
+alternatives use sibling draft directories with their own figures, results,
+bibliography checks, reviews, and history. Copied results remain inherited
+evidence. `/paper-draft` accepts `--paper-id <topic-id>` and
+`--draft-id <YYYY-MM-DD-slug>`; omission behavior is defined in the skill.
 
 `zotero_roots` is used by `/ingest` when the user passes `--title` or `--doi`
 without an explicit `--zotero-root`. Put each platform's likely Zotero data
@@ -135,4 +200,9 @@ uv run python tools/clean_wiki_repository.py --target all
 
 ## All Done by `setup.sh`
 
-If you ran `setup.sh`, these files are already copied to the right locations. You only need to edit `~/.config/llm-wiki/.env` if you want to add API keys.
+`setup.sh` seeds API and agent settings. Configure your external content roots
+in `config/paths.json` separately; it is private and is not overwritten by setup.
+Runtime specifications are maintained directly in `skills/`, `AGENTS.md`, and
+`CLAUDE.md`; edits take effect without a copy/sync step. Use `./setup.sh --sync-only`
+(or `./setup.fish --sync-only`, `pwsh -File .\setup.ps1 -SyncOnly`) to repair agent
+skill entrypoints without reinstalling dependencies or changing user API configuration.

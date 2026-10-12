@@ -161,8 +161,7 @@ class MineruApiTests(unittest.TestCase):
                         "batch_id": "batch-old",
                         "data_id": "paper",
                         "api_base": "https://mineru.net/api/v4",
-                        # Simulate a task submitted with the previous model.
-                        "model_version": "pipeline",
+                        "model_version": "vlm",
                         "language": "en",
                     }
                 ),
@@ -173,23 +172,20 @@ class MineruApiTests(unittest.TestCase):
                 mock.patch.object(
                     _mineru,
                     "_config",
-                    side_effect=lambda name, default="": (
-                        "token"
-                        if name == "MINERU_API_TOKEN"
-                        else "vlm"
-                        if name == "MINERU_MODEL_VERSION"
-                        else default
-                    ),
+                    side_effect=lambda name, default="": {
+                        "MINERU_API_TOKEN": "token",
+                        "MINERU_MODEL_VERSION": "pipeline",
+                    }.get(name, default),
                 ),
                 mock.patch.object(_mineru, "_poll_batch_until_done", side_effect=RuntimeError("stop after submit")),
                 self.assertRaisesRegex(RuntimeError, "stop after submit"),
             ):
                 _mineru._extract_via_api_with_requests(FakeRequests, pdf, cache_dir, "en")
 
-            self.assertEqual(FakeRequests.posted_json["model_version"], "vlm")
+            self.assertEqual(FakeRequests.posted_json["model_version"], "pipeline")
             state = json.loads((cache_dir / "api-task.json").read_text(encoding="utf-8"))
             self.assertEqual(state["batch_id"], "batch-new")
-            self.assertEqual(state["model_version"], "vlm")
+            self.assertEqual(state["model_version"], "pipeline")
 
     def test_poll_tolerates_transient_read_timeout(self) -> None:
         class FakeResponse:
