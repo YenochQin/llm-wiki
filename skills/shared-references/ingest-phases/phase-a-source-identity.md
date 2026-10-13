@@ -32,7 +32,7 @@ Read `prepared.canonical_ingest_path`, `prepared.usable`, and `metadata_path` fr
 [Gate A] source & identity
 - Zotero Local API metadata status: ok | n/a for non-Zotero handoff: ✓/✗
 - prepared source path: <…>  (exists, size > 0B): ✓/✗
-- source usable:true: ✓/✗
+- source usable:true (preparation only; Phase B source-quality gate still required): ✓/✗
 - slug source: zotero paper_slug | prepared paperSlug | paper-slug fallback  → "{slug}"
 - stop-if-exists checked (no different-paper collision): ✓/✗
 - importance: <n> (provisional? yes/no)

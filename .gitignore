@@ -26,6 +26,7 @@ __pycache__/
 .litcheck/
 config/zotero-cache/
 .checkpoints/
+/temp/
 .omo/
 raw/prepared/papers/assets/*
 raw/tmp/

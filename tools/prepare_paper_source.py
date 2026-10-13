@@ -69,6 +69,7 @@ import _mineru
 import frontmatter
 from _cli_io import configure_utf8_stdio
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths, resolve_runtime_path
+from _source_markdown import abstract_text, normalize_section_name
 from repair_latex_math import repair_latex_math
 
 PREPARED_SUBDIR = "prepared"
@@ -273,7 +274,7 @@ def _heading_depth(text: str) -> int:
 
 
 def _is_allowed_unnumbered(text: str) -> bool:
-    return text.strip().lower().rstrip(":") in KEEP_UNNUMBERED
+    return normalize_section_name(text) in KEEP_UNNUMBERED
 
 
 def _looks_like_author(text: str) -> bool:
@@ -534,7 +535,7 @@ def _detect_title(manifest: dict) -> str:
             continue
         if _heading_is_junk(h) or _heading_is_cutoff(h) or _is_journal_name(h):
             continue
-        if h.lower() in KEEP_UNNUMBERED:
+        if normalize_section_name(h) in KEEP_UNNUMBERED:
             continue
         if _is_numbered(h):
             continue
@@ -713,13 +714,8 @@ def _build_figures_index(
 
 
 def _build_abstract_excerpt(body: str, limit: int = 800) -> str:
-    abstract_heading = re.search(
-        r"^#{1,6}[ \t]+(?:abstract|摘要)[ \t]*$", body,
-        flags=re.MULTILINE | re.IGNORECASE,
-    )
-    if abstract_heading:
-        body = body[abstract_heading.end():]
-        body = re.split(r"^#{1,6}[ \t]+", body, maxsplit=1, flags=re.MULTILINE)[0]
+    # An absent abstract is an evidence gap, not permission to use cover text.
+    body = abstract_text(body) or ""
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", body)
     text = re.sub(r"^#.*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"\s+", " ", text).strip()

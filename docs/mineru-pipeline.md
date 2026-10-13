@@ -21,9 +21,9 @@ raw/papers/<file>.pdf
 | `prepared_path` | same as above; kept for parity with the LLMWiki contract |
 | `ingest_format` | `"mineru-md"` — flag to skills that this is structured MinerU output, not raw PDF or `.tex` |
 | `title` | best-effort title detected from the cover or the first non-junk heading |
-| `abstract_excerpt` | first ~400 chars after the abstract heading, for skill prompts |
+| `abstract_excerpt` | up to 800 chars from an explicit abstract (ATX, bold, plain or letter-spaced label); empty when no abstract boundary is recognized |
 | `warnings` | non-fatal anomalies (missing abstract, no figures, LaTeX math repair counts, etc.) |
-| `usable` | boolean — `false` blocks downstream ingest |
+| `usable` | preparation result — `false` blocks downstream ingest; `true` still requires the Phase B source-quality gate |
 
 ## Components
 
@@ -106,6 +106,21 @@ To maintain an existing prepared source outside an ingest run, inspect that one 
 uv run python -X utf8 tools/repair_latex_math.py --dry-run @configured-sources-papers/<source-slug>.md
 uv run python -X utf8 tools/repair_latex_math.py @configured-sources-papers/<source-slug>.md
 ```
+
+## Source quality before evidence extraction
+
+`tools/source_quality_lint.py` screens existing canonical Markdown without
+rewriting it. Phase B runs this tool before extracting cards and requires the
+current agent to review findings and prospective evidence. See the shared
+[source-quality gate](../skills/shared-references/source-quality.md) for scopes,
+dispositions, exit codes, coverage limits and batch reporting. Rules do not
+prove OCR fidelity, restore missing symbols, or replace PDF comparison.
+
+The abstract reader recognizes `**A B S T R A C T**`, `**Abstract**`, plain
+`Abstract`, and Markdown headings. It excludes cover metadata and stops at the
+next recognized section. With no explicit abstract it returns an empty excerpt
+instead of treating author/keyword text as the abstract. This reader change
+does not rewrite already-prepared sources.
 
 ## Troubleshooting
 

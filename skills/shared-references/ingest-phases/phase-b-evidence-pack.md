@@ -8,6 +8,13 @@ Build the source Evidence Pack from the prepared MinerU markdown **before** any 
 
 ## Steps
 
+Before step 1, run the **prepared-source quality gate** in
+[`source-quality.md`](../source-quality.md) on every canonical source used by
+this paper. Inspect findings and review prospective evidence in the current
+agent. Resolve scan failures and record exclusions/blockers before extracting
+cards; `usable: true` and successful quote matching do not substitute for this
+gate. This also applies to prepared handoffs and cached/light/reingest sources.
+
 1. **Extract short evidence card parameters** from the canonical prepared source (`wiki/sources/papers/<source-slug>.md` or the canonical path handed off by `/init`). Each card parameter object carries: `id` (`E1`, `E2`, …), `use_label` (`Problem` / `Research classification` / `Method` / `Results` / `Limitations` / `Concept` / `Claim`), `short_label`, `source_slug`, `source_section`, and `excerpt`.
    - `short_label` is the refined title of the source block: summarize the source's contribution in a few precise words, such as the mechanism, dataset/result, definition, limitation, or formal object.
    - `excerpt` is a locator anchor, not a copied source block. Use the shortest exact original-language sentence, phrase, table row, or formula that lets a reader find and verify the evidence in the prepared source.
@@ -48,6 +55,8 @@ If the prepared source is too poor to extract cards, stop and report a source-qu
 
 ```text
 [Gate B] evidence pack
+- source quality scan complete on every canonical source; current fingerprints and finding dispositions recorded: ✓/✗
+- selected evidence reviewed for content/structure damage; no unresolved damaged fragment used as support: ✓/✗
 - cards extracted: <n>
 - populated interpretive sections: <list>  → each has ≥1 card: ✓/✗
 - concepts this ingest will touch: <n> → each has a Concept card: ✓/✗

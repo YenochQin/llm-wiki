@@ -129,6 +129,17 @@ Section content that must remain.
             "The actual abstract.",
         )
 
+    def test_abstract_excerpt_accepts_spaced_bold_and_plain_labels(self) -> None:
+        for heading in ("**A B S T R A C T**", "# A B S T R A C T", "**Abstract**", "Abstract"):
+            with self.subTest(heading=heading):
+                body = ("# Paper\n\nAuthor and keywords.\n\n" + heading +
+                        "\n\nStates 5??24??.\n\n**1. Introduction**\nFollowing text.")
+                self.assertEqual(prepare_paper_source._build_abstract_excerpt(body), "States 5??24??.")
+
+    def test_missing_explicit_abstract_does_not_return_cover_as_abstract(self) -> None:
+        self.assertEqual(prepare_paper_source._build_abstract_excerpt(
+            "# Paper\nAuthor and institution.\n# 1. Introduction\nBody."), "")
+
     def test_cached_manifest_is_refreshed_with_current_adapter(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cache = Path(tmp)

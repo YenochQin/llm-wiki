@@ -29,6 +29,7 @@ Turn one paper into a fully wired set of wiki pages. Execute Phases A–E in dep
 - `.claude/skills/ingest/references/cross-references.md` — forward/reverse matrix + edge-type selection (Phase D)
 - `.claude/skills/ingest/references/init-handoff.md` — manifest-driven prepared-source handoff from `/init` (Phase A)
 - `.claude/skills/ingest/references/error-handling.md` — source parse / API / slug-collision fallbacks
+- `.claude/skills/shared-references/source-quality.md` — mandatory Phase B preflight for prepared sources, including cached/direct handoffs; scan findings and agent review before evidence extraction
 - `.claude/skills/ingest/references/content-quality-gate.md` — per-page quality floor (Phases C/D)
 
 ## Inputs
@@ -95,6 +96,7 @@ See `.claude/skills/ingest/references/error-handling.md`. Highlights: Zotero Loc
 - `tools/prepare_zotero_source.py --item-key …` — Zotero lookup-mode orchestration: resolves the PDF, persists metadata/manifest checkpoints, and invokes MinerU preparation; direct `prepare_paper_source.py` is for non-Zotero prepared-input flows (pdf-preprocessing.md)
 - `tools/fetch_literature.py paper|citations|references <doi-or-title>` — when a DOI/confident title is available
 - `tools/evidence_pack.py --input <cards.json>` — mandatory Phase B renderer for paper `## Evidence Pack`; agents provide structured card parameters and paste helper output, never hand-write card Markdown
+- `tools/source_quality_lint.py <canonical-source.md> --json` — mandatory read-only source screening before Phase B evidence extraction; findings require the dispositions in `source-quality.md`
 - `tools/grounding_lint.py --wiki-dir '@configured' --only "<touched-file>" --json` — mandatory scoped gate (Phases C/D/E)
 - `tools/discover.py from-anchors …` — only when `--discover`
 
