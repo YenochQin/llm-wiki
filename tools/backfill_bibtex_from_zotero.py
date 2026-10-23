@@ -33,6 +33,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from _page_scan import markdown_pages
+
 import frontmatter
 
 from _cli_io import configure_utf8_stdio
@@ -197,7 +199,7 @@ def main() -> int:
     wiki_root = paths.wiki_root
     papers_dir = wiki_root / "papers"
     slugs = set(args.slug)
-    paper_paths = sorted(papers_dir.glob("*.md"))
+    paper_paths = sorted(markdown_pages(papers_dir))
     if slugs:
         paper_paths = [path for path in paper_paths if path.stem in slugs]
 

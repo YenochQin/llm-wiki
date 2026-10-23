@@ -1,9 +1,14 @@
+import contextlib
+import io
+import json
+import subprocess
 import sys
 import tempfile
 import unittest
 import zipfile
 from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -16,6 +21,29 @@ def write(path, text):
 
 
 class BatchReocrTests(unittest.TestCase):
+    def test_live_output_preserves_progress_and_unicode_in_console_and_log(self):
+        expected = 'Layout 10%\r公式 100%\n'
+        proc = subprocess.Popen([sys.executable, '-c', 'import sys; sys.stdout.buffer.write(' + repr(expected.encode('utf-8')) + ')'],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        console, log = io.StringIO(), io.StringIO()
+        try:
+            with contextlib.redirect_stdout(console):
+                self.assertEqual(batch.wait_with_output(proc, log, 5), 0)
+            self.assertEqual(console.getvalue(), expected)
+            self.assertEqual(log.getvalue(), expected)
+        finally:
+            proc.stdout.close()
+
+    def test_live_output_timeout_is_enforced_for_a_silent_child(self):
+        proc = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(10)'], stdout=subprocess.PIPE)
+        try:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                batch.wait_with_output(proc, io.StringIO(), 0.1)
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)
+            proc.stdout.close()
+
     def test_portable_and_windows_paths_use_exact_zotero_attachment(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -117,7 +145,7 @@ with zipfile.ZipFile(p,'w') as z:
     def test_failure_does_not_stop_later_jobs(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp); queue=root/'queue'; queue.mkdir()
-            wiki=root/'wiki'; output=wiki/'sources/reocr/run'
+            wiki=root/'wiki'; output=root/'staging/run'
             jobs=[{'id':str(i),'rank':i,'importance':5,'pages':1,'label':f'p{i}'} for i in [1,2]]
             batch.atomic_json(queue/'queue.json',{'wiki_root':str(wiki),'output_root':str(output),'jobs':jobs})
             bin_dir=root/'bin'; write(bin_dir/'mineru-kit','fixture')
@@ -127,6 +155,67 @@ with zipfile.ZipFile(p,'w') as z:
             self.assertEqual(state['jobs']['1']['status'],'failed')
             self.assertEqual(state['jobs']['2']['status'],'completed')
             self.assertEqual(state['status'],'finished_with_failures')
+
+    def test_staging_rejects_vault_raw_and_symlink_destinations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); vault=root/'vault'; (vault/'.obsidian').mkdir(parents=True)
+            wiki=vault/'wiki'; raw=root/'raw'; raw.mkdir()
+            link=root/'link'; link.symlink_to(vault, target_is_directory=True)
+            for output in (wiki/'sources/reocr', vault/'temp', raw/'cache', root, link/'cache'):
+                with self.assertRaises(ValueError):
+                    batch.validate_staging_root(output,wiki,raw)
+            self.assertEqual(batch.validate_staging_root(root/'cache',wiki,raw),root/'cache')
+
+    def test_plan_defaults_to_ignored_tool_cache(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); wiki=root/'vault/wiki'; raw=root/'vault/raw'; queue=root/'temp/run'
+            runtime=SimpleNamespace(project_root=root,config_path=root/'config.json')
+            with patch.object(batch,'load_paths',return_value=runtime), \
+                 patch.object(batch,'resolve_runtime_path',side_effect=[wiki,raw]), \
+                 patch.object(batch,'build_plan',return_value=([],[])), \
+                 patch.object(batch,'exact_zotero_lookup'), \
+                 patch('find_zotero_pdf._candidate_roots_from_config',return_value=([],[])), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(batch.main(['plan','--queue-dir',str(queue)]),0)
+            plan=json.loads((queue/'queue.json').read_text())
+            self.assertEqual(plan['output_root'],str(root/'.checkpoints/reocr/run'))
+            self.assertFalse((wiki/'sources/reocr').exists())
+
+    def test_relocation_preserves_markdown_and_completed_receipts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); wiki=root/'wiki'; old=wiki/'sources/reocr/old'; new=root/'cache/new'; queue=root/'queue'
+            pdf=root/'paper.pdf'; write(pdf,'input'); md=old/'job/attempt/native/markdown.md'; write(md,'# Original OCR\nExact body')
+            job={'id':'job','rank':1,'importance':4,'pages':1,'label':'paper','title':'Paper','papers':[], 'pdf':str(pdf),'pdf_sha256':batch.digest(pdf)}
+            engine={'mineru_version':'4.fixture'}
+            batch.atomic_json(old/'job/result.json',{'markdown':str(md),'markdown_sha256':batch.digest(md),'pdf_sha256':batch.digest(pdf),'engine':engine})
+            batch.atomic_json(queue/'queue.json',{'created_utc':batch.now(),'wiki_root':str(wiki),'output_root':str(old),'jobs':[job],'papers':[]})
+            batch.atomic_json(queue/'progress.json',{'status':'interrupted','jobs':{'job':{'status':'completed','result':str(old/'job/result.json')}}})
+            with patch.object(batch,'load_paths'),patch.object(batch,'resolve_runtime_path',side_effect=[wiki,root/'raw',new]):
+                result=batch.relocate_queue(queue,new)
+            self.assertEqual(result['receipts_verified'],1)
+            self.assertFalse(old.exists())
+            self.assertEqual((new/'job/attempt/native/markdown.md').read_text(),'# Original OCR\nExact body')
+            self.assertIsNotNone(batch.completed_result(job,new,engine))
+            self.assertEqual(json.loads((queue/'queue.json').read_text())['output_root'],str(new))
+
+    def test_worker_refuses_plan_relocated_before_lock_acquisition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); queue=root/'queue'; wiki=root/'wiki'
+            plan={'wiki_root':str(wiki),'output_root':str(root/'old-cache'),'jobs':[]}
+            batch.atomic_json(queue/'queue.json',plan)
+            executable=root/'bin/python'; write(executable.parent/'mineru-kit','fixture')
+            @contextlib.contextmanager
+            def relocated(_):
+                batch.atomic_json(queue/'queue.json',dict(plan,output_root=str(root/'new-cache')))
+                yield
+            args=Namespace(queue_dir=queue)
+            with patch.object(batch,'worker_lock',relocated),patch.object(batch,'load_paths'), \
+                 patch.object(batch,'resolve_runtime_path',return_value=wiki), \
+                 patch.object(batch.sys,'executable',str(executable)), \
+                 patch.object(batch.importlib.metadata,'version',return_value='4.0.12'), \
+                 self.assertRaisesRegex(RuntimeError,'Queue changed'):
+                batch.run_queue(args)
+            self.assertFalse((queue/'progress.json').exists())
 
 
 if __name__ == '__main__':

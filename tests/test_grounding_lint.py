@@ -17,6 +17,23 @@ def write(path: Path, text: str) -> None:
 
 
 class GroundingLintTests(unittest.TestCase):
+    def test_explicit_card_use_takes_precedence_over_title_and_source_section(self) -> None:
+        section = """
+- `E1` Limitations — resolution floor ([prepared markdown](../sources/papers/a.md), 3. Results and discussion): ^E1
+  > Weak components could not be resolved.
+- `E2` Concept — Method comparison ([prepared markdown](../sources/papers/a.md), Results): ^E2
+  > The two approaches differ.
+- `E3` Claim — Results supporting the Problem ([prepared markdown](../sources/papers/a.md), Method): ^E3
+  > The reported result supports the claim.
+- `E4` Method — Problem setup ([prepared markdown](../sources/papers/a.md), Results): ^E4
+  > We used a controlled sample.
+"""
+        counts = grounding_lint._evidence_use_counts(section)
+        self.assertEqual(counts, {
+            "Problem": 0, "Method": 1, "Results": 0,
+            "Limitations": 1, "Concept": 1, "Claim": 1,
+        })
+
     def test_flags_paper_without_evidence_pack(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             wiki = Path(tmp) / "wiki"

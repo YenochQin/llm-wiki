@@ -42,6 +42,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
+from _page_scan import markdown_pages
+
 import frontmatter
 
 from _cli_io import configure_utf8_stdio
@@ -108,7 +110,7 @@ def _all_markdown_pages(wiki_dir: Path) -> list[Path]:
     for subdir in ("papers", "concepts", "claims"):
         root = wiki_dir / subdir
         if root.exists():
-            paths.extend(sorted(root.glob("*.md")))
+            paths.extend(sorted(markdown_pages(root)))
     return paths
 
 
@@ -400,6 +402,19 @@ def _evidence_use_counts(section: str) -> dict[str, int]:
     counts = {label: 0 for label in EVIDENCE_USE_LABELS}
     for match in EVIDENCE_CARD_RE.finditer(section):
         first_line = match.group(0).splitlines()[0]
+        explicit_use = re.match(
+            r"^[ \t]*-\s+`E\d+`\s+(Problem|Method|Results|Limitations|Concept|Claim)\s+—",
+            first_line,
+            re.IGNORECASE,
+        )
+        if explicit_use:
+            label = next(
+                label for label in EVIDENCE_USE_LABELS
+                if label.lower() == explicit_use.group(1).lower()
+            )
+            counts[label] += 1
+            continue
+        # Older cards have no explicit use label; retain their legacy inference.
         for label in EVIDENCE_USE_LABELS:
             if re.search(rf"\b{re.escape(label)}\b", first_line, re.IGNORECASE):
                 counts[label] += 1
