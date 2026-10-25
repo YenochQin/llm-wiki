@@ -1,5 +1,11 @@
 # Zotero Wiki Organizer 插件代码审查发现
 
+> 历史审查记录：本文描述 v0.1.9，保留当时的发现、阶段名称和章节编号，不代表当前版本仍有全部问题。
+> 两份计划已于 2026-10-25（Asia/Singapore）压缩为状态文档；本文旧章节引用对应
+> `git show fee7ef1:docs/zotero-internal-api-plugin-plan.md` 和
+> `git show fee7ef1:docs/zotero-cross-platform-support-plan.md`。
+> 当前实现及未完成项见 [插件状态](zotero-internal-api-plugin-plan.md) 和 [跨平台状态](zotero-cross-platform-support-plan.md)。
+
 ## 1. 审查范围与方法
 
 审查对象：`zotero_plugin/`（插件源码，v0.1.9）、`tools/zotero_client.py`（Python 客户端）、

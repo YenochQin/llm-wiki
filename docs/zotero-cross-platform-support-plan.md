@@ -1,330 +1,68 @@
-# Zotero Wiki Organizer 跨平台支持计划
+# Zotero Wiki Organizer：跨平台状态与验收
 
-## 1. 目的
+本文保留原文件名作为引用入口，集中记录跨平台实现与验证缺口。通用数据操作约束及分类流程见 [插件状态与验收](zotero-internal-api-plugin-plan.md)，用法见 [插件 README](../zotero_plugin/README.md)。
 
-本文档规划将 Zotero Wiki Organizer 从“Linux + Zotero 10 已验证”扩展为 macOS、Windows 和 Linux 三个平台可安装、可配置、可验证的版本。
+## 当前实现状态
 
-本计划只涉及跨平台兼容性，不改变插件的核心安全边界：所有写入仍必须通过 Zotero 进程内部的 `Zotero.Collection` 和 `saveTx()` 完成，Python 客户端不直接访问或修改 `zotero.sqlite`。
+核对日期：2026-10-25（Asia/Singapore，UTC+08:00）。代码基线：`fee7ef1057a67488d3f3986db39a68a717b80585`，插件 `0.1.11`；核对时相关实现没有未提交差异。“已实现”不等于三平台已验收。
 
-## 2. 当前状态
-
-### 已验证
-
-```text
-Linux + Zotero 10.0.SOURCE
-```
-
-已验证内容：
-
-- XPI 可打包和安装。
-- bootstrap 生命周期可以加载插件模块。
-- Zotero 内置本地服务器 endpoint 可用。
-- collection 查询和 `create-if-missing` 可用。
-- token preference 和 token 文件可以创建。
-- Python 客户端可以通过 uv 环境调用接口。
-
-### 尚未验证
-
-- macOS 安装、启动、路径发现、权限和同步。
-- Windows 安装、启动、路径发现、权限和同步。
-- 不同 Zotero 9/10 小版本之间的内部 API 差异。
-- Zotero 关闭、重启、升级和插件更新后的状态迁移。
-
-## 3. 支持范围定义
-
-### 3.1 目标支持矩阵
-
-| 平台 | Zotero 版本 | 目标状态 |
+| 能力 | 当前实现及依据 | 验证边界 |
 |---|---|---|
-| Linux | Zotero 9.x/10.x | 已有环境回归 + 扩展验证 |
-| macOS | Zotero 9.x/10.x | 待验证 |
-| Windows | Zotero 9.x/10.x | 待验证 |
-| 任意平台 | Zotero 11+ | 暂不承诺，需重新适配内部 API |
+| profile 自动发现 | [zotero_client.py](../tools/zotero_client.py) 按 `platform.system()` 选择 Linux、macOS、Windows 标准目录；只扫描一层 profile 并排序 | 已有 macOS 标准路径测试，Windows/多 profile/非 ASCII 测试不足 |
+| token 配置 | 优先级为 CLI token → 环境变量 token → CLI token 文件 → 环境变量 token 文件 → profile preference | 显式配置不依赖自动发现；失败提示仍偏 Linux |
+| 文件路径与写入 | [fs.js](../zotero_plugin/src/fs.js) 兼容字符串或 `.path` 数据目录，优先使用 PathUtils/IOUtils；[auth.js](../zotero_plugin/src/auth.js) 使用临时文件和 move，缺少 move 时走直接写入 fallback | 权限设置顺序、Windows ACL、可选镜像降级仍未达标 |
+| 生命周期与打包 | [bootstrap.js](../zotero_plugin/bootstrap.js)、[endpoint.js](../zotero_plugin/src/endpoint.js) 实现启动/清理及注册/注销；[package_xpi.py](../zotero_plugin/package_xpi.py) 使用文件 allowlist 和 manifest 版本命名 | 三平台安装、升级、重启效果仍待验证 |
+| 本地接口 | 客户端拒绝非 loopback URL；Bearer 认证；携带 `Zotero-Allowed-Request: 1`；启动失败时禁止写入 | 已有部分客户端 mock 测试；真实平台网络行为待验收 |
+| 就绪状态 | [plugin.js](../zotero_plugin/src/plugin.js) 等待启动并重试文件任务；health 返回版本及启动状态 | 尚无完整 API 能力探测摘要 |
 
-### 3.2 “支持”的最低定义
+[manifest.json](../zotero_plugin/manifest.json) 允许 Zotero `9.0`–`10.999` 安装，不能据此宣称所有版本兼容；Zotero 11+ 不在当前范围。
 
-某个平台只有同时满足以下条件，才可以标记为已支持：
+| 平台 | 仓库中可追溯的验证状态 |
+|---|---|
+| Linux + Zotero 10.0.SOURCE | 有旧版本安装、接口和文件落盘记录；当前 0.1.11 完整回归仍未确认 |
+| Linux + Zotero 9.x | manifest 允许安装，未找到完整运行验收记录 |
+| macOS / Windows + Zotero 9.x/10.x | 路径分支已实现，未找到完整安装、权限、重启和同步验收记录 |
 
-1. XPI 能成功安装。
-2. Zotero 启动时插件无未捕获异常。
-3. `health` 能返回就绪状态。
-4. `list` 能返回个人库 collection 树。
-5. `create-if-missing` 能创建合法 collection key。
-6. 重复创建保持幂等。
-7. Zotero 重启后 collection 持久存在。
-8. 同步不出现 `invalid collection key` 或上传停滞。
-9. token 不会暴露给非授权本地进程或写入普通日志。
-10. Python 客户端能在该平台的仓库 uv 环境中运行。
+历史记录出处及本次验证命令见 [插件状态文档](zotero-internal-api-plugin-plan.md)。2026-10-25 的客户端 17 项测试和插件 JavaScript 语法检查通过；未执行三平台集成测试、重新打包或发布检查。
 
-## 4. 待补充工作
+## 剩余缺口
 
-### 4.1 跨平台 profile 和 token 配置发现
+1. **profile 提示与测试。** 当前排序后使用第一个命中的 token，没有多 profile 命中提示；发现失败仍只展示 Linux 路径。需补 Windows `APPDATA`、非 ASCII/空格路径、多 profile、配置优先级及失败退出码测试，并更新 CLI 帮助。
+2. **token 文件权限与可选降级。** 当前先写含 token 的临时文件，再设置 `0600`，不能保证创建时即私有；没有 Windows ACL 专门处理或验证证据。缺少权限 API/写镜像失败会使启动失败并阻止写接口，尚未实现原计划要求的“镜像可选，继续使用 preference/环境变量”。无 move 的 fallback 也不能当作原子替换已验收。
+3. **完整兼容性探测。** 目前仅有部分对象服务/启动检查；需检查 `Zotero.Collection`、`Collections.getByLibrary`、`saveTx()`、`Server.Endpoints` 和 IOUtils/PathUtils 能力，记录版本及能力摘要。必要能力缺失时禁止写入并给出明确诊断；日志避免 token、文献内容和附件路径。
+4. **真实平台验收。** 安装、升级/卸载、重复加载、文件权限、冷启动/重试、重启持久化、同步和既有归属保护没有完整三平台证据，不能由 mock 测试代替。
+5. **支持矩阵与发布说明。** README 尚无完整已验证平台矩阵。需随实际结果更新版本范围、已知限制和报告位置；`update_url` 的存在不证明更新源已发布，本次未核实自动更新服务。
 
-当前 Python 客户端自动读取 `~/.zotero/zotero/*/prefs.js`，这是 Linux 目录约定，不足以覆盖 macOS 和 Windows。
+最小下一步：补 profile 提示与离线测试，修正 token 镜像权限/降级策略，再在独立测试库开展真实平台验收。
 
-需要实现一个独立的 profile 发现函数，按以下优先级处理：
+## 验收清单
 
-1. 用户显式传入 `--token`。
-2. 环境变量 `ZOTERO_WIKI_ORGANIZER_TOKEN`。
-3. 用户显式传入 `--token-file`。
-4. 环境变量 `ZOTERO_WIKI_ORGANIZER_TOKEN_FILE`。
-5. 根据操作系统搜索 Zotero profile 的标准目录。
-6. 如果找不到，返回包含平台相关路径提示的可读错误。
+### 离线检查
 
-建议搜索位置：
+- [ ] profile/token 测试覆盖三平台标准目录、Windows 环境变量缺失、空格和非 ASCII、多 profile、缺失/无权限文件及显式配置优先级。
+- [ ] 客户端覆盖 `--json` 纯 JSON 输出、网络/认证/插件缺失错误和稳定退出码；始终拒绝非 loopback URL，不自动重试写入。
+- [ ] API 能力缺失和镜像不可用的行为有测试；必要能力失败时不写入，镜像可选降级不泄露 token。
+- [ ] XPI 打包及压缩包完整性检查通过，版本来自 manifest，只包含 allowlist 文件；记录实际输出及版本。
 
-```text
-Linux:
-  ~/.zotero/zotero/*/prefs.js
-
-macOS:
-  ~/Library/Application Support/Zotero/Profiles/*/prefs.js
-
-Windows:
-  %APPDATA%/Zotero/Zotero/Profiles/*/prefs.js
-```
-
-实现要求：
-
-- 使用 `platform.system()` 或等价标准库接口，不依赖 shell。
-- 支持路径中空格和非 ASCII 字符。
-- 不递归扫描整个用户目录。
-- 只读取 `prefs.js` 中对应的插件 preference。
-- 多 profile 命中时给出确定性排序和明确提示。
-- profile 自动发现失败不能阻止用户使用显式 token 参数。
-
-### 4.2 插件文件路径和权限
-
-插件中的 [fs.js](../zotero_plugin/src/fs.js) 需要在三种平台验证：
-
-- `Zotero.DataDirectory.dir` 是字符串还是文件对象。
-- `PathUtils.join()` 能否正确处理平台路径分隔符。
-- `IOUtils.writeUTF8()` 和 `IOUtils.setPermissions()` 是否可用。
-- Zotero 数据目录尚未完全初始化时，启动重试是否可靠。
-
-token 文件策略：
-
-- Zotero preference 始终是权威存储。
-- token 文件只作为客户端便利入口。
-- Unix 平台设置 `0600`。
-- Windows 平台验证文件 ACL 或等效私有权限；如果无法保证，应将 token 文件视为可选，并要求使用 preference/环境变量。
-- 写文件时采用临时文件 + 原子替换，避免崩溃留下半写入 token。
-- 不在 token 文件名、普通 debug 日志或审计日志中包含 token。
-
-### 4.3 XPI 安装和插件生命周期
-
-需要在 Linux、macOS、Windows 分别验证：
-
-1. 从 `Tools → Plugins` 安装 `zotero-wiki-organizer-*.xpi`。
-2. Zotero 重启后自动加载插件。
-3. 插件升级时旧 endpoint 被正确注销，新 endpoint 被注册。
-4. 插件禁用或卸载时 endpoint 被注销。
-5. 插件卸载不删除 collection、item、附件或用户配置。
-6. 同一插件不会被重复加载两次。
-7. `manifest.json` 的 `strict_min_version`/`strict_max_version` 与目标 Zotero 版本匹配。
-
-升级策略：
-
-- 每次行为或兼容性修复都提升插件版本号。
-- XPI 文件名从 manifest 版本自动生成。
-- `update_url` 未发布时不要声称支持自动更新。
-- 重大 Zotero 内部 API 变化应发布新的兼容性说明，而不是静默尝试。
-
-### 4.4 本地 endpoint 和网络边界
-
-三个平台都必须验证：
-
-- endpoint 只挂在 Zotero 的 loopback server 上。
-- 客户端始终拒绝非 loopback URL。
-- `Authorization: Bearer <token>` 是唯一认证方式。
-- query-string token 永远不启用。
-- Zotero 的 `Zotero-Allowed-Request: 1` 请求头在三个平台均能正常工作。
-- 浏览器 UA、`Origin` 和 `Host` 检查不会导致合法 Python 客户端被静默丢弃。
-- Zotero 尚未完成启动时返回 `503`，而不是返回半初始化数据。
-
-### 4.5 Python 客户端跨平台行为
-
-需要补充：
-
-- Windows 路径和环境变量测试。
-- macOS 路径中空格的测试。
-- 非 ASCII 用户名和 Zotero 数据目录测试。
-- `--json` 模式在所有平台都只输出 JSON。
-- 连接失败、token 缺失和插件未安装时都返回稳定的退出码。
-- 客户端不调用 `pgrep`、`kill` 或平台特定进程命令。
-- 所有 Python 命令和测试仍通过：
-
-  ```bash
-  uv run python -X utf8 ...
-  ```
-
-### 4.6 Zotero 内部 API 兼容性探测
-
-插件启动时应记录但不泄露敏感信息的兼容性摘要：
-
-- Zotero 版本。
-- 插件版本。
-- `Zotero.Collection` 是否存在。
-- `Zotero.Collections.getByLibrary` 是否存在。
-- `saveTx()` 是否存在。
-- `Zotero.Server.Endpoints` 是否可用。
-- `IOUtils`/`PathUtils` 能力。
-
-探测失败时：
-
-- endpoint 不应执行写入。
-- `health` 返回 `503` 或明确的兼容性错误。
-- 日志只记录 API 名称和错误类型，不记录 token、文献内容或附件路径。
-
-### 4.7 同步和数据保护回归
-
-每个平台都需要建立独立测试库或可恢复快照，测试以下场景：
-
-1. 创建顶层 collection。
-2. 创建子 collection。
-3. 重复创建同名同父级 collection。
-4. 创建同名不同父级 collection。
-5. Zotero 重启后查询。
-6. 同步完成后再次查询。
-7. 检查原有 item 数量和 collection 关联没有减少。
-8. 检查插件卸载不会删除用户数据。
-9. 模拟 endpoint 失败，确认客户端不会盲目重复写入。
-10. 检查 token 和审计日志文件权限。
-
-## 5. 测试矩阵
-
-### 5.1 静态测试
-
-在仓库中运行：
+现有回归入口（不代表以上覆盖已齐全）：
 
 ```bash
-uv run python -X utf8 -m unittest tests/test_zotero_client.py
-uv run ruff check tools/zotero_client.py tools/zotero_create_collection.py \
-  zotero_plugin/package_xpi.py tests/test_zotero_client.py
+uv run python -X utf8 -m unittest discover -s tests -p test_zotero_client.py
 node --check zotero_plugin/bootstrap.js
 for file in zotero_plugin/src/*.js; do node --check "$file"; done
-uv run python -X utf8 zotero_plugin/package_xpi.py
-unzip -t zotero_plugin/dist/zotero-wiki-organizer-*.xpi
 ```
 
-### 5.2 平台运行测试
+### 每个平台的运行验收
 
-每个平台至少记录以下信息：
+在独立测试库或可恢复快照上逐平台执行，遵守配套文档的写入授权与迁移约束。只有完成相应版本的全部运行验收，才标记为已验证支持。
 
-```text
-OS 版本
-Zotero 版本
-插件版本
-profile 路径
-dataDir 路径
-endpoint 端口
-health 结果
-list 结果
-create 结果
-重启结果
-同步结果
-```
+- [ ] 安装、冷启动、重启、升级、禁用及卸载正常；endpoint 无重复注册或残留，用户数据和配置不被删除。
+- [ ] `health/list/create/assign` 行为正确；版本信息准确，未就绪返回 503；缺失/错误 token 拒绝访问，query-string token 无效。
+- [ ] `Zotero-Allowed-Request`、UA、Origin、Host 与 loopback 行为在该平台符合预期，合法 Python 请求不被静默丢弃。
+- [ ] 实际 profile/数据目录含空格及非 ASCII 时可用；数据目录初始化、启动重试和 IOUtils/PathUtils 行为经验证。
+- [ ] token preference 可用；镜像从创建起具有私有权限（Unix 0600、Windows ACL 或等效策略），镜像不可用时按规定降级；日志无 token，审计文件权限已检查。
+- [ ] 创建顶层/子级、同名同父级幂等、同名不同父级正常；追加归类保留旧关联，写后查询通过。
+- [ ] 重启和同步后 collection 持久存在，无 invalid key 或上传停滞；item/附件数量与原有关联不减少，失败后不会盲目重复写入。
+- [ ] README 发布对应 OS/Zotero/插件版本、已知限制和报告链接；自动更新能力仅在更新源及升级流程验证后声明。
 
-不得在报告中记录真实 token。
-
-### 5.3 自动化与人工测试分工
-
-可自动化：
-
-- Python 路径发现。
-- token preference 解析。
-- loopback URL 校验。
-- JSON 输出。
-- XPI manifest 和压缩包检查。
-- mock endpoint 下的错误处理和幂等行为。
-
-需要真实 Zotero 环境：
-
-- XPI 安装。
-- 内部 API 调用。
-- collection 持久化。
-- Zotero 重启。
-- 同步队列。
-- 文件权限实际效果。
-
-## 6. 配置和文档更新
-
-需要同步更新：
-
-- `zotero_plugin/README.md`：平台支持矩阵、profile 路径、token 配置。
-- `docs/zotero-internal-api-plugin-plan.md`：引用本文档并记录验证状态。
-- `tools/zotero_client.py --help`：平台无关的配置说明。
-- 测试报告：记录每个平台的 Zotero 与插件版本。
-
-文档不得把“设计支持”写成“已验证支持”。
-
-## 7. 回滚方案
-
-### 插件回滚
-
-- 在 Zotero 插件管理器中禁用或卸载插件。
-- 保留 endpoint 和审计日志用于诊断。
-- 不删除任何 collection 或 item。
-
-### 数据回滚
-
-- 任何同步回归前创建独立测试库快照。
-- 生产库迁移前保留 `zotero.sqlite` 备份及对应 WAL/SHM 状态。
-- 只有在 Zotero 完全退出后恢复数据库备份。
-- 恢复后先检查 collection/item 数量，再恢复同步。
-
-## 8. 实施顺序
-
-### 阶段 A：路径与配置抽象
-
-- 实现跨平台 profile 搜索。
-- 补充路径、token、非 ASCII 和多 profile 测试。
-- 修正 CLI 文档。
-
-### 阶段 B：插件文件与权限验证
-
-- 在三种平台验证 `DataDirectory`、`PathUtils`、`IOUtils`。
-- 验证 token 文件私有权限。
-- 必要时增加原子写入和平台降级策略。
-
-### 阶段 C：XPI 和生命周期验证
-
-- 三个平台安装、重启、升级、禁用和卸载测试。
-- 确认 endpoint 注册/注销无残留。
-
-### 阶段 D：同步和数据保护验证
-
-- 在独立测试库完成 collection 创建和同步回归。
-- 验证不影响既有 item collection 归属。
-
-### 阶段 E：发布支持矩阵
-
-- 只有完成最低验收标准的平台才标为“已支持”。
-- 发布插件版本、XPI、测试报告和已知限制。
-
-## 9. 验收标准
-
-跨平台版本必须满足：
-
-1. Linux、macOS、Windows 均能安装相同 XPI，或明确记录平台专用构建差异。
-2. 三个平台均能通过内部 API 创建 collection。
-3. 三个平台均能正确发现或显式配置 token。
-4. 三个平台均拒绝非 loopback endpoint。
-5. 三个平台均不接受 query-string token。
-6. 三个平台的 token 文件权限策略可解释、可测试。
-7. 三个平台的 `health/list/create` 行为一致。
-8. 三个平台重启后 collection 持久化。
-9. 三个平台同步无 invalid collection key 错误。
-10. 客户端和插件不会修改、移动或删除已有文献归属。
-11. 版本和文档准确区分“已验证”和“设计支持”。
-
-## 10. 当前状态
-
-当前状态：
-
-- Linux：插件核心和客户端已验证；跨平台扩展测试尚未完成。
-- macOS：待阶段 A–D 验证。
-- Windows：待阶段 A–D 验证。
-- Zotero 11+：不在当前承诺范围内。
-
-在阶段 A–D 完成前，不应对外宣称插件是完全全平台通用的。
+每份报告记录日期与时区、代码/OS/Zotero/插件版本、profile/数据目录的必要脱敏信息、端口、测试库/快照标识、逐项预期与实际结果、日志和输出位置。未运行项保持未勾选；不得记录真实 token。数据库备份恢复须在 Zotero 退出、备份核实且另行授权后执行。

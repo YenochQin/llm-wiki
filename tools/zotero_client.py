@@ -397,7 +397,7 @@ def cmd_create(args: argparse.Namespace) -> int:
     if payload.get("note"):
         print(f"  注意: {payload['note']}")
 
-    # Plan §8: after a write, verify with a read before reporting success.
+    # After creating a collection, verify with a read before reporting success.
     status2, payload2 = _request("GET", f"{PLUGIN_PREFIX}/collections", token, base)
     if status2 != 200:
         print(f"警告: 写后验证查询失败（HTTP {status2}），写入结果未经二次确认。", file=sys.stderr)
@@ -438,7 +438,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         )
     for key in payload.get("missing") or []:
         print(f"  缺失 {key}（本地库中不存在）")
-    print("说明: 本端点只读；任何删除/重建都必须按 plan §9 单独确认后执行。")
+    print("说明: 本端点只读；任何删除/重建都必须按插件状态文档的操作约束单独确认后执行。")
     return EXIT_OK
 
 
@@ -552,9 +552,9 @@ def build_parser() -> argparse.ArgumentParser:
     create.set_defaults(func=cmd_create)
 
     inspect = subparsers.add_parser(
-        "inspect", parents=[common], help="只读审计历史问题 collection key（plan §9）"
+        "inspect", parents=[common], help="只读审计历史问题 collection key"
     )
-    inspect.add_argument("--keys", help="逗号分隔的 key 列表（默认 plan §2.2 的 7 个 key）")
+    inspect.add_argument("--keys", help="逗号分隔的 key 列表（默认插件内置的 7 个历史 key）")
     inspect.add_argument("--json", action="store_true", help="输出原始 JSON")
     inspect.set_defaults(func=cmd_inspect)
 

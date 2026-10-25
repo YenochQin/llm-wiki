@@ -8,7 +8,7 @@
  * bodies with Content-Type application/json arrive pre-parsed in
  * requestData.data.
  *
- * Error model (plan §7.5): 401 auth, 400 validation, 409 conflict,
+ * Error model (zotero_plugin/README.md): 401 auth, 400 validation, 409 conflict,
  * 503 not ready, 500 internal (clients must not blindly retry writes).
  */
 
