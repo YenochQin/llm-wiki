@@ -19,8 +19,11 @@ Commands:
 
     # Graph operations
     add-edge <wiki_root> --from <id> --to <id> --type <type> --evidence "..." [--confidence high|medium|low]
+    remove-edge <wiki_root> --from <id> --to <id> --type <type> --expected-evidence "..."
+    set-edge-evidence <wiki_root> --from <id> --to <id> --type <type> --evidence-file <path>
     add-citation <wiki_root> --from papers/a --to papers/b [--source literature_api]
     batch-edges <wiki_root>                          # reads JSON array from stdin
+    remap-graph-nodes <wiki_root> --mapping <json-file>
     dedup-edges <wiki_root>
     dedup-citations <wiki_root>
     prune-dangling-graph <wiki_root>                 # remove rows whose endpoints no longer exist
@@ -71,12 +74,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 import unicodedata
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+
+from _page_scan import markdown_pages
 
 import frontmatter
 import yaml
@@ -796,6 +803,94 @@ def load_edges(wiki_root: str) -> list[dict]:
     return edges
 
 
+def remap_graph_nodes(wiki_root: str, mapping: dict[str, str]) -> None:
+    """Remap reviewed node identities; reject ambiguous collisions before writing.
+
+    Matching rows may differ only in date. Prefer the existing canonical row
+    in that case. Preserve unrelated rows and custom metadata. Each file is
+    replaced atomically, but this operation does not lock concurrent writers.
+    """
+    root = Path(wiki_root).resolve()
+    if not isinstance(mapping, dict) or not mapping:
+        raise ValueError("Expected a nonempty old-node -> canonical-node mapping")
+    for old, new in mapping.items():
+        for node in (old, new):
+            if not isinstance(node, str) or len(node.split("/")) != 2:
+                raise ValueError(f"Invalid node id: {node!r}")
+            kind, slug = node.split("/")
+            if kind not in ENTITY_DIRS or not slug or slug in {".", ".."} or "\\" in slug:
+                raise ValueError(f"Invalid node id: {node!r}")
+        if old.split("/")[0] != new.split("/")[0] or old == new or new in mapping:
+            raise ValueError(f"Expected a same-kind, non-chained mapping: {old} -> {new}")
+        destination = (root / (new + ".md")).resolve()
+        if not destination.is_relative_to(root) or not destination.is_file():
+            raise ValueError(f"Canonical page does not exist inside wiki: {new}")
+
+    updates = []
+    remapped = deduplicated = 0
+    for name in ("edges.jsonl", "citations.jsonl"):
+        path = root / DERIVED_DIR / name
+        if not path.exists():
+            continue
+        original = path.read_bytes()
+        entries = []
+        for line in original.decode("utf-8").splitlines():
+            if not line.strip():
+                entries.append((None, line, False))
+                continue
+            row = json.loads(line)
+            if not isinstance(row, dict) or not all(isinstance(row.get(k), str) for k in ("from", "to", "type")):
+                raise ValueError(f"Invalid graph row in {name}")
+            changed = row["from"] in mapping or row["to"] in mapping
+            if changed:
+                row = {**row, "from": mapping.get(row["from"], row["from"]),
+                       "to": mapping.get(row["to"], row["to"])}
+                if edge_is_symmetric(row["type"]) or row.get("symmetric") is True:
+                    row["from"], row["to"] = sorted([row["from"], row["to"]])
+                remapped += 1
+            entries.append((row, line, changed))
+        affected = {_edge_key(row) for row, _, changed in entries if changed}
+        selected = {}
+        for index, (row, _, changed) in enumerate(entries):
+            if row is None or _edge_key(row) not in affected:
+                continue
+            key = _edge_key(row)
+            if key in selected:
+                previous = entries[selected[key]][0]
+                if {k: v for k, v in row.items() if k != "date"} != {k: v for k, v in previous.items() if k != "date"}:
+                    raise ValueError(f"Conflicting graph metadata for {key}; reconcile explicitly first")
+                if not changed and entries[selected[key]][2]:
+                    selected[key] = index
+                deduplicated += 1
+            else:
+                selected[key] = index
+        output = []
+        for index, (row, line, changed) in enumerate(entries):
+            if row is not None and _edge_key(row) in affected and selected[_edge_key(row)] != index:
+                continue
+            output.append(json.dumps(row, ensure_ascii=False) if changed else line)
+        if any(changed for _, _, changed in entries):
+            updates.append((path, original, ("\n".join(output) + "\n").encode("utf-8")))
+    for path, original, _ in updates:
+        if path.read_bytes() != original:
+            raise ValueError(f"Graph changed during planning: {path}")
+    for path, original, content in updates:
+        fd, temporary = tempfile.mkstemp(dir=path.parent, prefix=".remap-")
+        try:
+            with os.fdopen(fd, "wb") as stream:
+                Path(temporary).chmod(path.stat().st_mode & 0o777)
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+            if path.read_bytes() != original:
+                raise ValueError(f"Graph changed during update: {path}")
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+    print(json.dumps({"status": "ok", "remapped": remapped, "deduplicated": deduplicated}))
+
+
 def dedup_edges(wiki_root: str) -> None:
     """Deduplicate edges.jsonl by canonical (from, to, type), keeping first occurrence.
 
@@ -911,6 +1006,125 @@ def set_edge_confidence(
             }
         )
     )
+
+
+def set_edge_evidence(
+    wiki_root: str,
+    from_id: str,
+    to_id: str,
+    edge_type: str,
+    evidence: str,
+    expected_evidence: str | None = None,
+) -> None:
+    """Replace evidence on one existing edge, preserving identity and metadata."""
+    def fail(message: str) -> None:
+        print(json.dumps({"status": "error", "message": message}))
+        raise SystemExit(1)
+
+    if edge_type not in VALID_EDGE_TYPES:
+        fail(f"Unknown edge type: {edge_type}")
+    if not evidence.strip():
+        fail("evidence must not be empty")
+    from_id, to_id, _, error = _canonical_edge_ids(from_id, to_id, edge_type, False)
+    if error:
+        fail(error)
+    path = Path(wiki_root) / DERIVED_DIR / "edges.jsonl"
+    if not path.is_file():
+        fail("edges.jsonl not found")
+    original = path.read_bytes()
+    try:
+        parts = original.decode("utf-8").split("\n")
+        lines = [part + "\n" for part in parts[:-1]]
+        if parts[-1]:
+            lines.append(parts[-1])
+    except UnicodeError:
+        fail("edges.jsonl is not valid UTF-8; no changes made")
+    key = _edge_key({"from": from_id, "to": to_id, "type": edge_type})
+    matches = []
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        try:
+            edge = json.loads(line)
+        except json.JSONDecodeError:
+            fail(f"Invalid JSON on edges.jsonl line {index + 1}; no changes made")
+        if not isinstance(edge, dict):
+            fail(f"Expected an edge object on line {index + 1}; no changes made")
+        if _edge_key(edge) == key:
+            matches.append((index, edge))
+    if len(matches) != 1:
+        fail(f"Expected one existing edge, found {len(matches)}: {from_id} --{edge_type}--> {to_id}")
+    index, edge = matches[0]
+    previous = edge.get("evidence", "")
+    if expected_evidence is not None and previous != expected_evidence:
+        fail("Existing evidence differs from --expected-evidence; no changes made")
+    changed = previous != evidence
+    if changed:
+        edge["evidence"] = evidence
+        ending = "\r\n" if lines[index].endswith("\r\n") else "\n" if lines[index].endswith("\n") else ""
+        lines[index] = json.dumps(edge, ensure_ascii=False) + ending
+        fd, tmp_name = tempfile.mkstemp(prefix=".edges-", suffix=".tmp", dir=path.parent)
+        try:
+            with os.fdopen(fd, "wb") as stream:
+                Path(tmp_name).chmod(path.stat().st_mode & 0o777)
+                stream.write("".join(lines).encode("utf-8"))
+                stream.flush()
+                os.fsync(stream.fileno())
+            if path.read_bytes() != original:
+                fail("edges.jsonl changed during update; no changes made")
+            os.replace(tmp_name, path)
+        finally:
+            Path(tmp_name).unlink(missing_ok=True)
+    print(json.dumps({"status": "ok", "edge": f"{from_id} --{edge_type}--> {to_id}",
+                      "changed": changed, "previous_evidence": previous,
+                      "evidence": evidence}, ensure_ascii=False))
+
+
+def remove_edge(
+    wiki_root: str, from_id: str, to_id: str, edge_type: str, expected_evidence: str
+) -> None:
+    """Remove one exact edge after validating the complete file and evidence."""
+    def fail(message: str) -> None:
+        print(json.dumps({"status": "error", "message": message}))
+        raise SystemExit(1)
+
+    if edge_type not in VALID_EDGE_TYPES:
+        fail(f"Unknown edge type: {edge_type}")
+    from_id, to_id, _, error = _canonical_edge_ids(from_id, to_id, edge_type, False)
+    if error:
+        fail(error)
+    path = Path(wiki_root) / DERIVED_DIR / "edges.jsonl"
+    if not path.is_file():
+        fail("edges.jsonl not found")
+    original = path.read_bytes()
+    try:
+        lines = original.decode("utf-8").splitlines(keepends=True)
+        rows = [(i, json.loads(line)) for i, line in enumerate(lines) if line.strip()]
+    except (UnicodeError, json.JSONDecodeError):
+        fail("Invalid UTF-8 or JSON in edges.jsonl; no changes made")
+    if any(not isinstance(row, dict) for _, row in rows):
+        fail("Expected edge objects; no changes made")
+    key = _edge_key({"from": from_id, "to": to_id, "type": edge_type})
+    matches = [(i, row) for i, row in rows if _edge_key(row) == key]
+    if len(matches) != 1:
+        fail(f"Expected one existing edge, found {len(matches)}; no changes made")
+    index, edge = matches[0]
+    if edge.get("evidence", "") != expected_evidence:
+        fail("Existing evidence differs from --expected-evidence; no changes made")
+    del lines[index]
+    fd, tmp_name = tempfile.mkstemp(prefix=".edges-", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            Path(tmp_name).chmod(path.stat().st_mode & 0o777)
+            stream.write("".join(lines).encode("utf-8"))
+            stream.flush()
+            os.fsync(stream.fileno())
+        if path.read_bytes() != original:
+            fail("edges.jsonl changed during update; no changes made")
+        os.replace(tmp_name, path)
+    finally:
+        Path(tmp_name).unlink(missing_ok=True)
+    print(json.dumps({"status": "ok", "removed": edge}, ensure_ascii=False))
 
 
 def dedup_citations(wiki_root: str) -> None:
@@ -1031,7 +1245,7 @@ def rebuild_open_questions(wiki_root: str) -> None:
     # From claims: under-supported claims
     claims_dir = root / "claims"
     if claims_dir.exists():
-        for f in sorted(claims_dir.glob("*.md")):
+        for f in sorted(markdown_pages(claims_dir)):
             fm = _parse_frontmatter(f)
             status = fm.get("status", "")
             if status in ("proposed", "weakly_supported"):
@@ -1056,7 +1270,7 @@ def _collect_section_items(
     """Extract bullet items from a named markdown section across all files in a dir."""
     if not directory.exists():
         return
-    for f in sorted(directory.glob("*.md")):
+    for f in sorted(markdown_pages(directory)):
         content = f.read_text(encoding="utf-8")
         lines = content.split("\n")
         in_section = False
@@ -1120,7 +1334,7 @@ def find_entities(
         return
 
     results: list[dict] = []
-    for f in sorted(entity_dir.glob("*.md")):
+    for f in sorted(markdown_pages(entity_dir)):
         fm = _parse_frontmatter(f)
         if not fm:
             continue
@@ -1315,7 +1529,7 @@ def _scan_entity_dir_for_similar(
     if not entity_dir.exists():
         return []
     matches: list[dict] = []
-    for f in sorted(entity_dir.glob("*.md")):
+    for f in sorted(markdown_pages(entity_dir)):
         fm = _parse_frontmatter(f)
         if not fm:
             continue
@@ -1419,7 +1633,7 @@ def find_similar_claim(
     cand_norm = _normalize_text(candidate_title)
 
     matches: list[dict] = []
-    for f in sorted(claims_dir.glob("*.md")):
+    for f in sorted(markdown_pages(claims_dir)):
         fm = _parse_frontmatter(f)
         if not fm:
             continue
@@ -1498,7 +1712,7 @@ def query_weak_claims(wiki_root: str, threshold: float = 0.5) -> None:
         return
 
     results: list[dict] = []
-    for f in sorted(claims_dir.glob("*.md")):
+    for f in sorted(markdown_pages(claims_dir)):
         fm = _parse_frontmatter(f)
         if not fm:
             continue
@@ -1559,7 +1773,7 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
     experiments: list[dict] = []
     exp_dir = root / "experiments"
     if exp_dir.exists():
-        for f in sorted(exp_dir.glob("*.md")):
+        for f in sorted(markdown_pages(exp_dir)):
             exp_fm = _parse_frontmatter(f)
             if exp_fm.get("target_claim") == claim_slug:
                 experiments.append(
@@ -1612,7 +1826,7 @@ def query_ready_to_test(wiki_root: str) -> None:
         return
 
     results: list[dict] = []
-    for f in sorted(ideas_dir.glob("*.md")):
+    for f in sorted(markdown_pages(ideas_dir)):
         fm = _parse_frontmatter(f)
         if not fm:
             continue
@@ -1651,7 +1865,7 @@ def query_orphans(wiki_root: str) -> None:
         entity_dir = root / entity_type
         if not entity_dir.exists():
             continue
-        for f in sorted(entity_dir.glob("*.md")):
+        for f in sorted(markdown_pages(entity_dir)):
             node_id = f"{entity_type}/{f.stem}"
             if node_id not in referenced:
                 orphans.append({"entity": node_id, "type": entity_type})
@@ -1795,7 +2009,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
         claims_dir = root / "claims"
         if claims_dir.exists():
             items: list[tuple[int, str]] = []
-            for f in sorted(claims_dir.glob("*.md")):
+            for f in sorted(markdown_pages(claims_dir)):
                 fm = _parse_frontmatter(f)
                 title = fm.get("title", f.stem)
                 status = fm.get("status", "unknown")
@@ -1826,7 +2040,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
         ideas_dir = root / "ideas"
         if ideas_dir.exists():
             failed: list[str] = []
-            for f in sorted(ideas_dir.glob("*.md")):
+            for f in sorted(markdown_pages(ideas_dir)):
                 fm = _parse_frontmatter(f)
                 status = fm.get("status", "")
                 if status in ("failed", "rejected"):
@@ -1845,7 +2059,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
         papers_dir = root / "papers"
         if papers_dir.exists():
             items2: list[tuple[int, str]] = []
-            for f in sorted(papers_dir.glob("*.md")):
+            for f in sorted(markdown_pages(papers_dir)):
                 fm = _parse_frontmatter(f)
                 title = fm.get("title", f.stem)
                 importance = fm.get("importance", "?")
@@ -1865,7 +2079,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
         exp_dir = root / "experiments"
         if exp_dir.exists():
             exp_lines: list[str] = []
-            for f in sorted(exp_dir.glob("*.md")):
+            for f in sorted(markdown_pages(exp_dir)):
                 fm = _parse_frontmatter(f)
                 title = fm.get("title", f.stem)
                 status = fm.get("status", "")
@@ -1901,7 +2115,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
             edir = root / etype
             if not edir.exists():
                 continue
-            for f in sorted(edir.glob("*.md")):
+            for f in sorted(markdown_pages(edir)):
                 fm = _parse_frontmatter(f)
                 date_str = (
                     fm.get("date_updated")
@@ -1954,14 +2168,14 @@ def get_stats(wiki_root: str, as_json: bool = False) -> dict:
 
     def count_md(subdir: str) -> int:
         d = root / subdir
-        return len(list(d.glob("*.md"))) if d.exists() else 0
+        return len(list(markdown_pages(d))) if d.exists() else 0
 
     def count_by_field(subdir: str, field: str, value: str) -> int:
         d = root / subdir
         if not d.exists():
             return 0
         count = 0
-        for f in d.glob("*.md"):
+        for f in markdown_pages(d):
             fm = _parse_frontmatter(f)
             if fm.get(field) == value:
                 count += 1
@@ -2034,7 +2248,7 @@ def get_maturity(wiki_root: str, as_json: bool = False) -> dict:
     exp_completed = 0
     exp_dir = root / "experiments"
     if exp_dir.exists():
-        for f in exp_dir.glob("*.md"):
+        for f in markdown_pages(exp_dir):
             fm = _parse_frontmatter(f)
             if fm.get("outcome") == "succeeded":
                 exp_completed += 1
@@ -2473,7 +2687,7 @@ def rebuild_index(wiki_root: str) -> None:
             continue
 
         entries: list[str] = []
-        for f in sorted(entity_dir.glob("*.md")):
+        for f in sorted(markdown_pages(entity_dir)):
             fm = _parse_frontmatter(f)
             slug = f.stem
             line_parts = [f"  - slug: {slug}"]
@@ -2586,7 +2800,7 @@ def topic_backfill(wiki_root: str) -> None:
 
     # Pre-load all paper frontmatter once
     papers: list[dict] = []
-    for p in sorted(papers_dir.glob("*.md")):
+    for p in sorted(markdown_pages(papers_dir)):
         fm = _parse_frontmatter(p)
         slug = p.stem
         tags = _as_str_set(fm.get("tags"))
@@ -2604,7 +2818,7 @@ def topic_backfill(wiki_root: str) -> None:
     matched_topics = 0
     per_topic: dict[str, dict[str, int]] = {}
 
-    for tpath in sorted(topics_dir.glob("*.md")):
+    for tpath in sorted(markdown_pages(topics_dir)):
         topic_slug = tpath.stem
         tfm = _parse_frontmatter(tpath)
         ttags = _as_str_set(tfm.get("tags"))
@@ -3520,6 +3734,14 @@ def main():
     )
     p.add_argument("wiki_root")
 
+    # remove-edge
+    p = sub.add_parser("remove-edge", help="Remove one edge guarded by its current evidence")
+    p.add_argument("wiki_root")
+    p.add_argument("--from", dest="from_id", required=True)
+    p.add_argument("--to", dest="to_id", required=True)
+    p.add_argument("--type", dest="edge_type", required=True)
+    p.add_argument("--expected-evidence", required=True)
+
     # set-edge-confidence
     p = sub.add_parser(
         "set-edge-confidence", help="Set confidence on an existing graph edge"
@@ -3531,6 +3753,17 @@ def main():
     p.add_argument(
         "--confidence", required=True, choices=sorted(EDGE_CONFIDENCE_VALUES)
     )
+
+    # set-edge-evidence
+    p = sub.add_parser("set-edge-evidence", help="Replace evidence on one existing graph edge")
+    p.add_argument("wiki_root")
+    p.add_argument("--from", dest="from_id", required=True)
+    p.add_argument("--to", dest="to_id", required=True)
+    p.add_argument("--type", dest="edge_type", required=True)
+    evidence_input = p.add_mutually_exclusive_group(required=True)
+    evidence_input.add_argument("--evidence", help="Replacement evidence text")
+    evidence_input.add_argument("--evidence-file", type=Path, help="UTF-8 file containing replacement evidence")
+    p.add_argument("--expected-evidence", help="Reject the update if the current evidence differs")
 
     # dedup-citations
     p = sub.add_parser(
@@ -3544,6 +3777,10 @@ def main():
         help="Remove derived graph rows whose endpoints do not exist",
     )
     p.add_argument("wiki_root")
+
+    p = sub.add_parser("remap-graph-nodes", help="Remap reviewed graph identities; reject conflicting metadata")
+    p.add_argument("wiki_root")
+    p.add_argument("--mapping", type=Path, required=True, help="JSON object mapping old node ids to canonical ids")
 
     # rebuild-index
     p = sub.add_parser("rebuild-index", help="Regenerate index.md from entity dirs")
@@ -3714,16 +3951,32 @@ def main():
         transition(args.path, args.new_status, args.reason)
     elif args.command == "batch-edges":
         batch_edges(args.wiki_root)
+    elif args.command == "remove-edge":
+        remove_edge(args.wiki_root, args.from_id, args.to_id, args.edge_type, args.expected_evidence)
     elif args.command == "dedup-edges":
         dedup_edges(args.wiki_root)
     elif args.command == "set-edge-confidence":
         set_edge_confidence(
             args.wiki_root, args.from_id, args.to_id, args.edge_type, args.confidence
         )
+    elif args.command == "set-edge-evidence":
+        evidence = args.evidence
+        if args.evidence_file is not None:
+            try:
+                evidence = args.evidence_file.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as exc:
+                parser.error(f"Cannot read --evidence-file: {exc}")
+        set_edge_evidence(args.wiki_root, args.from_id, args.to_id,
+                          args.edge_type, evidence, args.expected_evidence)
     elif args.command == "dedup-citations":
         dedup_citations(args.wiki_root)
     elif args.command == "prune-dangling-graph":
         prune_dangling_graph(args.wiki_root)
+    elif args.command == "remap-graph-nodes":
+        try:
+            remap_graph_nodes(args.wiki_root, json.loads(args.mapping.read_text(encoding="utf-8")))
+        except (ValueError, OSError) as exc:
+            parser.error(str(exc))
     elif args.command == "rebuild-index":
         rebuild_index(args.wiki_root)
     elif args.command == "topic-backfill":

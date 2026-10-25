@@ -9,19 +9,25 @@ The default parser is the tested MinerU 4 basic/auto mode, not forced page OCR.
 from __future__ import annotations
 
 import argparse
+import codecs
 import contextlib
 import hashlib
 import importlib.metadata
 import json
 import os
 import re
+import selectors
 import signal
+import shutil
 import subprocess
 import sys
+import time
 import zipfile
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+
+from _page_scan import markdown_pages
 from urllib.parse import unquote
 
 import frontmatter
@@ -129,7 +135,7 @@ def build_plan(wiki: Path, raw: Path, project: Path, zotero_roots: list[Path], l
     """Return a paper inventory and unique PDF jobs in importance order."""
     rows, jobs_by_hash = [], {}
     hash_cache = {}
-    for page in sorted((wiki / "papers").glob("*.md")):
+    for page in sorted(markdown_pages((wiki / "papers"))):
         meta, warning = metadata(page)
         importance = meta.get("importance")
         valid = isinstance(importance, int) and not isinstance(importance, bool) and 1 <= importance <= 5
@@ -306,7 +312,111 @@ def completed_result(job: dict, root: Path, engine: dict) -> dict | None:
         return None
 
 
-def execute_job(job: dict, output: Path, engine: dict, executable: Path, mineru_home: Path, timeout: int) -> dict:
+def validate_staging_root(output: Path, wiki: Path, raw: Path | None = None) -> Path:
+    """Parser artifacts are disposable caches, never vault-visible sources."""
+    output, wiki = output.resolve(), wiki.resolve()
+    boundary = next((p for p in (wiki, *wiki.parents) if (p / ".obsidian").is_dir()), wiki)
+    protected = [boundary] + ([raw.resolve()] if raw is not None else [])
+    if any(output.is_relative_to(p) or p.is_relative_to(output) for p in protected):
+        raise ValueError("OCR staging must be outside the wiki/Obsidian vault and raw inputs; use .checkpoints/reocr/<run>")
+    return output
+
+
+def relocate_queue(queue: Path, output: Path) -> dict:
+    """Move an idle cache and repair receipt paths without changing OCR bytes."""
+    queue = queue.resolve()
+    with worker_lock(queue):
+        plan = json.loads((queue / "queue.json").read_text(encoding="utf-8"))
+        runtime = load_paths(config_path=Path(plan["paths_config"]) if plan.get("paths_config") else None)
+        wiki = resolve_runtime_path("@configured", runtime, role="wiki", require_external=True)
+        raw = resolve_runtime_path("@raw-root", runtime, role="raw", require_external=True)
+        if str(wiki) != plan["wiki_root"]:
+            raise ValueError("Queue wiki no longer matches configuration")
+        output = validate_staging_root(resolve_runtime_path(str(output), runtime, role="output"), wiki, raw)
+        old = Path(plan["output_root"]).resolve()
+        if output == old:
+            return {"status": "unchanged", "output_root": str(output)}
+        if output.is_relative_to(old) or old.is_relative_to(output) or queue.is_relative_to(old):
+            raise ValueError("Cache relocation paths must not overlap")
+        journal = queue / "relocation.json"
+        recovering = False
+        if output.exists():
+            record = json.loads(journal.read_text()) if journal.exists() else {}
+            recovering = (not old.exists() and record.get("from") == str(old) and record.get("to") == str(output))
+            if not recovering:
+                raise ValueError("Relocation destination already exists")
+        if not recovering:
+            expected = {j["id"] for j in plan["jobs"]}
+            if not old.is_dir() or any(p.is_symlink() or not p.is_dir() or p.name not in expected for p in old.iterdir()):
+                raise ValueError("Cache root contains unexpected entries; refusing to move it")
+            atomic_json(journal, {"from": str(old), "to": str(output), "started_utc": now(), "original_plan": plan,
+                                  "original_progress": json.loads((queue / "progress.json").read_text())})
+            output.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(old), str(output))
+        def moved(value):
+            return str(output) + value[len(str(old)):] if isinstance(value, str) and value.startswith(str(old) + os.sep) else value
+        receipts = 0
+        for job in plan["jobs"]:
+            receipt = output / job["id"] / "result.json"
+            if not receipt.is_file():
+                continue
+            result = json.loads(receipt.read_text())
+            for key in ("markdown", "quality_report"):
+                if key in result:
+                    result[key] = moved(result[key])
+            if digest(Path(result["markdown"])) != result["markdown_sha256"]:
+                raise ValueError(f"Relocated Markdown hash mismatch: {job['id']}")
+            atomic_json(receipt, result)
+            quality_path = Path(result.get("quality_report", ""))
+            if quality_path.is_file():
+                quality = json.loads(quality_path.read_text())
+                quality["path"] = moved(quality.get("path"))
+                atomic_json(quality_path, quality)
+            receipts += 1
+        state = json.loads((queue / "progress.json").read_text())
+        for item in state["jobs"].values():
+            if "result" in item:
+                item["result"] = moved(item["result"])
+        plan["output_root"] = str(output)
+        atomic_json(queue / "queue.json", plan)
+        (queue / "priority.md").write_text(priority_markdown(plan), encoding="utf-8")
+        save_progress(queue, plan, state)
+        record = json.loads(journal.read_text())
+        record.update(status="completed", completed_utc=now(), receipts_verified=receipts)
+        atomic_json(journal, record)
+        return {"status": "relocated", "output_root": str(output), "receipts_verified": receipts}
+
+
+def wait_with_output(proc, log, timeout: float) -> int:
+    """Tee native progress to the terminal and log, retaining CR/UTF-8 output."""
+    deadline = time.monotonic() + timeout if timeout else None
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    with selectors.DefaultSelector() as selector:
+        selector.register(proc.stdout, selectors.EVENT_READ)
+        while True:
+            remaining = deadline - time.monotonic() if deadline else None
+            if remaining is not None and remaining <= 0:
+                raise subprocess.TimeoutExpired(proc.args, timeout)
+            if not selector.select(min(0.2, remaining) if remaining is not None else 0.2):
+                continue
+            chunk = os.read(proc.stdout.fileno(), 65536)
+            if not chunk:
+                break
+            text = decoder.decode(chunk)
+            log.write(text)
+            log.flush()
+            sys.stdout.write(text)
+            sys.stdout.flush()
+    tail = decoder.decode(b"", final=True)
+    log.write(tail)
+    sys.stdout.write(tail)
+    sys.stdout.flush()
+    remaining = max(0, deadline - time.monotonic()) if deadline else None
+    return proc.wait(timeout=remaining)
+
+
+def execute_job(job: dict, output: Path, engine: dict, executable: Path, mineru_home: Path, timeout: int,
+                verbose: bool = False) -> dict:
     pdf = Path(job["pdf"])
     if digest(pdf) != job["pdf_sha256"]:
         raise ValueError("PDF has changed since planning; re-plan before parsing")
@@ -319,12 +429,16 @@ def execute_job(job: dict, output: Path, engine: dict, executable: Path, mineru_
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", MINERU_HOME=str(mineru_home),
                MINERU_MODEL_SOURCE="local", MINERU_MODEL_SMALL_BACKEND="onnx",
                HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")
-    command = [str(executable), "parse", str(pdf), "--output", str(archive), "--format", "zip",
+    # Keep the dependency installation untouched. Successful old receipts remain
+    # reusable; the guard changes only zero-area boxes that previously crashed.
+    compat = executable.name == "mineru-kit" and engine["mineru_version"] == "4.0.12"
+    launcher = [sys.executable, str(Path(__file__).with_name("mineru_compat_cli.py"))] if compat else [str(executable)]
+    command = [*launcher, "parse", str(pdf), "--output", str(archive), "--format", "zip",
                "--tier", engine["tier"], "--ocr-mode", engine["ocr_mode"]]
     with (attempt / "mineru.log").open("w", encoding="utf-8") as log:
-        proc = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, env=env)
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE if verbose else log, stderr=subprocess.STDOUT, env=env)
         try:
-            code = proc.wait(timeout=timeout or None)
+            code = wait_with_output(proc, log, timeout) if verbose else proc.wait(timeout=timeout or None)
         except BaseException:
             proc.terminate()
             try:
@@ -333,6 +447,9 @@ def execute_job(job: dict, output: Path, engine: dict, executable: Path, mineru_
                 proc.kill()
                 proc.wait()
             raise
+        finally:
+            if proc.stdout is not None:
+                proc.stdout.close()
     if code:
         tail = (attempt / "mineru.log").read_text(encoding="utf-8", errors="replace")[-1500:]
         raise RuntimeError(f"MinerU exit {code}; log: {attempt / 'mineru.log'}; {tail}")
@@ -359,14 +476,18 @@ def run_queue(args) -> dict:
     output = Path(plan["output_root"]).resolve()
     runtime = load_paths(config_path=Path(plan["paths_config"]) if plan.get("paths_config") else None)
     wiki = resolve_runtime_path("@configured", runtime, role="wiki", require_external=True)
-    if str(wiki) != plan["wiki_root"] or not output.is_relative_to(wiki / "sources") or output.is_relative_to(wiki / "sources/papers"):
-        raise ValueError("Queue output/configuration no longer matches the external staging root")
+    if str(wiki) != plan["wiki_root"]:
+        raise ValueError("Queue wiki no longer matches configuration")
+    raw = resolve_runtime_path("@raw-root", runtime, role="raw", require_external=True)
+    validate_staging_root(output, wiki, raw)
     executable = Path(sys.executable).parent / "mineru-kit"
     version = importlib.metadata.version("mineru")
     if version.split(".")[0] != "4" or not executable.is_file():
         raise RuntimeError("This runner requires MinerU 4 and mineru-kit in the current Python environment")
     engine = {"mineru_version": version, "tier": "basic", "ocr_mode": "auto", "small_backend": "onnx"}
     with worker_lock(queue):
+        if json.loads((queue / "queue.json").read_text(encoding="utf-8")) != plan:
+            raise RuntimeError("Queue changed before the worker lock was acquired; rerun the command")
         state_path = queue / "progress.json"
         state = json.loads(state_path.read_text()) if state_path.exists() else {"jobs": {}}
         for job in plan["jobs"]:
@@ -396,7 +517,8 @@ def run_queue(args) -> dict:
                 save_progress(queue, plan, state)
                 print(f"[{job['rank']}/{len(plan['jobs'])}] importance={job['importance']} pages={job['pages']} {job['label']}", flush=True)
                 try:
-                    result = execute_job(job, output, engine, executable, args.mineru_home.resolve(), args.timeout_seconds)
+                    result = execute_job(job, output, engine, executable, args.mineru_home.resolve(), args.timeout_seconds,
+                                         verbose=getattr(args, "verbose", False))
                     previous.update(status="completed", finished_utc=now(), result=str(output / job["id"] / "result.json"), quality_issues=result["quality_issues"])
                 except Exception as exc:  # noqa: BLE001 -- isolate document failures and preserve diagnostics
                     previous.update(status="failed", finished_utc=now(), error=str(exc))
@@ -444,7 +566,7 @@ def main(argv=None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     p = commands.add_parser("plan", help="Inventory existing paper pages and write a priority queue")
     p.add_argument("--queue-dir", type=Path, required=True)
-    p.add_argument("--output-root", required=True, help="New staged output directory, outside canonical sources/papers")
+    p.add_argument("--output-root", help="Outside-vault cache; default .checkpoints/reocr/<queue-directory-name>")
     p.add_argument("--paths-config", type=Path, default=DEFAULT_CONFIG_PATH)
     p = commands.add_parser("run", help="Run/resume the queue sequentially, using local models only")
     p.add_argument("--queue-dir", type=Path, required=True)
@@ -452,10 +574,14 @@ def main(argv=None) -> int:
     p.add_argument("--max-items", type=int, default=0, help="Attempt at most N PDFs; default 0 runs the full queue")
     p.add_argument("--timeout-seconds", type=int, default=0, help="Per-PDF timeout; default 0 means no time limit")
     p.add_argument("--retry-failed", action="store_true")
+    p.add_argument("--verbose", action="store_true", help="Show native MinerU progress live while retaining per-document logs")
     p.add_argument("--background", action="store_true", help="Start a detached worker; inspect status/progress.md")
     for name in ("status", "stop"):
         p = commands.add_parser(name)
         p.add_argument("--queue-dir", type=Path, required=True)
+    p = commands.add_parser("relocate", help="Move an idle staging cache outside the vault, preserving resumability")
+    p.add_argument("--queue-dir", type=Path, required=True)
+    p.add_argument("--output-root", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         queue = args.queue_dir.resolve()
@@ -468,9 +594,11 @@ def main(argv=None) -> int:
             runtime = load_paths(config_path=args.paths_config)
             wiki = resolve_runtime_path("@configured", runtime, role="wiki", require_external=True)
             raw = resolve_runtime_path("@raw-root", runtime, role="raw", require_external=True)
-            output = resolve_runtime_path(args.output_root, runtime, role="output", require_external=True)
-            if not output.is_relative_to(wiki / "sources") or output.is_relative_to(wiki / "sources/papers"):
-                raise ValueError("Staged output must be under external wiki/sources and outside canonical sources/papers")
+            output = (resolve_runtime_path(args.output_root, runtime, role="output") if args.output_root
+                      else runtime.project_root / ".checkpoints/reocr" / queue.name)
+            output = validate_staging_root(output, wiki, raw)
+            if queue.is_relative_to(output):
+                raise ValueError("The queue directory must not be inside its OCR output root")
             if (queue / "queue.json").exists():
                 raise ValueError("Queue already exists; resume it or choose a new queue directory")
             roots, _ = find_zotero_pdf._candidate_roots_from_config(runtime.config_path)
@@ -485,6 +613,8 @@ def main(argv=None) -> int:
             save_progress(queue, plan, state)
             print(json.dumps({"papers": len(rows), "pdfs": len(jobs), "pages": sum(j['pages'] for j in jobs),
                               "paper_statuses": dict(Counter(r['status'] for r in rows)), "priority": str(queue / 'priority.md')}, ensure_ascii=False))
+        elif args.command == "relocate":
+            print(json.dumps(relocate_queue(queue, args.output_root), ensure_ascii=False))
         elif args.command == "status":
             state = json.loads((queue / "progress.json").read_text())
             print(json.dumps({k: v for k, v in state.items() if k != "jobs"} | {
@@ -500,6 +630,8 @@ def main(argv=None) -> int:
                    "--timeout-seconds", str(args.timeout_seconds)]
             if args.retry_failed:
                 cmd.append("--retry-failed")
+            if args.verbose:
+                cmd.append("--verbose")
             with (queue / "worker.log").open("a", encoding="utf-8") as log:
                 proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
             print(json.dumps({"worker_pid": proc.pid, "log": str(queue / 'worker.log')}, ensure_ascii=False))

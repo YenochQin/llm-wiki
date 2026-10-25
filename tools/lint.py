@@ -44,6 +44,8 @@ import re
 import sys
 from pathlib import Path
 
+from _page_scan import markdown_pages, sync_conflict_files
+
 import frontmatter
 import yaml
 
@@ -213,7 +215,7 @@ def find_all_pages(wiki_dir: Path) -> dict[str, Path]:
         dir_path = wiki_dir / subdir
         if not dir_path.exists():
             continue
-        for f in dir_path.glob("*.md"):
+        for f in markdown_pages(dir_path):
             slug = f.stem
             pages[slug] = f
     return pages
@@ -1168,7 +1170,9 @@ def check_content_quality(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIs
 def lint(wiki_dir: Path) -> list[LintIssue]:
     """Run all lint checks and return sorted issues."""
     pages = find_all_pages(wiki_dir)
-    issues = []
+    issues = [LintIssue("🔴", "sync-conflict", str(p.relative_to(wiki_dir)),
+                        "Sync-conflict copy excluded from page scans; reconcile before removal")
+              for p in sync_conflict_files(wiki_dir)]
 
     issues.extend(check_missing_fields(wiki_dir, pages))
     issues.extend(check_paper_classification(wiki_dir, pages))

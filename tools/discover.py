@@ -44,6 +44,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from _page_scan import markdown_pages
+
 import _env  # noqa: F401 — load .env files
 
 import fetch_literature
@@ -220,7 +222,7 @@ def _wiki_known_paper_keys(wiki_root: Path | None) -> set[str]:
     if not papers_dir.exists():
         return set()
     seen: set[str] = set()
-    for path in papers_dir.glob("*.md"):
+    for path in markdown_pages(papers_dir):
         key = _extract_wiki_paper_key(path)
         if key:
             seen.add(key)
@@ -697,7 +699,7 @@ def _wiki_recent_anchors(wiki_root: Path, k: int) -> list[str]:
     papers_dir = wiki_root / "papers"
     if not papers_dir.exists():
         return []
-    paths = sorted(papers_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    paths = sorted(markdown_pages(papers_dir), key=lambda p: p.stat().st_mtime, reverse=True)
     anchors: list[str] = []
     for path in paths:
         key = _extract_wiki_paper_key(path)

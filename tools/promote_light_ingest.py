@@ -26,6 +26,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from _page_scan import markdown_pages
+
 import frontmatter
 
 from _cli_io import configure_utf8_stdio
@@ -282,7 +284,7 @@ def main() -> None:
 
     papers_dir = wiki_root / "papers"
     items: list[dict[str, Any]] = []
-    for path in sorted(papers_dir.glob("*.md")):
+    for path in sorted(markdown_pages(papers_dir)):
         item = _score_page(path, wiki_root)
         if item and int(item["score"]) >= args.min_score:
             items.append(item)

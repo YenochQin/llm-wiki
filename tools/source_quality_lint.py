@@ -25,6 +25,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote
 
+from _page_scan import exclude_sync_conflicts, markdown_pages
+
 import frontmatter
 
 from _cli_io import configure_utf8_stdio
@@ -246,7 +248,7 @@ def reference_index(wiki: Path) -> dict[str, list[str]]:
     """Index actual direct Markdown links, not source/page filename guesses."""
     refs = {}
     for kind in ("papers", "concepts", "claims"):
-        for page in sorted((wiki / kind).glob("*.md")):
+        for page in sorted(markdown_pages((wiki / kind))):
             text = page.read_text(encoding="utf-8")
             for match in re.finditer(r"(?<!!)\[[^\]\n]*\]\(([^)\n]+)\)", text):
                 target = unquote(match.group(1).split("#")[0].strip().strip("<>"))
@@ -272,7 +274,7 @@ def scan_paths(paths: list[Path], *, wiki: Path | None = None) -> dict:
             raise ValueError(f"Source path missing or not Markdown: {path}")
     refs = reference_index(wiki) if wiki else {}
     reports = []
-    for path in sorted(files):
+    for path in exclude_sync_conflicts(sorted(files)):
         try:
             data = path.read_bytes()
             report = scan_text(data.decode("utf-8"), path=path)

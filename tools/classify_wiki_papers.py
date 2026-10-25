@@ -14,6 +14,8 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
+from _page_scan import markdown_pages
+
 import requests
 import yaml
 
@@ -73,7 +75,7 @@ def doi_norm(value: Any) -> str:
 
 def parse_pages(root: Path) -> list[dict[str, Any]]:
     pages = []
-    for path in sorted((root / "papers").glob("*.md")):
+    for path in sorted(markdown_pages((root / "papers"))):
         text = path.read_text(encoding="utf-8", errors="replace")
         front: dict[str, Any] = {}
         if text.startswith("---"):
