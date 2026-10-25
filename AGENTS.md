@@ -34,6 +34,12 @@
 - `/ingest` consumes prepared MinerU markdown, an explicit canonical handoff path, or Zotero-located sources; raw local PDFs use `/ingest-local-pdf`. `/init` prepares sources and hands papers to `/ingest` sequentially using `.checkpoints/init-sources.json` as the order/path authority.
 - Run the scoped `tools/grounding_lint.py` gate on every touched paper/concept/claim page. Fix red issues or report a source-quality blocker; never downgrade them or claim a passed gate. Manually ground other generated content; see the shared discipline below.
 
+## High-precision atomic-structure research
+
+- For atomic excitation energies and calculation plans, retrieve evidence from atomic-structure literature and implementations, with accuracy assessed against the user's cm$^{-1}$-scale requirements. Compare the relevant charge state, configurations, and $J$-resolved levels using consistent energy references; distinguish term centroids from individual fine-structure levels.
+- Exclude quantum-chemistry method studies and benchmarks (for example, CASSCF/CASPT2/RASPT2 studies), including their applications to isolated atoms, as the basis for recommending these atomic calculations. Shared physical concepts do not establish equivalent accuracy or a transferable implementation. Use such sources only when the user explicitly requests a cross-method comparison.
+- Require demonstrated absolute errors at the relevant accuracy scale before presenting a method as a validated solution. Converting eV or kcal/mol errors to cm$^{-1}$, meeting chemical-accuracy criteria, or observing a decrease in a calculated excitation energy does not establish the required atomic accuracy. When suitable atomic evidence is missing, state the gap rather than proposing further calculations from quantum-chemistry analogies.
+
 ## Links and derived state
 
 - Entity links use resolving `[[slug]]` wikilinks; prepared-source/external citations use ordinary Markdown links. Paper filenames use Zotero/Better BibTeX `citationKey`, or `author_year_veryshorttitle` without one; other page slugs are lowercase and hyphen-separated.
