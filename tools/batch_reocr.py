@@ -330,7 +330,7 @@ def relocate_queue(queue: Path, output: Path) -> dict:
         runtime = load_paths(config_path=Path(plan["paths_config"]) if plan.get("paths_config") else None)
         wiki = resolve_runtime_path("@configured", runtime, role="wiki", require_external=True)
         raw = resolve_runtime_path("@raw-root", runtime, role="raw", require_external=True)
-        if str(wiki) != plan["wiki_root"]:
+        if wiki.resolve() != Path(plan["wiki_root"]).resolve():
             raise ValueError("Queue wiki no longer matches configuration")
         output = validate_staging_root(resolve_runtime_path(str(output), runtime, role="output"), wiki, raw)
         old = Path(plan["output_root"]).resolve()
@@ -354,7 +354,16 @@ def relocate_queue(queue: Path, output: Path) -> dict:
             output.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(old), str(output))
         def moved(value):
-            return str(output) + value[len(str(old)):] if isinstance(value, str) and value.startswith(str(old) + os.sep) else value
+            if not isinstance(value, str) or not Path(value).is_absolute():
+                return value
+            # Receipts may use an alias such as macOS /var -> /private/var.
+            # Resolve non-strictly: the old cache has already been moved, or
+            # may be absent while recovering an interrupted relocation.
+            try:
+                relative = Path(value).resolve().relative_to(old)
+            except ValueError:
+                return value
+            return str(output / relative)
         receipts = 0
         for job in plan["jobs"]:
             receipt = output / job["id"] / "result.json"
@@ -476,7 +485,7 @@ def run_queue(args) -> dict:
     output = Path(plan["output_root"]).resolve()
     runtime = load_paths(config_path=Path(plan["paths_config"]) if plan.get("paths_config") else None)
     wiki = resolve_runtime_path("@configured", runtime, role="wiki", require_external=True)
-    if str(wiki) != plan["wiki_root"]:
+    if wiki.resolve() != Path(plan["wiki_root"]).resolve():
         raise ValueError("Queue wiki no longer matches configuration")
     raw = resolve_runtime_path("@raw-root", runtime, role="raw", require_external=True)
     validate_staging_root(output, wiki, raw)

@@ -1,13 +1,13 @@
 /* Read-only inspection of historically broken collection keys.
  *
- * docs/zotero-internal-api-plugin-plan.md §9 requires auditing the seven
+ * The operation constraints in docs/zotero-internal-api-plugin-plan.md require auditing the seven
  * collections that were once inserted directly into zotero.sqlite before
  * any cleanup decision. Inspection remains read-only; deletion (eraseTx) is
  * exposed only through a confirmation-gated, legacy-key allowlist below.
  */
 
 var WikiOrgMigration = {
-	// Plan §2.2: keys inserted via direct SQLite writes.
+	// Historical keys inserted via direct SQLite writes; see the retained operation constraints.
 	DEFAULT_KEYS: [
 		"TSTCOL01",
 		"DIEOX30F",

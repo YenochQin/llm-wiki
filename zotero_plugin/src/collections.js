@@ -5,7 +5,7 @@
  * are always the ones Zotero itself generated.
  *
  * The error classes at the top are shared with endpoint.js, which maps them
- * to the HTTP error model from docs/zotero-internal-api-plugin-plan.md §7.5:
+ * to the HTTP error model documented in zotero_plugin/README.md:
  * 400 bad request / 409 conflict / 503 not ready / 500 internal.
  */
 

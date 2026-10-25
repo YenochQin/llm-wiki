@@ -50,6 +50,10 @@ uv run python -X utf8 tools/batch_reocr.py relocate \
 `relocation.json` in the queue records the old location and original queue
 state. If interrupted after the directory move, rerunning the same relocation
 can finish repairing paths. A pre-existing unrelated destination is refused.
+Wiki-root comparisons and relocated artifact paths resolve filesystem aliases,
+including macOS `/var` and `/private/var`. Receipts written through an alias
+remain usable after relocation or recovery; a genuinely different wiki root
+is still rejected. No `TMPDIR` override is required.
 
 `run` resumes an existing queue. A stop request takes effect after the current
 PDF. Ctrl-C/SIGTERM terminates the active child and checkpoints interruption.

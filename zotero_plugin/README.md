@@ -2,8 +2,8 @@
 
 A local-only Zotero plugin that lets the llm-wiki repository manage Zotero
 collections through **Zotero's internal object API**. It exists to replace the
-failed direct-`zotero.sqlite` approach recorded in
-`docs/zotero-internal-api-plugin-plan.md` §2.2: every write goes through
+failed direct-`zotero.sqlite` approach recorded in the
+[implementation status](../docs/zotero-internal-api-plugin-plan.md): collection creation goes through
 `new Zotero.Collection()` + `await saveTx()`, so Zotero itself owns the
 database transaction, object cache, version field, and sync queue, and the
 collection keys are always the ones Zotero generated.
@@ -121,7 +121,8 @@ Semantics worth knowing:
   (relevant to the legacy rows) instead of hiding them.
 - `migration/inspect` is deliberately read-only. Deletion (`eraseTx`) is
   exposed separately at `migration/erase` and requires the exact confirmation
-  string plus the legacy-key/name/empty-collection checks described in plan §9.
+  string plus the legacy-key/name/empty-collection checks described in the
+  [retained operation constraints](../docs/zotero-internal-api-plugin-plan.md#保留的操作约束).
 
 ## Python client
 
@@ -175,7 +176,7 @@ Confirmed against the Zotero main-branch source (`server.js`,
    promise of `[status, contentType, body]`; `application/json` POST bodies
    arrive pre-parsed.
 3. `Zotero.Collections.getByLibrary(libraryID)`, `collection.parentKey`, and
-   `await collection.saveTx()` behave as the plan's pseudocode assumes.
+   `await collection.saveTx()` are used by `src/collections.js`.
 4. `Zotero.Prefs.get/set(name, true)` addresses absolute pref paths.
 5. **Manifest requirements are stricter than the Zotero 7 docs say** (this
    was learned the hard way: the first build failed to install with "may not
@@ -195,7 +196,10 @@ Confirmed against the Zotero main-branch source (`server.js`,
 key, ids), and `migration_inspect` runs. Tokens and item content are never
 written.
 
-## Test checklist (plan §11, run after install)
+## Test checklist (run after install)
+
+See also the [remaining acceptance checklist](../docs/zotero-internal-api-plugin-plan.md#验收清单)
+and [platform status and acceptance](../docs/zotero-cross-platform-support-plan.md).
 
 - [ ] `health` returns `ready: true` once Zotero is up; 503 while starting.
 - [ ] Request without token → 401; wrong token → 401.
