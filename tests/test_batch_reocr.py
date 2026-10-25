@@ -51,7 +51,7 @@ class BatchReocrTests(unittest.TestCase):
             write(pdf, "PDF fixture")
             for source in ("${Zotero data directory}/storage/ABCDEFGH/a paper.pdf",
                            r"E:\Zotero\storage\ABCDEFGH\a paper.pdf"):
-                self.assertEqual(batch.locate_pdf(source, [root / "zotero"], root / "raw", root), [pdf])
+                self.assertEqual(batch.locate_pdf(source, [root / "zotero"], root / "raw", root), [pdf.resolve()])
             self.assertEqual(batch.locate_pdf("/old/a paper.pdf", [root / "zotero"], root / "raw", root), [])
 
     def test_rank_existing_importance_deduplicate_pdf_and_preserve_broken_links(self):
@@ -164,7 +164,7 @@ with zipfile.ZipFile(p,'w') as z:
             for output in (wiki/'sources/reocr', vault/'temp', raw/'cache', root, link/'cache'):
                 with self.assertRaises(ValueError):
                     batch.validate_staging_root(output,wiki,raw)
-            self.assertEqual(batch.validate_staging_root(root/'cache',wiki,raw),root/'cache')
+            self.assertEqual(batch.validate_staging_root(root/'cache',wiki,raw),(root/'cache').resolve())
 
     def test_plan_defaults_to_ignored_tool_cache(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -178,7 +178,7 @@ with zipfile.ZipFile(p,'w') as z:
                  contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(batch.main(['plan','--queue-dir',str(queue)]),0)
             plan=json.loads((queue/'queue.json').read_text())
-            self.assertEqual(plan['output_root'],str(root/'.checkpoints/reocr/run'))
+            self.assertEqual(plan['output_root'],str((root/'.checkpoints/reocr/run').resolve()))
             self.assertFalse((wiki/'sources/reocr').exists())
 
     def test_relocation_preserves_markdown_and_completed_receipts(self):
@@ -196,7 +196,89 @@ with zipfile.ZipFile(p,'w') as z:
             self.assertFalse(old.exists())
             self.assertEqual((new/'job/attempt/native/markdown.md').read_text(),'# Original OCR\nExact body')
             self.assertIsNotNone(batch.completed_result(job,new,engine))
-            self.assertEqual(json.loads((queue/'queue.json').read_text())['output_root'],str(new))
+            self.assertEqual(json.loads((queue/'queue.json').read_text())['output_root'],str(new.resolve()))
+
+    def test_relocation_repairs_aliased_paths_even_after_interruption(self):
+        for interrupted in (False, True):
+            with self.subTest(interrupted=interrupted), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                real = root / 'real'
+                real.mkdir()
+                alias = root / 'alias'
+                alias.symlink_to(real, target_is_directory=True)
+                wiki = real / 'wiki'
+                old = alias / 'wiki/sources/reocr/old'
+                new = alias / 'cache/new'
+                queue = real / 'queue'
+                pdf = real / 'paper.pdf'
+                md = old / 'job/attempt/native/markdown.md'
+                quality = old / 'job/attempt/quality.json'
+                write(pdf, 'input')
+                write(md, '# Original OCR\nExact body')
+                job = {'id': 'job', 'rank': 1, 'importance': 4, 'pages': 1,
+                       'label': 'paper', 'title': 'Paper', 'papers': [],
+                       'pdf': str(pdf), 'pdf_sha256': batch.digest(pdf)}
+                engine = {'mineru_version': '4.fixture'}
+                batch.atomic_json(quality, {'path': str(md)})
+                batch.atomic_json(old / 'job/result.json', {
+                    'markdown': str(md), 'markdown_sha256': batch.digest(md),
+                    'quality_report': str(quality), 'pdf_sha256': batch.digest(pdf), 'engine': engine})
+                batch.atomic_json(queue / 'queue.json', {
+                    'created_utc': batch.now(), 'wiki_root': str(alias / 'wiki'),
+                    'output_root': str(old), 'jobs': [job], 'papers': []})
+                batch.atomic_json(queue / 'progress.json', {'status': 'interrupted', 'jobs': {
+                    'job': {'status': 'completed', 'result': str(old / 'job/result.json')}}})
+                atomic_json = batch.atomic_json
+
+                def interrupt_receipt(path, data):
+                    if path.name == 'result.json':
+                        raise OSError('interrupted after cache move')
+                    atomic_json(path, data)
+
+                with patch.object(batch, 'load_paths'), patch.object(
+                    batch, 'resolve_runtime_path', side_effect=[wiki, real / 'raw', new] * 2
+                ):
+                    if interrupted:
+                        with patch.object(batch, 'atomic_json', side_effect=interrupt_receipt), \
+                             self.assertRaisesRegex(OSError, 'interrupted after cache move'):
+                            batch.relocate_queue(queue, new)
+                        self.assertFalse(old.exists())
+                        self.assertTrue(new.is_dir())
+                    result = batch.relocate_queue(queue, new)
+                self.assertEqual(result['receipts_verified'], 1)
+                self.assertEqual(result['output_root'], str(new.resolve()))
+                receipt = batch.completed_result(job, new, engine)
+                self.assertIsNotNone(receipt)
+                self.assertEqual(receipt['markdown'], str(new.resolve() / 'job/attempt/native/markdown.md'))
+                self.assertEqual(receipt['quality_report'], str(new.resolve() / 'job/attempt/quality.json'))
+                self.assertEqual(json.loads(Path(receipt['quality_report']).read_text())['path'], receipt['markdown'])
+                progress = json.loads((queue / 'progress.json').read_text())
+                self.assertEqual(progress['jobs']['job']['status'], 'completed')
+                self.assertEqual(progress['jobs']['job']['result'], str(new.resolve() / 'job/result.json'))
+                self.assertIn(str(new.resolve() / 'job/result.json'), (queue / 'progress.md').read_text())
+                self.assertEqual(Path(receipt['markdown']).read_text(), '# Original OCR\nExact body')
+
+    def test_worker_accepts_wiki_alias_but_rejects_different_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            wiki = root / 'wiki'
+            wiki.mkdir()
+            alias = root / 'wiki-alias'
+            alias.symlink_to(wiki, target_is_directory=True)
+            queue = root / 'queue'
+            plan = {'wiki_root': str(alias), 'output_root': str(root / 'cache'), 'jobs': []}
+            batch.atomic_json(queue / 'queue.json', plan)
+            executable = root / 'bin/python'
+            write(executable.parent / 'mineru-kit', 'fixture')
+            with patch.object(batch, 'load_paths'), \
+                 patch.object(batch, 'resolve_runtime_path', side_effect=[wiki, root / 'raw']), \
+                 patch.object(batch.sys, 'executable', str(executable)), \
+                 patch.object(batch.importlib.metadata, 'version', return_value='4.0.12'):
+                self.assertEqual(batch.run_queue(Namespace(queue_dir=queue))['status'], 'finished')
+            with patch.object(batch, 'load_paths'), \
+                 patch.object(batch, 'resolve_runtime_path', return_value=root / 'different-wiki'), \
+                 self.assertRaisesRegex(ValueError, 'Queue wiki no longer matches configuration'):
+                batch.run_queue(Namespace(queue_dir=queue))
 
     def test_worker_refuses_plan_relocated_before_lock_acquisition(self):
         with tempfile.TemporaryDirectory() as tmp:
