@@ -51,11 +51,11 @@ Use these local references on demand:
 Run commands from the repository root.
 
 ```shell
-uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root'
+uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@experiment-root' '@output-root'
 uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ```
 
-If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@configured-sources' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
+If path diagnosis is needed, use `uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root' '@experiment-root' '@output-root' '@configured-sources' '@configured-sources-papers' '@mineru-cache'`. Do not import path helpers from `tools._env`; runtime path aliases are resolved by `tools/_paths.py` through this CLI.
 
 On resume, load `init-session` with `checkpoint-load` and read the existing preparation/source manifests before starting new work. Reuse unchanged prepared sources and scaffold pages; when Steps 1–4 are already valid, continue at Step 5. Per-paper recovery state is defined in [../ingest/references/init-handoff.md](../ingest/references/init-handoff.md).
 
@@ -65,7 +65,7 @@ On resume, load `init-session` with `checkpoint-load` and read the existing prep
 uv run python -X utf8 tools/research_wiki.py init '@configured'
 ```
 
-Create the standard wiki directories, `graph/`, `outputs/`, `index.md`, and `log/`. Do not add a second init log entry here.
+Create the standard wiki directories, `graph/`, `index.md`, and `log/`, plus the configured independent experiment and output roots. Do not add a second init log entry here.
 
 ### Step 2: Prepare local inputs into `wiki/sources/`
 

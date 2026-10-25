@@ -13,12 +13,12 @@ Read this reference only when `--write` or `--crystallize` authorizes wiki write
 2. Resolve the configured wiki root before direct edits:
 
    ```bash
-   uv run python -X utf8 tools/resolve_path_alias.py @configured
+   uv run python -X utf8 tools/resolve_path_alias.py @configured @output-root
    ```
 
-3. Create `outputs/code-analysis-{slug}-{date}.md` with `artifact_type: code_analysis`, the
+3. Create `@output-root/code-analysis-{slug}-{date}.md` with `artifact_type: code_analysis`, the
    objective, target, date, cited wiki pages, and repository path/branch/commit/dirty metadata.
-4. Update `index.md` only if the current index lists outputs.
+4. Rebuild `wiki/index.md` through `research_wiki.py rebuild-index '@configured'`.
 5. Append the log through the tool:
 
    ```bash

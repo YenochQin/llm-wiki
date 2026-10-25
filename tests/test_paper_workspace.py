@@ -49,7 +49,7 @@ class PaperWorkspaceTests(unittest.TestCase):
         expected = self.root / "papers" / "atomic-radials" / DRAFT / "paper.tex"
         self.assertEqual(resolve_runtime_path(f"@paper-root/atomic-radials/{DRAFT}/paper.tex", paths, role="paper"), expected)
         self.assertEqual(resolve_runtime_path("@configured-papers", paths, role="paper"), self.root / "papers")
-        self.assertEqual(resolve_runtime_path("@configured/outputs/report.md", paths, role="report"), self.root / "wiki" / "outputs" / "report.md")
+        self.assertEqual(resolve_runtime_path("@configured/sources/report.md", paths, role="report"), self.root / "wiki" / "sources" / "report.md")
 
     def test_environment_and_explicit_argument_precedence(self) -> None:
         os.environ["LLM_WIKI_PAPER_ROOT"] = str(self.root / "env-papers")

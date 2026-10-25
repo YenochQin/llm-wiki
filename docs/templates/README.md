@@ -15,7 +15,7 @@ time.
 - `topic-template.md` -> `wiki/topics/{slug}.md`
 - `person-template.md` -> `wiki/people/{slug}.md`
 - `idea-template.md` -> `wiki/ideas/{slug}.md`
-- `experiment-template.md` -> `wiki/experiments/{slug}.md`
+- `experiment-template.md` -> `@experiment-root/{slug}.md`
 - `claim-template.md` -> `wiki/claims/{slug}.md`
 - `summary-template.md` -> `wiki/Summary/{slug}.md`
 - `foundation-template.md` -> `wiki/foundations/{slug}.md`

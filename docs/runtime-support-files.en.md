@@ -31,6 +31,11 @@ When writing a forward link, **always write the reverse link simultaneously**:
 | claims/C writes `source_papers: [[paper-P]]` | papers/P appends C to `## Related` |
 | any page links to `[[foundation-X]]` | **no reverse link** — foundations are terminal: they receive inward links from papers/concepts/etc. but never write `key_papers` or any back-reference field |
 
+Experiment records live under `experiment_root`; reports live under `output_root`.
+The `experiments/E` notation above and in graph endpoints is a logical identity,
+resolved by `tools/_content.py`, rather than a child path of `wiki_root`.
+Slug wikilinks and claim evidence sources remain unchanged by relocation.
+
 ## Graph Rules
 
 - `graph/` is auto-generated; do not edit it manually
@@ -68,6 +73,12 @@ Citation format: `{"from": "papers/citing", "to": "papers/cited", "type": "cites
 
 ## index.md Format
 
+`rebuild-index` scans the independent experiment/output roots as well as wiki
+entities. Each experiment/output entry includes its path relative to `wiki_root`;
+custom directory names and locations are supported. Output entries are document
+navigation, not new claim evidence. Existing `outputs/<slug>` provenance edges remain valid.
+
+
 Entity scanners exclude filenames containing `NSConflict` (case-insensitive),
 including numbered variants. They report skipped paths on stderr; `lint.py`
 also reports `sync-conflict` findings. Copies without a canonical counterpart
@@ -99,6 +110,10 @@ ideas:
   - slug: sparse-lora-for-edge-devices
 experiments:
   - slug: sparse-lora-latency-benchmark
+    path: ../experiments/sparse-lora-latency-benchmark.md
+outputs:
+  - slug: related-work-example
+    path: ../outputs/related-work-example.md
 claims:
   - slug: lora-preserves-quality-at-low-rank
 ```

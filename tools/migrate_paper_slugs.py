@@ -43,6 +43,7 @@ from typing import Any, Iterable
 
 import frontmatter
 
+from _content import content_files, content_relative, configure_content_paths
 from _cli_io import configure_utf8_stdio
 import find_zotero_pdf
 from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
@@ -478,7 +479,7 @@ def _update_paper_frontmatter(text: str, row: PaperRow) -> str:
 
 
 def _walk_text_files(wiki_root: Path) -> Iterable[Path]:
-    for path in sorted(wiki_root.rglob("*")):
+    for path in sorted(content_files(wiki_root, "*")):
         if not path.is_file():
             continue
         if path.suffix in {".md", ".jsonl"}:
@@ -556,12 +557,12 @@ def validate(wiki_root: Path) -> dict[str, Any]:
         try:
             post = frontmatter.loads(path.read_text(encoding="utf-8", errors="ignore"))
         except Exception as exc:
-            issues.append({"file": str(path.relative_to(wiki_root)), "issue": f"frontmatter parse failed: {exc}"})
+            issues.append({"file": content_relative(path, wiki_root), "issue": f"frontmatter parse failed: {exc}"})
             continue
         slug = str(post.metadata.get("slug") or "").strip()
         if slug != path.stem:
             issues.append({
-                "file": str(path.relative_to(wiki_root)),
+                "file": content_relative(path, wiki_root),
                 "issue": f"slug mismatch: {slug or '<missing>'} != {path.stem}",
             })
 
@@ -582,7 +583,7 @@ def validate(wiki_root: Path) -> dict[str, Any]:
                 continue
             if stem not in paper_stems:
                 issues.append({
-                    "file": str(path.relative_to(wiki_root)),
+                    "file": content_relative(path, wiki_root),
                     "issue": f"broken paper endpoint: papers/{stem}",
                 })
                 break
@@ -627,6 +628,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     paths = load_paths(config_path=DEFAULT_CONFIG_PATH)
+    configure_content_paths(paths)
     wiki_root = resolve_runtime_path(args.wiki_root, paths, role="wiki-root")
     if wiki_root is None:
         raise SystemExit("wiki root could not be resolved")

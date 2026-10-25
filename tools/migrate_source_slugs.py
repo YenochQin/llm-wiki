@@ -38,6 +38,7 @@ from typing import Any
 
 import frontmatter
 
+from _content import content_files, content_relative, configure_content_paths
 from _cli_io import configure_utf8_stdio
 import find_zotero_pdf
 from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
@@ -363,7 +364,7 @@ def apply_plan(wiki_root: Path, rows: list[MigrationRow], report_path: Path | No
     by_source = {row.source_path.resolve(): row for row in rows}
     updated_markdown = 0
 
-    for md_path in sorted(wiki_root.rglob("*.md")):
+    for md_path in sorted(content_files(wiki_root)):
         resolved = md_path.resolve()
         old_text = md_path.read_text(encoding="utf-8", errors="ignore")
         if resolved in by_source:
@@ -410,7 +411,7 @@ def _assert_apply_permissions(wiki_root: Path, rows: list[MigrationRow], replace
 
     files_to_write: list[Path] = []
     source_paths = {row.source_path.resolve() for row in rows}
-    for md_path in sorted(wiki_root.rglob("*.md")):
+    for md_path in sorted(content_files(wiki_root)):
         resolved = md_path.resolve()
         if resolved in source_paths:
             files_to_write.append(md_path)
@@ -464,20 +465,20 @@ def validate(wiki_root: Path) -> dict[str, Any]:
         source_slug = _plain_text(post.metadata.get("sourceSlug")).strip()
         if source_slug != path.stem:
             issues.append({
-                "file": str(path.relative_to(wiki_root)),
+                "file": content_relative(path, wiki_root),
                 "issue": f"sourceSlug mismatch: {source_slug or '<missing>'} != {path.stem}",
             })
         text = path.read_text(encoding="utf-8", errors="ignore")
         for match in re.finditer(r"assets/([^)/]+)/", text):
             if match.group(1) != path.stem:
                 issues.append({
-                    "file": str(path.relative_to(wiki_root)),
+                    "file": content_relative(path, wiki_root),
                     "issue": f"asset stem mismatch: assets/{match.group(1)}/",
                 })
                 break
 
     source_link_re = re.compile(r"(?P<link>(?:\.\./|\./)?sources/papers/[^\s)]+\.md|@configured-sources-papers/[^\s)]+\.md|@wiki-sources-papers/[^\s)]+\.md)")
-    for md_path in sorted(wiki_root.rglob("*.md")):
+    for md_path in sorted(content_files(wiki_root)):
         text = md_path.read_text(encoding="utf-8", errors="ignore")
         for match in source_link_re.finditer(text):
             link = match.group("link")
@@ -487,7 +488,7 @@ def validate(wiki_root: Path) -> dict[str, Any]:
                 target = (md_path.parent / link).resolve()
             if not target.exists():
                 issues.append({
-                    "file": str(md_path.relative_to(wiki_root)),
+                    "file": content_relative(md_path, wiki_root),
                     "issue": f"broken prepared-source link: {link}",
                 })
 
@@ -520,6 +521,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     paths = load_paths(config_path=DEFAULT_CONFIG_PATH)
+    configure_content_paths(paths)
     wiki_root = resolve_runtime_path(args.wiki_root, paths, role="wiki-root")
     if wiki_root is None:
         raise SystemExit("wiki root could not be resolved")

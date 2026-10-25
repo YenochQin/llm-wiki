@@ -44,6 +44,10 @@ import re
 import sys
 from pathlib import Path
 
+from _content import (
+    configure_content_paths, content_directory, content_path, content_relative,
+    content_kind, content_roots, reference_slug,
+)
 from _page_scan import markdown_pages, sync_conflict_files
 
 import frontmatter
@@ -212,7 +216,7 @@ def find_all_pages(wiki_dir: Path) -> dict[str, Path]:
     """Map slug -> file path for all wiki pages."""
     pages = {}
     for subdir in ENTITY_DIRS:
-        dir_path = wiki_dir / subdir
+        dir_path = content_directory(wiki_dir, subdir)
         if not dir_path.exists():
             continue
         for f in markdown_pages(dir_path):
@@ -226,8 +230,8 @@ def check_missing_fields(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
     issues = []
     for slug, fpath in pages.items():
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
-        page_type = fpath.parent.name
+        rel = content_relative(fpath, wiki_dir)
+        page_type = content_kind(fpath, wiki_dir)
         fm = extract_frontmatter(content)
 
         for field in REQUIRED_FIELDS.get(page_type, []):
@@ -264,10 +268,10 @@ def check_paper_classification(
     }
 
     for slug, fpath in pages.items():
-        if fpath.parent.name != "papers":
+        if content_kind(fpath, wiki_dir) != "papers":
             continue
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
+        rel = content_relative(fpath, wiki_dir)
         fm = extract_frontmatter(content)
         if "bibtex" in fm:
             issues.append(
@@ -392,10 +396,10 @@ def check_concept_source_excerpts(
     """Require concept pages to carry source excerpts linked to prepared markdown."""
     issues = []
     for slug, fpath in pages.items():
-        if fpath.parent.name != "concepts":
+        if content_kind(fpath, wiki_dir) != "concepts":
             continue
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
+        rel = content_relative(fpath, wiki_dir)
         section = _extract_section(content, "Source excerpts")
         if not section:
             issues.append(
@@ -437,10 +441,15 @@ def check_broken_links(
     """Check wikilinks and track incoming links."""
     issues = []
     incoming: dict[str, set[str]] = {slug: set() for slug in pages}
+    link_targets = set(pages)
+    for kind in ("outputs", "experiments"):
+        for path in content_directory(wiki_dir, kind).rglob("*.md"):
+            link_targets.add(path.stem)
+            link_targets.add(content_relative(path, wiki_dir).removesuffix(".md"))
 
     for slug, fpath in pages.items():
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
+        rel = content_relative(fpath, wiki_dir)
 
         for match in WIKILINK_RE.finditer(content):
             target = match.group(1).strip()
@@ -454,7 +463,7 @@ def check_broken_links(
                 target = target.split("#", 1)[0].strip()
                 if not target:
                     continue
-            if target in pages:
+            if target in link_targets:
                 incoming.setdefault(target, set()).add(slug)
             else:
                 issues.append(
@@ -487,10 +496,10 @@ def check_claim_provenance_shape(
     """Keep claim frontmatter provenance machine-readable, not Obsidian syntax."""
     issues = []
     for _slug, fpath in pages.items():
-        if fpath.parent.name != "claims":
+        if content_kind(fpath, wiki_dir) != "claims":
             continue
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
+        rel = content_relative(fpath, wiki_dir)
         fm = extract_frontmatter(content)
 
         source_papers = fm.get("source_papers", [])
@@ -551,7 +560,7 @@ def check_orphan_pages(
     issues = []
     for slug, fpath in pages.items():
         if not incoming.get(slug):
-            rel = str(fpath.relative_to(wiki_dir))
+            rel = content_relative(fpath, wiki_dir)
             issues.append(LintIssue("🔵", "orphan", rel, "No incoming links"))
     return issues
 
@@ -561,8 +570,8 @@ def check_field_values(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIssue
     issues = []
     for slug, fpath in pages.items():
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
-        page_type = fpath.parent.name
+        rel = content_relative(fpath, wiki_dir)
+        page_type = content_kind(fpath, wiki_dir)
 
         # Check enum fields
         enum_checks = {
@@ -626,10 +635,10 @@ def check_idea_failure_reason(
     """Check that failed ideas have failure_reason filled."""
     issues = []
     for slug, fpath in pages.items():
-        if fpath.parent.name != "ideas":
+        if content_kind(fpath, wiki_dir) != "ideas":
             continue
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
+        rel = content_relative(fpath, wiki_dir)
         status = extract_frontmatter_value(content, "status")
         if status == "failed":
             reason = extract_frontmatter_value(content, "failure_reason")
@@ -652,11 +661,11 @@ def check_experiment_claim_link(
     """Check that experiments have valid target_claim references."""
     issues = []
     for slug, fpath in pages.items():
-        if fpath.parent.name != "experiments":
+        if content_kind(fpath, wiki_dir) != "experiments":
             continue
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
-        target = extract_frontmatter_value(content, "target_claim")
+        rel = content_relative(fpath, wiki_dir)
+        target = reference_slug(extract_frontmatter_value(content, "target_claim"))
         if target:
             claim_path = wiki_dir / "claims" / f"{target}.md"
             if not claim_path.exists():
@@ -683,8 +692,8 @@ def check_xref_asymmetry(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
 
     for slug, fpath in pages.items():
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
-        page_type = fpath.parent.name
+        rel = content_relative(fpath, wiki_dir)
+        page_type = content_kind(fpath, wiki_dir)
 
         # concepts key_papers ↔ papers Related
         if page_type == "concepts":
@@ -781,7 +790,7 @@ def check_xref_asymmetry(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIss
 
         # experiments target_claim ↔ claims evidence
         if page_type == "experiments":
-            target = extract_frontmatter_value(content, "target_claim")
+            target = reference_slug(extract_frontmatter_value(content, "target_claim"))
             if target:
                 ref_path = wiki_dir / "claims" / f"{target}.md"
                 if ref_path.exists():
@@ -810,7 +819,7 @@ def _check_graph_node_exists(
     if "/" not in node_id:
         return None
     entity_dir, node_slug = node_id.split("/", 1)
-    node_path = wiki_dir / entity_dir / f"{node_slug}.md"
+    node_path = content_path(wiki_dir, f"{entity_dir}/{node_slug}.md")
     if not node_path.exists():
         return LintIssue(
             "🟡",
@@ -1104,8 +1113,8 @@ def check_content_quality(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIs
     issues = []
     for slug, fpath in pages.items():
         content = fpath.read_text(encoding="utf-8")
-        rel = str(fpath.relative_to(wiki_dir))
-        page_type = fpath.parent.name
+        rel = content_relative(fpath, wiki_dir)
+        page_type = content_kind(fpath, wiki_dir)
 
         # importance=5 paper should be referenced by at least one concept
         if page_type == "papers":
@@ -1170,9 +1179,9 @@ def check_content_quality(wiki_dir: Path, pages: dict[str, Path]) -> list[LintIs
 def lint(wiki_dir: Path) -> list[LintIssue]:
     """Run all lint checks and return sorted issues."""
     pages = find_all_pages(wiki_dir)
-    issues = [LintIssue("🔴", "sync-conflict", str(p.relative_to(wiki_dir)),
+    issues = [LintIssue("🔴", "sync-conflict", content_relative(p, wiki_dir),
                         "Sync-conflict copy excluded from page scans; reconcile before removal")
-              for p in sync_conflict_files(wiki_dir)]
+              for scan_root in content_roots(wiki_dir) for p in sync_conflict_files(scan_root)]
 
     issues.extend(check_missing_fields(wiki_dir, pages))
     issues.extend(check_paper_classification(wiki_dir, pages))
@@ -1196,7 +1205,7 @@ def _normalize_rel_path(raw: str, wiki_dir: Path) -> str:
     path = Path(raw).expanduser()
     if path.is_absolute():
         try:
-            return str(path.resolve().relative_to(wiki_dir.resolve()))
+            return content_relative(path, wiki_dir)
         except ValueError:
             return str(path)
     return str(path).lstrip("./")
@@ -1394,7 +1403,7 @@ def _fix_missing_field(
     if field not in defaults:
         return None
 
-    fpath = wiki_dir / issue.file
+    fpath = content_path(wiki_dir, issue.file)
     if not fpath.exists():
         return None
 
@@ -1448,6 +1457,7 @@ def main():
     base_paths = load_paths(config_path=args.paths_config)
     wiki_root = resolve_runtime_path(args.wiki_dir, base_paths, role="--wiki-dir") if args.wiki_dir else base_paths.wiki_root
     paths = load_paths(config_path=args.paths_config, wiki_root=wiki_root)
+    configure_content_paths(base_paths)
     wiki_dir = paths.wiki_root
     if not wiki_dir.exists():
         print(f"Error: {wiki_dir} does not exist", file=sys.stderr)

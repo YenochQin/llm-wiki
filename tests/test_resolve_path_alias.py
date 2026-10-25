@@ -51,9 +51,9 @@ class ResolvePathAliasTests(unittest.TestCase):
 
     def test_unused_roots_do_not_block_wiki(self):
         self.configure(wiki_root=self.root / "vault", paper_root=self.project / "invalid-papers")
-        code, data = self.resolve("@configured/outputs/new.md")
+        code, data = self.resolve("@configured/sources/new.md")
         self.assertEqual(code, 0)
-        self.assertEqual(data["paths"]["@configured/outputs/new.md"], str(self.root / "vault/outputs/new.md"))
+        self.assertEqual(data["paths"]["@configured/sources/new.md"], str(self.root / "vault/sources/new.md"))
         self.assertFalse((self.root / "vault").exists())
 
     def test_raw_only_configuration_does_not_require_wiki_or_paper(self):

@@ -32,7 +32,7 @@ cited_by: []
 
 Body sections: `## Evidence Pack` / `## Problem` / `## Key idea` / `## Research classification` / `## Method` / `## Results` / `## Limitations` / `## Open questions` / `## My take` / `## BibTeX` / `## Related`
 
-Do not add follow-up ingest queues, not-yet-ingested bibliography recommendations, or `### Suggested follow-up ingests` sections to paper pages. Candidates for future ingestion belong in `outputs/ingest-candidates.md` as plain-text queue rows until their paper pages exist.
+Do not add follow-up ingest queues, not-yet-ingested bibliography recommendations, or `### Suggested follow-up ingests` sections to paper pages. Candidates for future ingestion belong in `@output-root/ingest-candidates.md` as plain-text queue rows until their paper pages exist.
 
 `## Evidence Pack` is mandatory for generated or rewritten paper pages. It must appear before interpretive sections and contain short source-grounding cards anchored in the prepared MinerU markdown. Each card separates **interpretation** from **source anchoring**: `<short label>` is the agent's terse refinement of what the source block contributes, while the blockquote is only the minimal exact source sentence, phrase, table row, or formula needed to locate and verify that contribution.
 
@@ -223,7 +223,7 @@ Body sections: `## Motivation` / `## Hypothesis` / `## Approach sketch` / `## Ex
 
 When `status: failed`, `failure_reason` must record the specific reason; it is persistent anti-repetition memory.
 
-### experiments/{experiment-slug}.md
+### @experiment-root/{experiment-slug}.md
 
 ```yaml
 ---
@@ -260,7 +260,7 @@ remote:
 
 Body sections: `## Objective` / `## Setup` / `## Procedure` / `## Results` / `## Analysis` / `## Claim updates` / `## Follow-up`
 
-Every experiment requires a resolving `target_claim`. Assess user-reported results through iterative conversation, distinguishing observations, interpretation, limitations, and open questions. When the user requests recording, update the experiment and affected claim/idea pages from actual evidence, preserving provenance and reverse links.
+Experiment storage is independent of `wiki_root`; graph node ids remain `experiments/{experiment-slug}`. Every experiment requires a resolving `target_claim`. Assess user-reported results through iterative conversation, distinguishing observations, interpretation, limitations, and open questions. When the user requests recording, update the experiment and affected claim/idea pages from actual evidence, preserving provenance and reverse links.
 
 ### claims/{claim-slug}.md
 

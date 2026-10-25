@@ -14,7 +14,7 @@ argument-hint: <paper-plan-path> [--paper-id <topic-id>] [--draft-id <YYYY-MM-DD
 
 ## Inputs
 
-- `plan`: path to PAPER_PLAN.md (e.g. `wiki/outputs/paper-plan-sparse-lora-2026-04-08.md`)
+- `plan`: path to PAPER_PLAN.md (e.g. `@output-root/paper-plan-sparse-lora-2026-04-08.md`)
 - `--paper-id` (optional): stable research-topic directory name without a date (e.g. `rmcdhf-radial-research`)
 - `--draft-id` (optional): manuscript version named `YYYY-MM-DD-<purpose>` (e.g. `2026-10-06-rmcdhf-research`); selection and omission behavior are defined in Step 1
 - `--review` (optional): enable per-section agent-local review
@@ -34,9 +34,9 @@ argument-hint: <paper-plan-path> [--paper-id <topic-id>] [--draft-id <YYYY-MM-DD
 ## Wiki Interaction
 
 ### Reads
-- `wiki/outputs/paper-plan-*.md` — PAPER_PLAN (section outline, evidence map, figure plan, citation plan)
+- `@output-root/paper-plan-*.md` — PAPER_PLAN (section outline, evidence map, figure plan, citation plan)
 - `wiki/claims/*.md` — Statement, Evidence summary, Conditions of target claims
-- `wiki/experiments/*.md` — Results, Analysis, key_result, metrics data
+- `@experiment-root/*.md` — Results, Analysis, key_result, metrics data
 - `wiki/papers/*.md` — Method, Results, Related (as citation content and baseline reference)
 - `wiki/concepts/*.md` — Definition, Formal notation, Variants (supports Method writing)
 - `wiki/topics/*.md` — Overview, Timeline, SOTA tracker (supports Introduction context)
@@ -55,6 +55,8 @@ argument-hint: <paper-plan-path> [--paper-id <topic-id>] [--draft-id <YYYY-MM-DD
 - None (paper-plan already created derived_from edges)
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Resolve `@configured` and `@paper-root` before writing; resolve `@raw-root` only when reading raw inputs. `wiki/` below denotes the external configured wiki root:
 

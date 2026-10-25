@@ -2,8 +2,8 @@
 
 > On-demand reference for storage layout and runtime operations. `AGENTS.md` and `CLAUDE.md` keep the essential execution rules; page and support-file schemas live in their dedicated runtime documents.
 
-`wiki/`, `raw/`, and `papers/` below are external roots configured as
-`wiki_root`, `raw_root`, and `paper_root`. Generated research content does not
+`wiki/`, `experiments/`, `outputs/`, `raw/`, and `papers/` below are external roots configured as
+`wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root`. Generated research content does not
 belong in the code repository; tools, skills, maintained docs, and templates do.
 
 ```text
@@ -16,11 +16,9 @@ wiki/
 ├── topics/            ← research direction maps
 ├── people/            ← researcher profiles
 ├── ideas/             ← research ideas (with lifecycle status)
-├── experiments/       ← experiment records (wiki pages)
 ├── claims/            ← testable research claims
 ├── Summary/           ← domain-wide surveys
 ├── foundations/       ← background knowledge (terminal: receives inward links, writes none)
-├── outputs/           ← generated wiki reports and paper plans
 ├── sources/           ← vault-visible source markdown, notes, and web clips
 │   ├── papers/        ← MinerU-generated markdown; source PDFs stay in raw/papers/
 │   ├── notes/         ← copied markdown/text notes from raw/notes/
@@ -30,6 +28,9 @@ wiki/
     ├── citations.jsonl
     ├── context_brief.md
     └── open_questions.md
+
+experiments/           ← experiment_root; experiment entities and supporting records
+outputs/               ← output_root; reports, saved answers, and paper plans
 
 raw/
 ├── papers/            ← user-owned source PDFs and other original paper files
@@ -77,7 +78,7 @@ docs/                  ← long-form runtime references (this file lives here)
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned original inputs.
 - `wiki/sources/` is the vault-visible source layer: converted paper markdown, copied notes, and copied web clips.
 - Source PDFs stay outside the vault in `raw/papers/`; only their MinerU markdown goes under `wiki/sources/papers/`.
-- `config/paths.json` sets `wiki_root`, `raw_root`, and `paper_root` to OS-specific external directories via `profiles.macos/windows/linux`; it is machine-local and ignored by git. Manuscripts have no in-repository fallback.
+- `config/paths.json` sets `wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root` to OS-specific external directories via `profiles.macos/windows/linux`; it is machine-local and ignored by git. Manuscripts have no in-repository fallback.
 - `@paper-root/<paper-id>/<draft-id>/` selects a version under a stable research topic. Routine revisions keep that directory; major structural changes or independent evaluations fork a sibling draft, preserving the original and recording its parent.
 - `docs/templates/` is the maintained template library; do not keep a root-level `templates/` directory.
 - `graph/` is derived and should be maintained only through `tools/research_wiki.py`.
@@ -85,10 +86,35 @@ docs/                  ← long-form runtime references (this file lives here)
 
 ## External Path Resolution
 
-- Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`, `LLM_WIKI_PAPER_ROOT`) for external `wiki_root`, `raw_root`, and `paper_root`; `active_profile: auto` selects the OS profile and `LLM_WIKI_PATH_PROFILE` can override it. `resolve_path_alias.py` strictly validates each requested content root: missing configuration and roots inside or containing the code repository are errors. Validate the aliases needed by the task before content reads/writes, including tool writes; an unused raw/manuscript root is not required. Roots may be absent on disk before initialization. Legacy low-level wiki/raw defaults remain for migration tools and test fixtures, not skill content operations.
-- `@configured`, `@raw-root`, `@paper-root`, `@configured-sources-papers`, and alias-relative paths such as `@paper-root/<paper-id>/<draft-id>/paper.tex` are resolved only by Python tools supporting `tools/_paths.py`. For direct file operations, first run `uv run python -X utf8 tools/resolve_path_alias.py ...` and use the returned absolute paths; never create literal alias directories. `tools/paper_workspace.py create|resolve|fork|list` manages topics and draft versions; create/fork refuse existing destinations.
+- Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_EXPERIMENT_ROOT`, `LLM_WIKI_OUTPUT_ROOT`, `LLM_WIKI_RAW_ROOT`, `LLM_WIKI_PAPER_ROOT`) for external `wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root`; `active_profile: auto` selects the OS profile and `LLM_WIKI_PATH_PROFILE` can override it. `resolve_path_alias.py` strictly validates each requested content root: missing configuration and roots inside or containing the code repository are errors. Validate the aliases needed by the task before content reads/writes, including tool writes; an unused raw/manuscript root is not required. Roots may be absent on disk before initialization. Legacy low-level wiki/raw defaults remain for migration tools and test fixtures, not skill content operations.
+- `@configured`, `@experiment-root`, `@output-root`, `@raw-root`, `@paper-root`, `@configured-sources-papers`, and alias-relative paths such as `@paper-root/<paper-id>/<draft-id>/paper.tex` are resolved only by Python tools supporting `tools/_paths.py`. For direct file operations, first run `uv run python -X utf8 tools/resolve_path_alias.py ...` and use the returned absolute paths; never create literal alias directories. `tools/paper_workspace.py create|resolve|fork|list` manages topics and draft versions; create/fork refuse existing destinations.
 
 See `config/README.md` for profile examples and manuscript workspace commands. `paper_root` is separate from wiki/raw storage; create/fork refuse existing destinations, and inherited evidence is not a newly executed experiment.
+
+## Independent Experiments and Outputs
+
+Configure `experiment_root` and `output_root` explicitly, normally as siblings of
+`wiki_root`. Each must be outside the repository and disjoint from every other
+content root. They have no implicit sibling or repository-local fallback. Resolve
+`@experiment-root` and `@output-root` before accessing them; an unused root does
+not block a wiki-only operation. Retired `@configured/experiments/...` and
+`@configured/outputs/...` aliases fail with a migration hint.
+
+`tools/_content.py` maps logical `experiments/<slug>` identities to the configured
+experiment root. Graph edges and claim/idea provenance retain those identities.
+Index, evidence queries, context compilation, lint, lifecycle, reset, and source
+rename maintenance use that mapping. Outputs are indexed documents; existing `outputs/<slug>` provenance edges
+remain valid, without treating report prose as new claim evidence. `wiki/index.md` records relative paths to both independent
+roots. Flat entity pages remain at the experiment root; supporting files may
+live below it. Existing standalone legacy trees can be passed explicitly to
+low-level tools for migration/testing; they never borrow another vault's roots.
+
+A move requires copying and checking every file, rebasing both incoming and
+outgoing relative links, updating root configuration and the index, and checking
+graph endpoints before removing the originals. Keep a recovery archive outside
+the active content trees; no symlink or redirect-page compatibility layer is
+needed. `reset --scope wiki` retains its logical scope, including experiment and
+output pages in their configured roots; its dry-run lists their actual paths.
 
 ## Python Environment and Backends
 

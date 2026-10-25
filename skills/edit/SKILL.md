@@ -12,7 +12,7 @@ argument-hint: "[request]"
 
 User request, for example:
 
-- "Save the previous answer in wiki/outputs/."
+- "Save the previous answer in @output-root/."
 - "Update the SOTA tracker in topics/efficient-llm-adaptation."
 - "Add a new variant to concepts/lora."
 - "Add this local source to raw/notes/."
@@ -25,6 +25,8 @@ User request, for example:
 - A report of changed paths and unresolved evidence gaps.
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Precondition**: run from the repository root. Resolve the configured external wiki root before direct file operations. Resolve `@raw-root` with the same tool only when a raw-source operation needs it; never create literal alias directories or repository-local research content.
 
@@ -44,7 +46,7 @@ uv run python -X utf8 tools/resolve_path_alias.py '@configured'
 **Wiki content**:
 
 - Modify only requested pages and the related files needed to maintain their consistency.
-- To save an answer without a specified entity type, use `wiki/outputs/{query-slug}.md`. Preserve the answer's citations and uncertainty; include `title`, `slug`, `query`, `source_pages`, and `date_created` in frontmatter. Check for an existing destination before creating or replacing it.
+- To save an answer without a specified entity type, use `@output-root/{query-slug}.md`. Preserve the answer's citations and uncertainty; include `title`, `slug`, `query`, `source_pages`, and `date_created` in frontmatter. Check for an existing destination before creating or replacing it.
 - Create or materially update concept/claim pages only when the user's request includes that knowledge change. Re-read the actual supporting sources; a synthesized answer alone is not source evidence. Preserve canonical prepared-source links, exact excerpts, Evidence Pack anchors, and required backlinks.
 - Maintain forward and reverse links together. Use `tools/research_wiki.py add-edge` or `add-citation` for warranted graph relationships, following the endpoint/type rules; never edit `wiki/graph/` manually.
 - After changing paper/concept/claim pages, run `uv run python -X utf8 tools/grounding_lint.py --wiki-dir '@configured' --only <touched-relative-path> --json` for the touched files. Fix red issues from source evidence or report the source-quality blocker; do not claim a passed grounding check when red issues remain.

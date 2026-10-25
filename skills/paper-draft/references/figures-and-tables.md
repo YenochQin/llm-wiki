@@ -10,7 +10,7 @@ For each entry in the Figure Plan from PAPER_PLAN:
    - Save to `PAPER_DIR/figures/{figure-name}.pdf`
 
 2. **Plot type** (recorded calculation or observation charts):
-   - Use the actual data sources identified in the plan, including calculation reports/data files or `wiki/experiments/{slug}.md`; record provenance. Plot rendering does not authorize new research calculations/experiments or filling missing data.
+   - Use the actual data sources identified in the plan, including calculation reports/data files or `@experiment-root/{slug}.md`; record provenance. Plot rendering does not authorize new research calculations/experiments or filling missing data.
    - Generate matplotlib script (following figure design standards in academic-writing):
      - Colorblind-safe palette
      - Font size >= 8pt

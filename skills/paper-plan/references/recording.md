@@ -7,7 +7,7 @@ Read this reference after the mandatory review, when saving the plan and returni
    uv run python -X utf8 tools/research_wiki.py slug "<working-title>"
    ```
 
-2. **Write the plan** to the resolved external `wiki/outputs/paper-plan-{slug}-{date}.md`, containing:
+2. **Write the plan** to the resolved external `@output-root/paper-plan-{slug}-{date}.md`, containing:
    - Metadata: title, date, target claims, research object/modes, supplied venue or `unspecified`
    - Venue/format requirements: confirmed source and date checked, or explicit unknowns; mark budget estimates provisional where needed
    - Evidence Map: actual source locations, support/scope, counter-evidence, and gaps
@@ -30,6 +30,7 @@ Read this reference after the mandatory review, when saving the plan and returni
 
 4. **Rebuild derived data**:
    ```shell
+   uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'
    uv run python -X utf8 tools/research_wiki.py rebuild-context-brief '@configured'
    ```
 

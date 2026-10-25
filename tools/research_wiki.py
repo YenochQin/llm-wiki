@@ -88,7 +88,11 @@ from _page_scan import markdown_pages
 import frontmatter
 import yaml
 from _cli_io import configure_utf8_stdio
-from _paths import load_paths
+from _paths import load_paths, resolve_runtime_path
+from _content import (
+    active_content_paths, configure_content_paths, content_directory,
+    content_path, reference_slug,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -414,21 +418,21 @@ def init_wiki(wiki_root: str) -> None:
       - 9 entity directories (papers, concepts, topics, people, ideas, experiments, claims, Summary, foundations)
       - graph/ with empty edges.jsonl, citations.jsonl, context_brief.md, open_questions.md
       - log/ for weekly audit log files
-      - outputs/
+      - independent experiment/output roots
       - index.md (if it doesn't exist)
     """
     root = Path(wiki_root)
 
     # Entity directories
-    for d in ENTITY_DIRS:
-        (root / d).mkdir(parents=True, exist_ok=True)
+    directories = [content_directory(root, d) for d in [*ENTITY_DIRS, "outputs"]]
+    for directory in directories:
+        directory.mkdir(parents=True, exist_ok=True)
 
     # Derived graph directory
     graph = root / DERIVED_DIR
     graph.mkdir(parents=True, exist_ok=True)
 
-    # Outputs and audit log directories
-    (root / "outputs").mkdir(parents=True, exist_ok=True)
+    # Audit log directory
     (root / LOG_DIR).mkdir(parents=True, exist_ok=True)
 
     # Seed files (only if they don't already exist)
@@ -485,7 +489,7 @@ def _validate_node_refs(root: Path, *node_ids: str) -> list[str]:
     warnings: list[str] = []
     for node_id in node_ids:
         if "/" in node_id:
-            entity_path = root / f"{node_id}.md"
+            entity_path = content_path(root, f"{node_id}.md")
             if not entity_path.exists():
                 warnings.append(f"{node_id}.md not found")
     return warnings
@@ -822,8 +826,8 @@ def remap_graph_nodes(wiki_root: str, mapping: dict[str, str]) -> None:
                 raise ValueError(f"Invalid node id: {node!r}")
         if old.split("/")[0] != new.split("/")[0] or old == new or new in mapping:
             raise ValueError(f"Expected a same-kind, non-chained mapping: {old} -> {new}")
-        destination = (root / (new + ".md")).resolve()
-        if not destination.is_relative_to(root) or not destination.is_file():
+        destination = content_path(root, new + ".md")
+        if not destination.is_file():
             raise ValueError(f"Canonical page does not exist inside wiki: {new}")
 
     updates = []
@@ -1168,7 +1172,7 @@ def prune_dangling_graph(wiki_root: str) -> None:
         if not isinstance(node_id, str) or "/" not in node_id:
             return False
         entity_dir, slug = node_id.split("/", 1)
-        return bool(entity_dir and slug) and (root / entity_dir / f"{slug}.md").exists()
+        return bool(entity_dir and slug) and content_path(root, f"{entity_dir}/{slug}.md").exists()
 
     def prune(path: Path) -> int:
         if not path.exists():
@@ -1327,7 +1331,7 @@ def find_entities(
 ) -> None:
     """Search entities of a given type by slug or frontmatter field filters."""
     root = Path(wiki_root)
-    entity_dir = root / entity_type
+    entity_dir = content_directory(root, entity_type)
 
     if not entity_dir.exists():
         print(json.dumps([]))
@@ -1749,7 +1753,7 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
 
     if not claim_path.exists():
         print(
-            json.dumps({"status": "error", "message": f"Claim not found: {claim_slug}"})
+            _json_dumps({"status": "error", "message": f"Claim not found: {claim_slug}"})
         )
         sys.exit(1)
 
@@ -1771,11 +1775,11 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
 
     # Find linked experiments
     experiments: list[dict] = []
-    exp_dir = root / "experiments"
+    exp_dir = content_directory(root, "experiments")
     if exp_dir.exists():
         for f in sorted(markdown_pages(exp_dir)):
             exp_fm = _parse_frontmatter(f)
-            if exp_fm.get("target_claim") == claim_slug:
+            if reference_slug(exp_fm.get("target_claim")) == claim_slug:
                 experiments.append(
                     {
                         "slug": f.stem,
@@ -1800,7 +1804,7 @@ def query_evidence_for(wiki_root: str, claim_slug: str) -> None:
         net = "weak"
 
     print(
-        json.dumps(
+        _json_dumps(
             {
                 "claim": {"slug": claim_slug, **fm},
                 "source_papers": source_papers,
@@ -1862,7 +1866,7 @@ def query_orphans(wiki_root: str) -> None:
     # Scan all entity files
     orphans: list[dict] = []
     for entity_type in ENTITY_DIRS:
-        entity_dir = root / entity_type
+        entity_dir = content_directory(root, entity_type)
         if not entity_dir.exists():
             continue
         for f in sorted(markdown_pages(entity_dir)):
@@ -2076,7 +2080,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
 
     # 5. Experiment summaries
     if b_experiments > 0:
-        exp_dir = root / "experiments"
+        exp_dir = content_directory(root, "experiments")
         if exp_dir.exists():
             exp_lines: list[str] = []
             for f in sorted(markdown_pages(exp_dir)):
@@ -2112,7 +2116,7 @@ def compile_context(wiki_root: str, purpose: str, max_chars: int = 8000) -> None
         cutoff = datetime.now(timezone.utc) - timedelta(days=30)
         stale_lines: list[str] = []
         for etype in ENTITY_DIRS:
-            edir = root / etype
+            edir = content_directory(root, etype)
             if not edir.exists():
                 continue
             for f in sorted(markdown_pages(edir)):
@@ -2167,11 +2171,11 @@ def get_stats(wiki_root: str, as_json: bool = False) -> dict:
     root = Path(wiki_root)
 
     def count_md(subdir: str) -> int:
-        d = root / subdir
+        d = content_directory(root, subdir)
         return len(list(markdown_pages(d))) if d.exists() else 0
 
     def count_by_field(subdir: str, field: str, value: str) -> int:
-        d = root / subdir
+        d = content_directory(root, subdir)
         if not d.exists():
             return 0
         count = 0
@@ -2246,7 +2250,7 @@ def get_maturity(wiki_root: str, as_json: bool = False) -> dict:
 
     # Count completed experiments
     exp_completed = 0
-    exp_dir = root / "experiments"
+    exp_dir = content_directory(root, "experiments")
     if exp_dir.exists():
         for f in markdown_pages(exp_dir):
             fm = _parse_frontmatter(f)
@@ -2395,6 +2399,9 @@ def transition(path: str, new_status: str, reason: str = "") -> None:
 
     # Determine entity type from path
     entity_type = p.parent.name
+    paths = active_content_paths()
+    if paths.experiment_root is not None and p.resolve().parent == paths.experiment_root.resolve():
+        entity_type = "experiments"
     if entity_type not in TRANSITIONS:
         print(
             json.dumps(
@@ -2674,73 +2681,32 @@ def batch_edges(wiki_root: str) -> None:
 
 
 def rebuild_index(wiki_root: str) -> None:
-    """Regenerate index.md by scanning all entity directories."""
+    """Regenerate a valid YAML catalog across knowledge and independent roots."""
     root = Path(wiki_root)
+    catalog: dict[str, list[dict] | None] = {}
     counts: dict[str, int] = {}
-
-    sections: list[str] = []
-    for entity_type in ENTITY_DIRS:
-        entity_dir = root / entity_type
-        if not entity_dir.exists():
-            counts[entity_type] = 0
-            sections.append(f"{entity_type}:\n")
-            continue
-
-        entries: list[str] = []
-        for f in sorted(markdown_pages(entity_dir)):
-            fm = _parse_frontmatter(f)
-            slug = f.stem
-            line_parts = [f"  - slug: {slug}"]
-
-            # Include key fields per entity type
-            if "title" in fm:
-                title = fm["title"]
-                line_parts.append(f'    title: "{title}"')
-            if "tags" in fm and fm["tags"]:
-                tags = fm["tags"]
-                if isinstance(tags, list):
-                    line_parts.append(f"    tags: [{', '.join(str(t) for t in tags)}]")
-            if "status" in fm:
-                line_parts.append(f"    status: {fm['status']}")
-            if "importance" in fm:
-                line_parts.append(f"    importance: {fm['importance']}")
-            if "research_modes" in fm and fm["research_modes"]:
-                modes = fm["research_modes"]
-                if isinstance(modes, list):
-                    line_parts.append(
-                        f"    research_modes: [{', '.join(str(m) for m in modes)}]"
-                    )
-            if "research_object_tags" in fm and fm["research_object_tags"]:
-                objects = fm["research_object_tags"]
-                if isinstance(objects, list):
-                    line_parts.append(
-                        f"    research_object_tags: [{', '.join(str(o) for o in objects)}]"
-                    )
-            if "confidence" in fm:
-                line_parts.append(f"    confidence: {fm['confidence']}")
-            if "domain" in fm:
-                line_parts.append(f"    domain: {fm['domain']}")
-            if "target_claim" in fm:
-                line_parts.append(f"    target_claim: {fm['target_claim']}")
-            if "priority" in fm:
-                line_parts.append(f"    priority: {fm['priority']}")
-            if "affiliation" in fm:
-                line_parts.append(f'    affiliation: "{fm["affiliation"]}"')
-            if "maturity" in fm:
-                line_parts.append(f"    maturity: {fm['maturity']}")
-
-            entries.append("\n".join(line_parts))
-
+    fields = ("title", "tags", "status", "importance", "research_modes",
+              "research_object_tags", "confidence", "domain", "target_claim",
+              "priority", "affiliation", "maturity")
+    for entity_type in [*ENTITY_DIRS, "outputs"]:
+        directory = content_directory(root, entity_type)
+        entries = []
+        for page in markdown_pages(directory):
+            metadata = _parse_frontmatter(page)
+            entry = {"slug": page.stem}
+            if entity_type in {"experiments", "outputs"}:
+                entry["path"] = os.path.relpath(page, root).replace(os.sep, "/")
+            for field in fields:
+                if field in metadata:
+                    if field in {"tags", "research_modes", "research_object_tags"} and not metadata[field]:
+                        continue
+                    entry[field] = metadata[field]
+            entries.append(entry)
+        catalog[entity_type] = entries or None
         counts[entity_type] = len(entries)
-        if entries:
-            sections.append(f"{entity_type}:\n" + "\n".join(entries) + "\n")
-        else:
-            sections.append(f"{entity_type}:\n")
 
-    content = "# Wiki Index\n\n" + "\n".join(sections)
-    index_path = root / "index.md"
-    index_path.write_text(content, encoding="utf-8")
-
+    content = "# Wiki Index\n\n" + yaml.safe_dump(catalog, allow_unicode=True, sort_keys=False)
+    (root / "index.md").write_text(content, encoding="utf-8")
     print(json.dumps({"status": "ok", "entities": counts}, ensure_ascii=False))
 
 
@@ -3840,8 +3806,12 @@ def main():
     if unknown_args and args.command != "find":
         parser.error(f"unrecognized arguments: {' '.join(unknown_args)}")
 
-    if hasattr(args, "wiki_root") and args.wiki_root in {"@wiki", "@configured"}:
-        args.wiki_root = str(load_paths().wiki_root)
+    runtime_paths = load_paths()
+    configure_content_paths(runtime_paths)
+    for attr in ("wiki_root", "path"):
+        value = getattr(args, attr, None)
+        if value and str(value).startswith("@"):
+            setattr(args, attr, str(resolve_runtime_path(value, runtime_paths, role=attr, require_external=True)))
     if hasattr(args, "wiki_root") and args.wiki_root:
         args.wiki_root = _validate_cli_wiki_root(args.wiki_root)
 

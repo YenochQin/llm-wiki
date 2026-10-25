@@ -14,7 +14,7 @@ stage in both implementation language and LaTeX.
 Keep the target code read-only. Do not patch it unless the user separately requests an
 implementation change.
 
-When this analysis supports a manuscript, place its saved reports, reproduction scripts, result files, and source manifests in the selected external manuscript version under `<paper_root>/<paper-id>/<draft-id>/`. Other archived analysis reports use the external configured wiki `outputs/` directory; never use repository-local `artifacts/` for generated content.
+When this analysis supports a manuscript, place its saved reports, reproduction scripts, result files, and source manifests in the selected external manuscript version under `<paper_root>/<paper-id>/<draft-id>/`. Other archived analysis reports use the configured `@output-root/` directory; never use repository-local `artifacts/` for generated content.
 
 ## Inputs
 
@@ -27,7 +27,7 @@ target is omitted, use the current repository.
   comprehensively. Trace enough upstream and downstream context to explain it correctly, but do
   not broaden the report into unrelated audit categories.
 - With `--write`, archive the report as
-  `outputs/code-analysis-{slug}-{date}.md` under the configured wiki root.
+  `@output-root/code-analysis-{slug}-{date}.md` under the independent output root.
 - With `--crystallize`, first write the report, then create or update research entities only when
   the findings are durable research knowledge.
 
@@ -58,18 +58,20 @@ Read wiki material only when the user asks to connect the implementation to rese
 
 - `wiki/graph/context_brief.md`
 - `wiki/index.md`
-- directly relevant pages under `papers/`, `concepts/`, `claims/`, `ideas/`, and `experiments/`
+- directly relevant pages under `papers/`, `concepts/`, `claims/`, `ideas/`, and `@experiment-root/`
 
 ### Writes
 
 - Write nothing by default.
-- With `--write`, create one report under `outputs/`, update the index only if it indexes outputs,
+- With `--write`, create one report under `@output-root/`, rebuild the wiki index to include the report,
   and append a log entry through `tools/research_wiki.py log`.
 - With `--crystallize`, create or edit only grounded `concepts/`, `claims/`, `ideas/`, or
-  `experiments/` pages and maintain required reverse links.
+  `@experiment-root/` pages and maintain required reverse links.
 - Create graph edges only through `tools/research_wiki.py`; never edit `wiki/graph/` manually.
 
 ## Workflow
+
+Resolve `@output-root` before report writes and `@experiment-root` before experiment reads; use returned absolute paths.
 
 When writing to the wiki, run from the llm-wiki repository root and verify the configured wiki:
 

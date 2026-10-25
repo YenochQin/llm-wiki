@@ -17,7 +17,7 @@ argument-hint: <artifact-path-or-slug-or-text> [--difficulty standard|hard|adver
 
 - `artifact`: the artifact to review, one of:
   - slug of a wiki page (e.g. `sparse-lora-for-edge-devices`, searched in ideas/experiments/claims/)
-  - file path (e.g. `wiki/outputs/paper-draft-v1.md`)
+  - file path (e.g. `@output-root/paper-draft-v1.md`)
   - free text (directly pasted proposal or idea description)
 - `--difficulty` (optional, default `standard`):
   - `standard`: single-pass review with structured feedback
@@ -48,7 +48,7 @@ argument-hint: <artifact-path-or-slug-or-text> [--difficulty standard|hard|adver
 - `wiki/papers/*.md` — locate papers cited by the artifact, verify citation accuracy
 - `wiki/concepts/*.md` — understand technical concepts involved in the artifact
 - `wiki/claims/*.md` — check the current status and confidence of claims the artifact depends on
-- `wiki/experiments/*.md` — find related experiment results
+- `@experiment-root/*.md` — find related experiment results
 - `wiki/ideas/*.md` — if reviewing an idea, check its context
 - `wiki/graph/context_brief.md` — global context
 - `wiki/graph/open_questions.md` — check completeness against the gap map
@@ -62,12 +62,14 @@ argument-hint: <artifact-path-or-slug-or-text> [--difficulty standard|hard|adver
 
 ## Workflow
 
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
+
 **Precondition**: run from the llm-wiki repository root. Resolve the configured external wiki root with `uv run python -X utf8 tools/resolve_path_alias.py '@configured'` and use the returned absolute path for direct reads. `wiki/` below denotes that configured root; do not require or create repository-local content directories.
 
 ### Step 1: Load Context
 
 1. **Parse artifact**:
-   - If slug: search sequentially in `wiki/ideas/`, `wiki/experiments/`, `wiki/claims/`, `wiki/papers/`, `wiki/outputs/` for `{slug}.md`
+   - If slug: search sequentially in `wiki/ideas/`, `@experiment-root/`, `wiki/claims/`, `wiki/papers/`, `@output-root/` for `{slug}.md`
    - If file path: read directly
    - If free text: use directly
 2. **Determine artifact type**: idea / experiment / claim / paper-draft / proposal / other

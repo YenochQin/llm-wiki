@@ -37,7 +37,7 @@ Turn one paper into a fully wired set of wiki pages. Execute Phases A–E in dep
 - Choose the ingest-family skill from the requested source, depth, and existing-page intent. A generic "add this paper" request alone does not determine full versus light analysis; clarify only if those choices cannot be inferred from the request. An explicit skill invocation retains its documented defaults.
 - `source`: Zotero lookup arguments — `--title <str>` and/or `--doi <doi>`, optionally `--zotero-root <dir>`. Zotero discipline (including why `--item-key` is internal-only) is in invariants §2. Prepared `@configured-sources-papers/*.md` and `canonical_ingest_path` values are internal handoffs from `/ingest-local-pdf` or `/init` only; do not expose prepared markdown as a user-facing input.
 - Zotero metadata alone is not a grounded source: with no PDF / prepared markdown / notes / web content, do not create a paper page.
-- `--discover` (optional, default **off**): after Phase E, run `/discover` anchored on this paper and append the gated shortlist to `@configured/outputs/ingest-candidates.md`. User-owned flag — do not set it from repo state.
+- `--discover` (optional, default **off**): after Phase E, run `/discover` anchored on this paper and append the gated shortlist to `@output-root/ingest-candidates.md`. User-owned flag — do not set it from repo state.
 
 ## Outputs
 
@@ -55,6 +55,8 @@ Turn one paper into a fully wired set of wiki pages. Execute Phases A–E in dep
 
 ## Workflow
 
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
+
 **Pre-condition**: working directory is the project root (`tools/`, `pyproject.toml`, `config/paths.json`). Path/environment discipline is in invariants §1.
 
 ```shell
@@ -71,7 +73,7 @@ Skip unless the user passed `--discover`. When active:
 uv run python -X utf8 tools/discover.py from-anchors --id <doi-or-title-of-this-paper> --wiki-root '@configured' --limit 10 --output-checkpoint .checkpoints/ --markdown
 ```
 
-Append only gated candidates (Phase E candidate gate: title + authors + year + DOI + Zotero status + relation evidence) to `@configured/outputs/ingest-candidates.md`, creating it with a `# Follow-up Ingest Candidates` heading and `## Queue` table if absent. Use one table row per candidate with `status=todo`, `priority` inferred from relation strength/citation evidence, `candidate` as plain text (no dangling paper wikilinks), `suggested by` = `[[{slug}]]`, and `reason` = one-line relation evidence. Never write follow-up candidates into `papers/{slug}.md`, including under `## Related` or a `### Suggested follow-up ingests` heading. Never auto-ingest. A failed or empty `/discover` must not fail an otherwise successful `/ingest` — note it in one line.
+Append only gated candidates (Phase E candidate gate: title + authors + year + DOI + Zotero status + relation evidence) to `@output-root/ingest-candidates.md`, creating it with a `# Follow-up Ingest Candidates` heading and `## Queue` table if absent. Use one table row per candidate with `status=todo`, `priority` inferred from relation strength/citation evidence, `candidate` as plain text (no dangling paper wikilinks), `suggested by` = `[[{slug}]]`, and `reason` = one-line relation evidence. Never write follow-up candidates into `papers/{slug}.md`, including under `## Related` or a `### Suggested follow-up ingests` heading. Never auto-ingest. A failed or empty `/discover` must not fail an otherwise successful `/ingest` — note it in one line.
 
 ## Constraints
 

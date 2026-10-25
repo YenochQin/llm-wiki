@@ -18,7 +18,7 @@ argument-hint: "<review-paths-or-text> [--paper-slug <slug>] [--venue <venue>] [
   - file path (e.g. `raw/reviews/reviewer1.txt`, `raw/reviews/meta-review.md`)
   - multiple file paths (comma-separated: `raw/reviews/R1.txt,raw/reviews/R2.txt,raw/reviews/R3.txt`)
   - directly pasted review text
-- `--paper-slug` (optional): slug of the associated paper in wiki/outputs/, used to locate PAPER_PLAN
+- `--paper-slug` (optional): slug of the associated paper in @output-root/, used to locate PAPER_PLAN
 - `--venue` (optional): target conference/journal (ICLR / NeurIPS / ICML / ACL / CVPR); affects rebuttal format and word limits
 - `--stress-test` (optional, enabled by default): the current agent simulates reviewer follow-up; disable with `--no-stress-test`
 - `--format` (optional, default `formal`): output format
@@ -27,8 +27,8 @@ argument-hint: "<review-paths-or-text> [--paper-slug <slug>] [--venue <venue>] [
 
 ## Outputs
 
-- **wiki/outputs/rebuttal-{slug}.md** — rich-text rebuttal (with [[wikilinks]], evidence tracing, analysis tables)
-- **wiki/outputs/rebuttal-{slug}.txt** — plain-text draft; paste into a submission system only after resolving marked gaps and author decisions
+- **@output-root/rebuttal-{slug}.md** — rich-text rebuttal (with [[wikilinks]], evidence tracing, analysis tables)
+- **@output-root/rebuttal-{slug}.txt** — plain-text draft; paste into a submission system only after resolving marked gaps and author decisions
 - **wiki/claims/*.md** — if a concern exposes an evidence gap, append a suggestion to `## Open questions`
 - **wiki/log/** — append log entry
 
@@ -37,18 +37,18 @@ argument-hint: "<review-paths-or-text> [--paper-slug <slug>] [--venue <venue>] [
 ### Reads
 - User-supplied manuscript passages, calculation/experiment records, and supporting files — usable evidence even before wiki ingestion; retain their actual provenance
 - `wiki/claims/*.md` — map concerns to claims, check evidence sufficiency
-- `wiki/experiments/*.md` — find experiment results supporting claims
+- `@experiment-root/*.md` — find experiment results supporting claims
 - `wiki/papers/*.md` — find citation context for referenced papers
 - `wiki/concepts/*.md` — understand the conceptual background of method-related concerns
 - `wiki/ideas/*.md` — find the motivation and pilot results for ideas
-- `wiki/outputs/PAPER_PLAN.md` — understand paper structure (from /paper-plan, if --paper-slug provided)
+- `@output-root/PAPER_PLAN.md` — understand paper structure (from /paper-plan, if --paper-slug provided)
 - `wiki/graph/context_brief.md` — global context
 - `wiki/graph/edges.jsonl` — claim-experiment-paper relationships
 - `skills/shared-references/review-protocol.md` — agent-local stress-test and provenance
 
 ### Writes
-- `wiki/outputs/rebuttal-{slug}.md` — rich-text version
-- `wiki/outputs/rebuttal-{slug}.txt` — formal plain-text version
+- `@output-root/rebuttal-{slug}.md` — rich-text version
+- `@output-root/rebuttal-{slug}.txt` — formal plain-text version
 - `wiki/claims/*.md` — append reviewer-identified gaps to `## Open questions` (do not directly modify confidence/status; add suggestions only)
 - `wiki/log/` — append log entry
 
@@ -56,6 +56,8 @@ argument-hint: "<review-paths-or-text> [--paper-slug <slug>] [--venue <venue>] [
 - None (rebuttal is a query operation; does not modify the knowledge graph)
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
@@ -126,7 +128,7 @@ Read [references/output-formats.md](references/output-formats.md) when formattin
 - **Review provenance**: during stress-test, follow review-protocol.md; a skeptical role or second pass does not establish independence
 - **Concern ID format**: strictly use Rvx-Cy format (Rv1-C1, Rv1-C2, Rv2-C1) to ensure traceability
 - **Specific proposals, explicit unknowns**: tie proposed revisions/validation to the concern and actual workflow; unconfirmed details are unknown, not mandatory invented dates or metrics. External execution and LaTeX compilation remain with the user unless separately requested.
-- **Output to wiki/outputs/**: rebuttal files are stored uniformly in the wiki/outputs/ directory
+- **Output to @output-root/**: rebuttal files are stored uniformly in the @output-root/ directory
 
 ## Error Handling
 

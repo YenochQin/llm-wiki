@@ -29,10 +29,10 @@ Exactly one of `--anchor`, `--topic`, `--from-wiki` must be given.
 
 - `.checkpoints/discover-{seed-slug}-{YYYY-MM-DD}.json` — full shortlist payload, machine-readable; the seed slug is derived from the first anchor or the topic
 - a human-readable markdown summary printed to the user with each candidate's title, authors, year, DOI, and relevance rationale
-- `wiki/outputs/ingest-candidates.md` — append structured queue rows when `/discover` is called from `/ingest --discover` or `/reingest --discover`
+- `@output-root/ingest-candidates.md` — append structured queue rows when `/discover` is called from `/ingest --discover` or `/reingest --discover`
 - `wiki/log/` — one append line via `tools/research_wiki.py log`
 
-Manual `/discover` does not write anywhere else in `wiki/` and does not touch `raw/` unless the user explicitly asks to save the shortlist. Internal ingest-family callers save their gated candidates to `outputs/ingest-candidates.md`.
+Manual `/discover` does not write anywhere else in `wiki/` and does not touch `raw/` unless the user explicitly asks to save the shortlist. Internal ingest-family callers save their gated candidates to `@output-root/ingest-candidates.md`.
 
 ## Wiki Interaction
 
@@ -44,13 +44,15 @@ Manual `/discover` does not write anywhere else in `wiki/` and does not touch `r
 ### Writes
 
 - `wiki/log/` — APPEND via `tools/research_wiki.py log`
-- `wiki/outputs/ingest-candidates.md` — APPEND only for `/ingest --discover` or `/reingest --discover` callers, or when the user explicitly asks manual `/discover` to save candidates
+- `@output-root/ingest-candidates.md` — APPEND only for `/ingest --discover` or `/reingest --discover` callers, or when the user explicitly asks manual `/discover` to save candidates
 
 ### Graph edges created
 
 - none. Graph mutations belong to `/ingest`, not `/discover`.
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
@@ -135,7 +137,7 @@ uv run python -X utf8 tools/research_wiki.py log '@configured' "discover | mode=
 
 ### From `/ingest --discover`
 
-When `/ingest` or `/reingest` is invoked with the optional `--discover` flag (default off), it calls `/discover` after Phase E, using the just-ingested/refreshed paper's DOI when available, otherwise its title. The gated shortlist is appended to `@configured/outputs/ingest-candidates.md`, not to the paper page and not as a long final-report section. Because this is a post-ingest follow-up, surface only the heavy-relation shortlist produced by the tool, and keep each candidate's title, authors, DOI, and Zotero collection status visible in the queue row. `/ingest` and `/reingest` never auto-ingest anything from this list.
+When `/ingest` or `/reingest` is invoked with the optional `--discover` flag (default off), it calls `/discover` after Phase E, using the just-ingested/refreshed paper's DOI when available, otherwise its title. The gated shortlist is appended to `@output-root/ingest-candidates.md`, not to the paper page and not as a long final-report section. Because this is a post-ingest follow-up, surface only the heavy-relation shortlist produced by the tool, and keep each candidate's title, authors, DOI, and Zotero collection status visible in the queue row. `/ingest` and `/reingest` never auto-ingest anything from this list.
 
 For this caller, apply a stricter candidate gate before anything reaches `outputs/ingest-candidates.md`. Each candidate must include exact title, authors, year, DOI, Zotero collection status, and one-line relation evidence. `DOI: unavailable` is allowed in manual `/discover` output, but not in ingest-family `--discover` queue rows. Drop candidates that fail the gate; if all are dropped, report `No structured follow-up candidates passed the gate` instead of naming unresolved references.
 
@@ -146,7 +148,7 @@ For this caller, apply a stricter candidate gate before anything reaches `output
 ## Constraints
 
 - **Never auto-ingest**: `/discover` returns a shortlist and stops. Even when called by `/ingest --discover`, the caller surfaces results and the user decides what to ingest.
-- **No paper-page writes**: `/discover` never writes candidate recommendations into `papers/{slug}.md`. Ingest-family `--discover` callers write recommendations only to `outputs/ingest-candidates.md`; paper pages, concepts, claims, and graph edges all belong to `/ingest`.
+- **No paper-page writes**: `/discover` never writes candidate recommendations into `papers/{slug}.md`. Ingest-family `--discover` callers write recommendations only to `@output-root/ingest-candidates.md`; paper pages, concepts, claims, and graph edges all belong to `/ingest`.
 - **No writes to `raw/`**: `/discover` does not download papers or modify raw sources or Zotero libraries.
 - **Always dedupe against the wiki**: pass `--wiki-root '@configured'` so the shortlist contains only papers not yet in the wiki. Surfacing duplicates is the most common low-quality failure mode.
 - **Pre-1990 citation gate**: candidates published before 1990 require `citation_count > 100`; otherwise drop them from every mode before ranking. This is a recommendation quality gate, not a soft scoring preference.

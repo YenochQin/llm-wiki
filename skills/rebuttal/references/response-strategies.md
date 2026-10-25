@@ -5,7 +5,7 @@ Read this reference when drafting a response according to its evidence, clarity,
 Draft a response for each concern according to its strategy:
 
 **Strategy A — Evidence sufficient (respond directly):**
-- Cite specific experiment results and data (annotate source, ensure traceability to wiki/experiments/)
+- Cite specific experiment results and data (annotate source, ensure traceability to @experiment-root/)
 - If supporting evidence was provided directly rather than ingested, cite its actual file/table/passage and retain that provenance; do not invent a wiki record.
 - Point to evidence in the wiki (convert to paper citations)
 - If the concern is based on a misunderstanding: politely clarify, point to the relevant Section in the paper

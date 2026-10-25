@@ -24,14 +24,14 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include
 - `--start-after slug`: for batch continuation; skip sorted targets through this slug.
 - `--fix`: apply conservative wiki corrections after reporting findings.
 - `--dry-run`: show proposed edits without writing files; meaningful with `--fix`.
-- `--write-report`: write `wiki/outputs/source-audit-{date}.md`.
+- `--write-report`: write `@output-root/source-audit-{date}.md`.
 - `--adversarial`: use stricter reading; actively look for plausible but unsupported wiki wording.
 
 ## Outputs
 
 - Source-grounded audit report in the conversation.
 - Automated grounding-gate results from `tools/grounding_lint.py`, folded into the report as potential hallucination/unsupported-content blockers.
-- Optional report file: `wiki/outputs/source-audit-{date}.md`.
+- Optional report file: `@output-root/source-audit-{date}.md`.
 - Optional wiki edits only when the user explicitly passes `--fix`.
 - Log entry in `wiki/log/` only after actual source-page corrections or an explicitly requested report write, outside dry-run/no-write mode.
 
@@ -51,7 +51,7 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include
 
 - Default: no writes.
 - With `--fix`, outside dry-run/no-write mode: edit only wiki interpretation pages (`papers/`, `concepts/`, `claims/`) and only for issues that are directly supported by the source.
-- With `--write-report`, outside dry-run/no-write mode: write `wiki/outputs/source-audit-{date}.md`.
+- With `--write-report`, outside dry-run/no-write mode: write `@output-root/source-audit-{date}.md`.
 - Append `wiki/log/` via `tools/research_wiki.py log` only after actual fixes or a requested report write. Default report-only and dry-run audits do not log.
 
 ### Never writes
@@ -61,6 +61,8 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include
 - Do not alter prepared source markdown under `wiki/sources/` unless the user explicitly asks to repair source conversion artifacts.
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Precondition**: run from the llm-wiki repository root. Resolve the configured wiki root; do not hard-code repository-local `wiki/` if `config/paths.json` points elsewhere.
 
@@ -144,7 +146,7 @@ After edits, re-read changed files and confirm the correction is present. Then r
 ### Step 7: Finalize Optional Writes
 
 1. If `--dry-run` is present or the user requested a no-write audit, return the report and proposed edits without writing pages, report files, logs, or maintenance files. This also leaves a requested `--write-report` as a preview.
-2. Otherwise, if `--write-report` is explicit, save the report to `wiki/outputs/source-audit-{date}.md`, including any fixes and post-fix verification results.
+2. Otherwise, if `--write-report` is explicit, save the report to `@output-root/source-audit-{date}.md`, including any fixes and post-fix verification results.
 3. Only after actual source-page corrections or a requested report write, append a concise log line:
 
    ```shell

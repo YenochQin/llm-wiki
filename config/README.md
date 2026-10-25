@@ -43,7 +43,7 @@ These are the **minimum permissions** for LLM-Wiki skills to function. Claude Co
 ### `paths.json.example`
 
 Cross-platform paths that connect this code repository to an external wiki
-vault, raw source directory, manuscript root, and Zotero lookup candidates. Copy it to
+vault, independent experiment/output roots, raw source directory, manuscript root, and Zotero lookup candidates. Copy it to
 `config/paths.json` and fill in the profiles you use:
 
 ```bash
@@ -58,6 +58,8 @@ Then edit the profile values:
   "profiles": {
     "macos": {
       "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
+      "experiment_root": "/Users/you/Documents/ResearchWiki/experiments",
+      "output_root": "/Users/you/Documents/ResearchWiki/outputs",
       "raw_root": "/Users/you/Documents/ResearchWiki/raw",
       "paper_root": "/Users/you/Documents/ResearchWiki/papers",
       "zotero_roots": [
@@ -67,6 +69,8 @@ Then edit the profile values:
     },
     "windows": {
       "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
+      "experiment_root": "%USERPROFILE%/Documents/ResearchWiki/experiments",
+      "output_root": "%USERPROFILE%/Documents/ResearchWiki/outputs",
       "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw",
       "paper_root": "%USERPROFILE%/Documents/ResearchWiki/papers",
       "zotero_roots": [
@@ -76,6 +80,8 @@ Then edit the profile values:
     },
     "linux": {
       "wiki_root": "~/Documents/ResearchWiki/wiki",
+      "experiment_root": "~/Documents/ResearchWiki/experiments",
+      "output_root": "~/Documents/ResearchWiki/outputs",
       "raw_root": "~/Documents/ResearchWiki/raw",
       "paper_root": "~/Documents/ResearchWiki/papers",
       "zotero_roots": [
@@ -90,10 +96,11 @@ Then edit the profile values:
 With `"active_profile": "auto"`, tools choose `macos`, `windows`, or `linux`
 from the current OS. Set `active_profile` to a concrete profile name to force
 one, or set `LLM_WIKI_PATH_PROFILE` temporarily. Environment variables
-`LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_RAW_ROOT`, and `LLM_WIKI_PAPER_ROOT` override the selected
+`LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_EXPERIMENT_ROOT`, `LLM_WIKI_OUTPUT_ROOT`,
+`LLM_WIKI_RAW_ROOT`, and `LLM_WIKI_PAPER_ROOT` override the selected
 profile.
 
-The legacy flat format with top-level `wiki_root`, `raw_root`, and `paper_root` is still
+The legacy flat format with top-level root keys (including `experiment_root` and `output_root`) is still
 accepted, but the profiled format is preferred for synced multi-platform use.
 Most tools read this file automatically; `tools/research_wiki.py` accepts
 `@wiki` as a shortcut for the configured wiki root.
@@ -106,6 +113,24 @@ including through a symlink. Explicit environment overrides count as configurati
 The root may be created later during initialization. Project/cache aliases and
 explicit file paths do not require content-root configuration; legacy low-level
 path defaults are retained for migration tools and disposable test fixtures.
+
+### Independent experiments and outputs
+
+Set `experiment_root` and `output_root` in each active platform profile (or use
+`LLM_WIKI_EXPERIMENT_ROOT` / `LLM_WIKI_OUTPUT_ROOT`). Normally both sit alongside
+`wiki_root`; arbitrary external names are supported. They must not overlap the
+repository, wiki, raw, manuscripts, or each other. Missing values are errors only
+for operations requiring that root. No directory is moved by changing config.
+
+```bash
+uv run python -X utf8 tools/resolve_path_alias.py '@experiment-root' '@output-root'
+uv run python -X utf8 tools/resolve_path_alias.py '@output-root/report.md'
+```
+
+Use resolved absolute paths for normal filesystem operations. The graph retains
+logical `experiments/<slug>` identities and the wiki catalog includes experiment
+and output paths. See `docs/runtime-directory-structure.en.md` for migration and
+legacy fixture behavior. Old wiki-subdirectory aliases are rejected.
 
 ### Independent manuscripts
 

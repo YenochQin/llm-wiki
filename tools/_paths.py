@@ -24,6 +24,8 @@ class RuntimePaths:
     paper_root: Path | None = None
     wiki_root_configured: bool = False
     raw_root_configured: bool = False
+    experiment_root: Path | None = None
+    output_root: Path | None = None
 
 
 def find_project_root(start: Path | None = None) -> Path:
@@ -136,6 +138,8 @@ def load_paths(
     wiki_root: Path | None = None,
     raw_root: Path | None = None,
     paper_root: Path | None = None,
+    experiment_root: Path | None = None,
+    output_root: Path | None = None,
 ) -> RuntimePaths:
     """Load runtime paths, with explicit args > env vars > config > local defaults."""
     root = (project_root or find_project_root()).resolve()
@@ -152,6 +156,10 @@ def load_paths(
     raw_value = raw_root or env_raw or profile_cfg.get("raw_root") or cfg.get("raw_root")
     # Manuscripts never fall back to a directory in the code repository.
     paper_value = paper_root or env_paper or profile_cfg.get("paper_root") or cfg.get("paper_root")
+    experiment_value = (experiment_root or os.environ.get("LLM_WIKI_EXPERIMENT_ROOT", "").strip()
+                        or profile_cfg.get("experiment_root") or cfg.get("experiment_root"))
+    output_value = (output_root or os.environ.get("LLM_WIKI_OUTPUT_ROOT", "").strip()
+                    or profile_cfg.get("output_root") or cfg.get("output_root"))
 
     return RuntimePaths(
         project_root=root,
@@ -163,6 +171,8 @@ def load_paths(
         paper_root=expand_path(paper_value, root) if paper_value else None,
         wiki_root_configured=bool(wiki_value),
         raw_root_configured=bool(raw_value),
+        experiment_root=expand_path(experiment_value, root) if experiment_value else None,
+        output_root=expand_path(output_value, root) if output_value else None,
     )
 
 
@@ -182,19 +192,28 @@ def _require_external_root(paths: RuntimePaths, name: str) -> Path:
 
 def require_paper_root(paths: RuntimePaths) -> Path:
     """Require an external manuscript root before resolving or writing papers."""
-    if paths.paper_root is None:
+    return require_independent_root(paths, "paper_root")
+
+
+def require_independent_root(paths: RuntimePaths, name: str) -> Path:
+    """Validate one requested independent root; unused roots need not be set."""
+    value = getattr(paths, name)
+    if value is None:
         raise ValueError(
-            "paper_root is not configured; set it in config/paths.json "
-            "or LLM_WIKI_PAPER_ROOT (no in-repository fallback)"
+            f"{name} is not configured; set it in config/paths.json "
+            f"or LLM_WIKI_{name.upper()} (no in-repository fallback)"
         )
-    root = paths.paper_root.resolve()
+    root = value.resolve()
     project = paths.project_root.resolve()
     if root.is_relative_to(project) or project.is_relative_to(root):
-        raise ValueError("paper_root must be outside the code repository and must not contain it")
-    for label, other in (("wiki_root", paths.wiki_root), ("raw_root", paths.raw_root)):
+        raise ValueError(f"{name} must be outside the code repository and must not contain it")
+    for label in ("wiki_root", "raw_root", "paper_root", "experiment_root", "output_root"):
+        other = getattr(paths, label)
+        if label == name or other is None:
+            continue
         other = other.resolve()
         if root.is_relative_to(other) or other.is_relative_to(root):
-            raise ValueError(f"paper_root must be separate from {label}")
+            raise ValueError(f"{name} must be separate from {label}")
     return root
 
 
@@ -247,6 +266,8 @@ def resolve_runtime_path(
         content_root = None
         if alias in {"@paper-root", "@configured-papers"}:
             base = require_paper_root(paths)
+        elif alias in {"@experiment-root", "@output-root"}:
+            base = require_independent_root(paths, alias[1:].replace("-", "_"))
         elif alias in aliases:
             base = aliases[alias].resolve()
             if require_external:
@@ -258,6 +279,11 @@ def resolve_runtime_path(
                     content_root = _require_external_root(paths, "wiki_root")
                 elif alias in {"@raw-root", "@raw", "@configured-raw"}:
                     content_root = _require_external_root(paths, "raw_root")
+            if alias in {"@wiki-root", "@wiki", "@configured", "@configured-wiki"}:
+                moved = {"experiments": "@experiment-root", "outputs": "@output-root"}
+                if suffix.split("/", 1)[0] in moved:
+                    raise ValueError(f"{text} uses a retired wiki subdirectory; use "
+                                     f"{moved[suffix.split('/', 1)[0]]} instead")
         else:
             raise ValueError(f"unknown runtime path alias: {alias}")
         target = (base / suffix).resolve() if separator else base

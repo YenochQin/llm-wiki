@@ -8,7 +8,7 @@ Read this reference when archiving the completed Related Work text and reporting
    ```
 
 2. **Write archive file**:
-   Create `wiki/outputs/related-work-{slug}-{date}.md`:
+   Create `@output-root/related-work-{slug}-{date}.md`:
    ```yaml
    ---
    title: "Related Work: {topic}"
@@ -27,7 +27,8 @@ Read this reference when archiving the completed Related Work text and reporting
    uv run python -X utf8 tools/research_wiki.py add-edge '@configured' --from "outputs/related-work-{slug}-{date}" --to "papers/{paper-slug}" --type derived_from --evidence "Cited in related work section"
    ```
 
-4. **Append log**:
+4. **Rebuild the index and append log**:
+   Run `uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'` after the report write.
    ```shell
    uv run python -X utf8 tools/research_wiki.py log '@configured' "survey | {topic} | {N} papers, {G} groups, format: {format}"
    ```

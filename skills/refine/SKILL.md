@@ -18,7 +18,7 @@ For manuscript files, preserve the selected topic, draft version, and source fil
 
 - `artifact`: the artifact to improve, one of:
   - slug of a wiki page (searched in ideas/experiments/claims/outputs/)
-  - file path (e.g. `wiki/outputs/paper-draft-v1.md`)
+  - file path (e.g. `@output-root/paper-draft-v1.md`)
 - `--max-rounds N` (optional, default 4): maximum improvement rounds (positive integer). A final review of a changed version verifies that round; it is not another edit round. Reuse an unchanged current review, so at most N+1 successful state reviews are needed; a failed review may be retried once.
 - `--target-score N` (optional, default 8): requested review-score threshold (1-10), used together with the completion gate below; a high score alone does not establish completion.
 - `--difficulty` (optional, default `hard`): difficulty level passed to /llm-review
@@ -38,19 +38,19 @@ For manuscript files, preserve the selected topic, draft version, and source fil
 
 ### Reads
 - `wiki/ideas/*.md` — if artifact is an idea
-- `wiki/experiments/*.md` — if artifact is an experiment plan
+- `@experiment-root/*.md` — if artifact is an experiment plan
 - `wiki/claims/*.md` — claims referenced by the review
 - `wiki/papers/*.md` — papers referenced by the review
-- `wiki/outputs/*.md` — if artifact is a wiki output
+- `@output-root/*.md` — if artifact is a wiki output
 - `<paper_root>/<paper-id>/<draft-id>/` — if artifact is a manuscript (selected source and supporting files)
 - `wiki/graph/context_brief.md` — global context passed to /llm-review
 - `wiki/graph/open_questions.md` — check whether new gaps need recording
 
 ### Writes
 - `wiki/ideas/{slug}.md` — if artifact is an idea, fix issues found by review
-- `wiki/experiments/{slug}.md` — if artifact is an experiment plan
+- `@experiment-root/{slug}.md` — if artifact is an experiment plan
 - `wiki/claims/{slug}.md` — if review finds a claim needing update (confidence adjustment, evidence note)
-- `wiki/outputs/*.md` — if artifact is a wiki output
+- `@output-root/*.md` — if artifact is a wiki output
 - `<paper_root>/<paper-id>/<draft-id>/` — if artifact is a manuscript (selected source and supporting files)
 - `wiki/graph/edges.jsonl` — if new relationships are discovered during fixes
 - `wiki/graph/context_brief.md` — rebuild after each round if wiki changes were made
@@ -61,6 +61,8 @@ For manuscript files, preserve the selected topic, draft version, and source fil
 - Depends on fix content; may add: `supports`, `addresses_gap`, `inspired_by`, etc.
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
@@ -73,7 +75,7 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
 ### Step 1: Initialize
 
 1. **Locate artifact**:
-   - If slug: search sequentially in `wiki/ideas/`, `wiki/experiments/`, `wiki/claims/`, `wiki/outputs/`, `wiki/papers/` for `{slug}.md`
+   - If slug: search sequentially in `wiki/ideas/`, `@experiment-root/`, `wiki/claims/`, `@output-root/`, `wiki/papers/` for `{slug}.md`
    - If file path: read directly
    - Record artifact type and path
 2. **Read current content**: load full artifact text

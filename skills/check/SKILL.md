@@ -21,7 +21,7 @@ argument-hint: "[wiki-dir] [--json] [--fix [--dry-run]] [--suggest]"
 ## Outputs
 
 - Lint report (reported directly to the user)
-- Optional file write, only if explicitly requested and not in preview/no-write mode: `wiki/outputs/lint-report-{date}.md`
+- Optional file write, only if explicitly requested and not in preview/no-write mode: `@output-root/lint-report-{date}.md`
 
 ## Wiki Interaction
 
@@ -31,7 +31,7 @@ argument-hint: "[wiki-dir] [--json] [--fix [--dry-run]] [--suggest]"
 - `wiki/topics/*.md` — topic page fields and links
 - `wiki/people/*.md` — people page fields and links
 - `wiki/ideas/*.md` — idea status, failure_reason, origin_gaps
-- `wiki/experiments/*.md` — experiment status, target_claim, outcome
+- `@experiment-root/*.md` — experiment status, target_claim, outcome
 - `wiki/claims/*.md` — claim confidence, status, evidence, source_papers
 - `wiki/Summary/*.md` — survey page fields
 - `wiki/graph/edges.jsonl` — semantic graph edge consistency check
@@ -46,6 +46,8 @@ argument-hint: "[wiki-dir] [--json] [--fix [--dry-run]] [--suggest]"
 - `wiki/log/` records actual repairs or an explicitly requested report archive; a read-only check does not log.
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-conditions**: run from the configured llm-wiki repository root. Resolve the user-supplied `wiki-dir`, or `@configured` when omitted, through `tools/resolve_path_alias.py`. In every command below, replace `<wiki-dir>` with that resolved absolute directory; `wiki/` in prose denotes the same selected root. Report invalid or missing configuration instead of creating a fallback.
 
@@ -113,7 +115,7 @@ Read [references/report-format.md](references/report-format.md) when formatting 
 
 When the user supplies `--json`, return a JSON report preserving the tool findings and labeling additional content judgments separately; otherwise return the Markdown report.
 
-Save `wiki/outputs/lint-report-{date}.md` only when the user explicitly requested an archive and this is not a dry-run/no-write operation. After actual repairs or a requested report write, append a log:
+Save `@output-root/lint-report-{date}.md` only when the user explicitly requested an archive and this is not a dry-run/no-write operation. After actual repairs or a requested report write, append a log:
 
 ```shell
 uv run python -X utf8 tools/research_wiki.py log '<wiki-dir>' "check | {repairs/report archive}: N 🔴, M 🟡, K 🔵"

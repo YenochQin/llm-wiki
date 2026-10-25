@@ -10,7 +10,7 @@ argument-hint: "<claim-slugs...> [--venue <journal-or-conference>] [--title <wor
 > Input target claims and, optionally, a target journal or conference;
 > compile an evidence map from the wiki → determine narrative structure → generate a section outline + figure plan + citation plan.
 > Agent-local review is a mandatory step, using criteria appropriate to the paper's research modes.
-> Output PAPER_PLAN.md to wiki/outputs/.
+> Output PAPER_PLAN.md to @output-root/.
 >
 > Key distinction: the outline is claim-graph-driven — each section exists because it supports a claim,
 > not because paper convention requires that section.
@@ -23,7 +23,7 @@ argument-hint: "<claim-slugs...> [--venue <journal-or-conference>] [--title <wor
 
 ## Outputs
 
-- `wiki/outputs/paper-plan-{slug}-{date}.md` — complete paper plan (PAPER_PLAN.md)
+- `@output-root/paper-plan-{slug}-{date}.md` — complete paper plan (PAPER_PLAN.md)
 - `wiki/graph/edges.jsonl` — new derived_from edges (plan → source claims/papers)
 - `wiki/graph/context_brief.md` — rebuilt
 - `wiki/log/` — appended log entry
@@ -34,7 +34,7 @@ argument-hint: "<claim-slugs...> [--venue <journal-or-conference>] [--title <wor
 
 ### Reads
 - `wiki/claims/*.md` — status, confidence, evidence list, conditions of target claims
-- `wiki/experiments/*.md` — supporting experiments for claims (results, metrics, key_result)
+- `@experiment-root/*.md` — supporting experiments for claims (results, metrics, key_result)
 - User-identified proof/derivation notes, calculation reports, datasets, and observation records — additional evidence with actual path/section provenance; reading them does not authorize ingestion or changes to those sources
 - `wiki/papers/*.md` — evidence source papers (Method, Results, Related)
 - `wiki/concepts/*.md` — technical concepts involved (supports Method section writing)
@@ -47,7 +47,7 @@ argument-hint: "<claim-slugs...> [--venue <journal-or-conference>] [--title <wor
 - `skills/shared-references/citation-verification.md` — citation discipline
 
 ### Writes
-- `wiki/outputs/paper-plan-{slug}-{date}.md` — paper plan file
+- `@output-root/paper-plan-{slug}-{date}.md` — paper plan file
 - `wiki/graph/edges.jsonl` — derived_from edges
 - `wiki/graph/context_brief.md` — rebuilt
 - `wiki/log/` — appended operation log
@@ -57,6 +57,8 @@ argument-hint: "<claim-slugs...> [--venue <journal-or-conference>] [--title <wor
 - `derived_from`: paper-plan → papers (which papers the plan cites)
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
@@ -74,7 +76,7 @@ uv run python -X utf8 tools/research_wiki.py stats '@configured' --json
    - evidence type (supports / contradicts / tested_by / invalidates)
    - evidence strength (weak / moderate / strong)
 3. For each evidence source, read the corresponding wiki page:
-   - `wiki/experiments/{source}.md` → key_result, metrics, outcome
+   - `@experiment-root/{source}.md` → key_result, metrics, outcome
    - `wiki/papers/{source}.md` → Evidence Pack, Method, Results, and cited prepared-source locations
    - user-identified evidence files → the actual proof, derivation, calculation, or observation and its conditions; retain normal Markdown file links rather than inventing wiki pages
 4. Load relevant edges from `wiki/graph/edges.jsonl` to build relationships between claims

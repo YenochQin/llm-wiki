@@ -38,6 +38,8 @@ Rebuild an existing `wiki/papers/{slug}.md` in **clean-room mode**. Use this whe
 
 ## Workflow
 
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
+
 ### Phase A — refresh source + resolve existing page
 
 Follow ingest Phase A for source refresh and identity checks, then resolve the existing page:
@@ -70,7 +72,7 @@ Run ingest Phase D with one extra rule: existing connected entities are **not** 
 
 ### Phase E — finalize exactly like ingest-family refresh
 
-Run index/context/open-question rebuilds, scoped lint, scoped grounding lint, and log the run. `--discover` follows the same optional follow-up rule as `/reingest`: append only gated candidates to `@configured/outputs/ingest-candidates.md`.
+Run index/context/open-question rebuilds, scoped lint, scoped grounding lint, and log the run. `--discover` follows the same optional follow-up rule as `/reingest`: append only gated candidates to `@output-root/ingest-candidates.md`.
 
 ## Report
 

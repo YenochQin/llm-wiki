@@ -24,7 +24,8 @@ argument-hint: "<question> [--format markdown|table|timeline|bullets]"
 
 - `wiki/graph/context_brief.md` and `wiki/graph/open_questions.md`, when present.
 - `wiki/index.md`, when present, and `wiki/graph/edges.jsonl` for relevant relationships.
-- Relevant pages under `papers/`, `concepts/`, `topics/`, `people/`, `ideas/`, `experiments/`, `claims/`, `Summary/`, and `foundations/`.
+- Experiment records under `@experiment-root/` remain eligible evidence. Resolve that alias when the question needs experiments; resolve `@output-root` only when retrieving saved reports.
+- Relevant pages under `papers/`, `concepts/`, `topics/`, `people/`, `ideas/`, `claims/`, `Summary/`, and `foundations/`.
 
 ### Writes
 

@@ -70,7 +70,9 @@ The specifications are English-only. Agent replies follow the language of the cu
 ```
 raw/           user-owned originals (PDFs, notes, web clips). Read-only to the LLM.
 wiki/sources/  vault-visible sources: MinerU-converted paper markdown, copied notes and web clips.
-wiki/          LLM-maintained pages: papers, concepts, topics, people, ideas, experiments, claims, Summary, foundations, outputs.
+wiki/          Knowledge pages: papers, concepts, topics, people, ideas, claims, Summary, foundations.
+experiments/   Experiment records (experiment_root); retain claim/idea evidence links.
+outputs/       Reports and plans (output_root); indexed from wiki/index.md.
 wiki/graph/    auto-derived edges, citations, context_brief — never hand-edit.
 tools/         Python CLIs (run via uv).
 skills/        canonical English skill files; includes shared-references/.
@@ -85,7 +87,7 @@ docs/          pipeline docs, runtime references, page templates.
 
 This repository stores skills, tools, configuration, and maintained runtime
 documentation. Generated research content lives outside it. Set OS-specific
-`wiki_root`, `raw_root`, and `paper_root` in `config/paths.json` (gitignored;
+`wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root` in `config/paths.json` (gitignored;
 see [`config/README.md`](config/README.md)). `paper_root` stores independent
 research topics in stable `<paper-id>/` directories, each containing multiple
 `YYYY-MM-DD-<purpose>/` manuscript versions; `wiki_root/papers/` continues
@@ -176,7 +178,7 @@ PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pip
 - **`/ingest-light`** — lightweight intake for dissertation-introduction or background papers. Creates a compact paper page, tags it for `thesis-introduction`, and links it to a target Summary without expanding the full concept/claim/people graph.
 - **`/promote-light-ingest`** — ranks light-ingested pages that are worth upgrading to full `/ingest` or `/reingest`.
 - **`/reingest`** — rerun the adapter and migrate linked entities after the PDF adapter, template, or analysis policy changes. `--paper-only` skips the entity audit.
-- **`/code-analyze`** — reconstructs a code repository's execution flow and processing stages with source evidence and LaTeX; other analysis directions apply only when requested. It can archive reports to `wiki/outputs/`.
+- **`/code-analyze`** — reconstructs a code repository's execution flow and processing stages with source evidence and LaTeX; other analysis directions apply only when requested. It can archive reports to `@output-root/`.
 
 Metadata-only inputs don't create paper pages on their own — they enrich an existing content source (prepared markdown, note, or web clip).
 

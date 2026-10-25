@@ -2,7 +2,7 @@
 """Reset wiki state to a clean scaffold (used by /reset skill).
 
 Scopes:
-    wiki         delete all .md content under wiki/<entity>/, wiki/outputs/,
+    wiki         delete all .md content under wiki/<entity>/ and independent experiment/output roots,
                  wiki/sources/, wiki/index.md, wiki/log/, and wiki/graph/ files.
                  Preserves .gitkeep and wiki/CLAUDE.md.
     raw          delete all files under raw/<sub>/ except .gitkeep; does not
@@ -38,6 +38,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from _content import configure_content_paths, content_directory
 from _cli_io import configure_utf8_stdio
 from _paths import DEFAULT_CONFIG_PATH, display_path, load_paths
 
@@ -99,9 +100,9 @@ def plan(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[str])
 
     if "wiki" in scopes:
         for entity in ENTITY_DIRS:
-            for f in _list_md(wiki / entity):
+            for f in _list_md(content_directory(wiki, entity)):
                 p["delete_files"].append(_show(f, project_root))
-        for f in _list_md(wiki / "outputs"):
+        for f in _list_md(content_directory(wiki, "outputs")):
             p["delete_files"].append(_show(f, project_root))
         for f in _list_source_entries(wiki / "sources"):
             p["delete_files"].append(_show(f, project_root))
@@ -142,12 +143,13 @@ def execute(project_root: Path, wiki_root: Path, raw_root: Path, scopes: list[st
     wiki = wiki_root
 
     if "wiki" in scopes:
-        for entity in ENTITY_DIRS + ["outputs"]:
-            for f in _list_md(wiki / entity):
+        directories = [content_directory(wiki, entity) for entity in ENTITY_DIRS + ["outputs"]]
+        for directory in directories:
+            for f in _list_md(directory):
                 f.unlink()
                 deleted += 1
             # Ensure .gitkeep exists so the directory survives commits
-            keep = wiki / entity / ".gitkeep"
+            keep = directory / ".gitkeep"
             if not keep.parent.exists():
                 keep.parent.mkdir(parents=True, exist_ok=True)
             if not keep.exists():
@@ -259,6 +261,7 @@ def main() -> None:
         wiki_root=args.wiki_root,
         raw_root=args.raw_root,
     )
+    configure_content_paths(load_paths(config_path=args.paths_config, project_root=args.project_root))
     root = paths.project_root
     the_plan = plan(root, paths.wiki_root, paths.raw_root, scopes)
 

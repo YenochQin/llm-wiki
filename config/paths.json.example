@@ -16,7 +16,9 @@
           "path": "~/Zotero",
           "enabled": true
         }
-      ]
+      ],
+      "experiment_root": "/Users/you/Documents/ResearchWiki/experiments",
+      "output_root": "/Users/you/Documents/ResearchWiki/outputs"
     },
     "windows": {
       "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
@@ -33,7 +35,9 @@
           "path": "%USERPROFILE%/Zotero",
           "enabled": true
         }
-      ]
+      ],
+      "experiment_root": "%USERPROFILE%/Documents/ResearchWiki/experiments",
+      "output_root": "%USERPROFILE%/Documents/ResearchWiki/outputs"
     },
     "linux": {
       "wiki_root": "~/Documents/ResearchWiki/wiki",
@@ -50,7 +54,9 @@
           "path": "~/Zotero",
           "enabled": true
         }
-      ]
+      ],
+      "experiment_root": "~/Documents/ResearchWiki/experiments",
+      "output_root": "~/Documents/ResearchWiki/outputs"
     }
   }
 }

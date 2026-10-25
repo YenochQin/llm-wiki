@@ -25,7 +25,7 @@ argument-hint: "<research-question-or-claim-slugs-or-paper-plan-path> [--format 
 
 ## Outputs
 
-- `wiki/outputs/related-work-{slug}-{date}.md` — Related Work text (archived)
+- `@output-root/related-work-{slug}-{date}.md` — Related Work text (archived)
 - `wiki/graph/edges.jsonl` — derived_from edges (if a new output is created)
 - `wiki/log/` — appended log entry
 - **Terminal output** — Related Work body text (for direct copy-paste)
@@ -45,7 +45,7 @@ argument-hint: "<research-question-or-claim-slugs-or-paper-plan-path> [--format 
 - `skills/shared-references/citation-verification.md` — citation discipline
 
 ### Writes
-- `wiki/outputs/related-work-{slug}-{date}.md` — archived file
+- `@output-root/related-work-{slug}-{date}.md` — archived file
 - `wiki/graph/edges.jsonl` — derived_from edges
 - `wiki/log/` — appended operation log
 
@@ -53,6 +53,8 @@ argument-hint: "<research-question-or-claim-slugs-or-paper-plan-path> [--format 
 - `derived_from`: related-work output → source papers
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 

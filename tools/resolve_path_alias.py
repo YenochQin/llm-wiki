@@ -78,6 +78,8 @@ def main() -> None:
         requested = args.paths or [
             *DEFAULT_ALIASES,
             *(["@paper-root"] if runtime_paths.paper_root is not None else []),
+            *(["@experiment-root"] if runtime_paths.experiment_root is not None else []),
+            *(["@output-root"] if runtime_paths.output_root is not None else []),
         ]
         resolved = {
             value: str(resolve_runtime_path(

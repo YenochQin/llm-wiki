@@ -18,7 +18,7 @@ Read the relevant portions of the mapped evidence; these are examples, not requi
 - Method → wiki/concepts/*.md#Formal_notation + wiki/claims/{claim}.md#Statement
 - Theory/Derivation → source-anchored assumptions, proof/derivation notes, and limits identified in the plan
 - Computational Method/Results → identified calculation reports/data, actual settings, convergence and numerical-error records
-- Experiments → wiki/experiments/*.md#Results + wiki/experiments/*.md#Analysis
+- Experiments → @experiment-root/*.md#Results + @experiment-root/*.md#Analysis
 - Conclusion → wiki/graph/open_questions.md + wiki/claims/*.md#Open_questions
 
 **3b. Write LaTeX**

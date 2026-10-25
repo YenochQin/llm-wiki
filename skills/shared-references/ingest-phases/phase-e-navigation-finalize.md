@@ -13,7 +13,7 @@ Place the paper in topics/Summary, refresh navigation, log the run, and run the 
 3. **Index**: `uv run python -X utf8 tools/research_wiki.py rebuild-index '@configured'`.
 4. **Log** (always): `uv run python -X utf8 tools/research_wiki.py log '@configured' "ingest | added papers/<slug> | updated: <list>"`.
 5. **Rebuild**: `rebuild-context-brief` and `rebuild-open-questions`.
-6. **Report**: pages created/updated, edges added, `Topic placement: matched N; Summary placement: matched S`, contradictions, and optional `--discover` queue count/path. Follow-up ingest candidates must be written only to `@configured/outputs/ingest-candidates.md` after the structured candidate gate (title + authors + year + DOI + Zotero status + relation evidence); never append them to `papers/{slug}.md`. Close with `Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges`.
+6. **Report**: pages created/updated, edges added, `Topic placement: matched N; Summary placement: matched S`, contradictions, and optional `--discover` queue count/path. Follow-up ingest candidates must be written only to `@output-root/ingest-candidates.md` after the structured candidate gate (title + authors + year + DOI + Zotero status + relation evidence); never append them to `papers/{slug}.md`. Close with `Wiki: +1 paper, +{N} claims, +{M} concepts, +{K} edges`.
 
 ## Gate E — consolidated final self-check; resolve failures or report the incomplete outcome
 

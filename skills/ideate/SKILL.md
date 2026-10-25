@@ -36,7 +36,7 @@ argument-hint: "[research-direction-or-topic] [--max-ideas N] [--skip-validation
 - `wiki/papers/*.md` — existing paper methods and results
 - `wiki/concepts/*.md` — technical concepts, find cross-domain combination opportunities
 - `wiki/topics/*.md` — research direction maps, SOTA and open problems
-- `wiki/experiments/*.md` — existing experiment results, avoid duplication
+- `@experiment-root/*.md` — existing experiment results, avoid duplication
 
 ### Writes
 - `wiki/ideas/{slug}.md` — create new idea pages
@@ -50,6 +50,8 @@ argument-hint: "[research-direction-or-topic] [--max-ideas N] [--skip-validation
 - `inspired_by`: idea → paper/concept (source of inspiration for the idea)
 
 ## Workflow
+
+Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
 **Pre-condition**: a configured llm-wiki repo (see `/setup`). Run Python tools through `uv run python -X utf8`, matching `README.md`. Never hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured` and `@raw-root`:
 
