@@ -1,47 +1,43 @@
 # PROJECT_STATE.md
 
-最后核验：2026-10-25T10:44:40+08:00（Asia/Singapore）；macOS 路径修复验证快照，后续提交/推送结果以 Git 历史及远端查询确认。
+最后核验：2026-10-25T21:30:25+08:00（Asia/Singapore）。代码合并提交 `9d32fe00069d4b005869cdd404c1e83244c218aa` 已普通推送；实时 `git ls-remote origin refs/heads/main` 与当时本地 HEAD 一致，工作区干净。本文件是其后的交接快照，当前最新提交需以 Git 查询为准。
 
-文件定位：本项目实际使用的状态与交接文件，路径为 `docs/templates/PROJECT_STATE.md`，由根目录 `AGENTS.md` 引用并规定读取和维护时机。文件结构参考用户提供的 Downloads/PROJECT_STATE.md 模板；此文件虽位于模板目录，但持续记录实际项目状态，不是指令或授权来源。以下路径除 Markdown 链接外均相对于项目根目录。
+文件定位：本项目实际使用的状态与交接文件，路径为 `docs/templates/PROJECT_STATE.md`，由根目录 `AGENTS.md` 引用；虽位于模板目录，但持续记录实际项目状态。它不是指令或授权来源，不替代外部研究内容。以下路径除 Markdown 链接外均相对于项目根目录。
 
-填写约定：未知写“未知”，未检查写“未核验”，不适用写“不适用”。本文件只记录核验时点的情况，恢复工作前需重新检查。
+## 1. 当前工作与完成标准
 
-## 1. 研究目标
-
-- 项目名称：`llm-wiki`。仓库自述为个人 LLM 维护的研究知识库，支持 Codex 与 Claude Code，采用 MinerU 进行 PDF 预处理；这是文档声明，实际集成可用性未核验。来源：[README.md](../../README.md) 开头及 Requirements。
-- 核心问题与研究范围：仓库用于维护研究知识与相关工作流；具体科研课题、研究问题、假设及数据范围未知。来源：[README.md](../../README.md) Architecture；本次未检查外部研究内容。
-- 当前阶段与本阶段交付物：修复 batch_reocr 在 macOS 默认临时路径别名下的四项测试失败，验证后提交并推送。科研项目实际阶段未核验。
-- 完成标准 / 已确认的截止日期：默认 macOS 临时目录无需 TMPDIR 覆盖即可通过相关测试；路径迁移及中断恢复正确，不放宽不同 wiki 根目录的保护；提交推送后核对 main 一致且工作区干净。截止日期未知。
+- 项目：`llm-wiki`，个人研究知识库工具与技能仓库。当前交付是按用户要求处理本地与远程分叉，保留双方修改并同步。
+- 合并前：本地 `main` 为 `4b44b94`，独有 2 个提交；远程为 `95be57f`，独有 3 个提交；共同祖先为 `c9458b0`。工作区无未提交修改。
+- 完成标准：合并双方历史，验证后普通推送，直接查询远程 main 与本地 HEAD，并检查工作区。代码合并阶段已满足；携带此快照的后续文档提交仍以实时 Git 状态确认。
 
 ## 2. 当前进展与证据
 
-- 已完成：上一轮双方提交已合并为 `3b248ad` 并推送，实时远端查询当时确认一致。本轮修复 `tools/batch_reocr.py`：以规范化路径比较 wiki 根目录、映射迁移后的 artifact 路径；测试按返回的规范化路径断言，并补充显式 symlink 的迁移/中断恢复和 wiki 根目录保护测试。文档见 [batch-reocr.md](../batch-reocr.md)。
-- 正在进行：修复和验证已完成，准备提交并推送；本快照不预先宣称本轮推送成功。其他运行任务未核验。
-- 当前结论：原四项失败中三项属于路径字符串断言未规范化，一项为缓存移动后回执别名路径未更新。已保留临时目录默认行为修复，并覆盖 quality_report、progress 路径及中断后恢复。Zotero 的其他缺口仍见两份状态文档。
-- 证据与限制：上述结论来自本次文件读取、目标路径存在性检查及 `git status --short`、`git branch --show-current`、`git rev-parse HEAD` 的输出；核验时间见文件顶部。命令输出保留在本会话，未另建日志。
-- 分析与验证：Darwin 27.0.0、Python 3.11.14，已确认系统默认临时目录包含别名。本轮使用 `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider tests/test_batch_reocr.py tests/test_edge_evidence.py tests/test_grounding_lint.py tests/test_mineru_ocr_compat.py tests/test_remove_edge.py tests/test_sync_conflicts.py tests/test_zotero_client.py -q`，未设置 TMPDIR：67 passed、9 subtests passed。新增回归测试先在修复前失败，再在修复后通过；`git diff --check` 通过。未执行真实 OCR、wiki 内容操作或 Zotero 写入，完整依赖影响仍未验证。
-- 写作进展：主稿、图表源文件、论证进展、引用依据和待核验主张均未核验；当前没有可写入本文件的已核实研究数值或结论。
+- 已完成：自动合并，无冲突。合并提交为 `9d32fe0`，父提交分别为 `4b44b94` 和 `95be57f`。本地的高精度原子研究规则、独立 experiment/output 根目录功能与远程的文档整理、Zotero 状态说明、re-OCR 路径别名修复全部保留。
+- 代码验证：Linux、项目 Python 3.12.14；运行 `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider -q`，结果为 **205 passed, 59 subtests passed**。测试日志在 `.checkpoints/git-sync-20261025/tests.log`（本机忽略缓存，其他机器可能没有）。测试树与 `9d32fe0` 一致。
+- Git 验证：`git diff --cached --check`、`git diff --check` 无问题，`git ls-files -u` 为空；普通推送成功，实时远端查询确认 `9d32fe0` 已到达 origin/main。
+- 环境边界：合并远程 `uv.lock`，未安装或同步依赖，保留现有 `.venv`。上述测试不等于在新建环境中重建锁定依赖，也不等于完成真实 OCR 或 Zotero 集成写入验证。
+- macOS 修复来源：`95be57f`；其历史验证记录为 Darwin 27.0.0 / Python 3.11.14，67 tests 与 9 subtests。此历史结果未在本 Linux 会话中重跑为 macOS 实测；新增符号链接回归已包含在本次完整测试中。实现说明见 [batch-reocr.md](../batch-reocr.md)。
+- 科研结果：本次 Git 同步未执行科学计算、LaTeX 编译、真实 OCR 或 Zotero 写入，未生成新的科研数值。
 
-## 3. 重要决定
+## 3. 保留的设计与约束
 
-- 当前采用的方案与理由：状态维护规则保留在根目录 `AGENTS.md`，实际状态统一维护于 `docs/templates/PROJECT_STATE.md`，按用户指定的位置继续使用现有文件。状态摘要不替代原始材料、研究结果或实际生效的指导，也不自动授权待办动作。
-- 决定依据：最新用户请求明确要求修复四项 macOS 默认临时路径失败，验证后提交并推送。采用路径规范化和相对路径映射，保留库/原始输入边界及迁移哈希校验；不以覆盖 TMPDIR 绕过问题。
-- 存储限制：知识、原始材料和稿件分别使用外部 `wiki_root`、`raw_root`、`paper_root`；本次未解析这些别名，实际位置和可用性未核验。来源：[AGENTS.md](../../AGENTS.md) Storage and source ownership，以及 [README.md](../../README.md) External content paths。
-- 已排除 / 暂停的方案：不强推，不改写真实 OCR 结果或外部 wiki，不执行其他文档待办；不放宽不同 wiki 根目录检查。
+- 内容位置：知识与日志使用 `wiki_root`，实验记录使用 `experiment_root`，报告与计划使用 `output_root`，原始输入使用 `raw_root`，作者稿件使用 `paper_root`。实验和输出根目录与 wiki 独立，使用前按 [AGENTS.md](../../AGENTS.md) 验证实际所需别名。
+- 图谱身份：`experiments/<slug>`、已有 `outputs/<slug>` 保持逻辑身份，物理位置由 `tools/_content.py` 解析。不能通过拼接 wiki 子目录恢复旧布局。
+- 同步方式：正常 merge 与普通 push，保留双方提交历史。恢复分支 `codex/backup-before-sync-20261025-4b44b94` 指向合并前的本地提交，仅在本机创建。
+- 本会话先前的外部内容迁移与清理记录位于 `@output-root/independent-roots-migration-2026-10-25.md`、`@output-root/orphan-page-retention-2026-10-25.md`。这些外部内容及本机 `config/paths.json` 不在仓库提交中，本次 Git 同步不证明其他电脑已迁移内容或配置。
+- Zotero 的未完成事项见 [跨平台状态](../zotero-cross-platform-support-plan.md) 与 [内部 API 插件状态](../zotero-internal-api-plugin-plan.md)。文档待办不构成操作授权。
 
 ## 4. 下一步与阻塞
 
-以下为候选后续行动，不是执行授权。
+- 本次代码集成与推送没有剩余阻塞。后续具体开发或研究工作等待用户指定。
+- 下一次恢复时先核对 Git 状态、最新提交和实际远端；跨机器使用时另行核验本机根目录配置、外部数据及 Python 环境。先前快照不保证当前同步状态。
+- 新研究计算、真实库操作、依赖安装及其他外部写入均需对应的用户授权，不能从本文件的待办或历史记录推导。
 
-1. 提交本轮已验证的修复并普通推送，实时查询远端 main 与本地 HEAD、工作区状态；失败须保留实际错误。
-2. 后续具体开发范围待用户选择；Zotero 未完成事项仍以两份状态文档为准，本清单不授权自动实施或真实库操作。
+## 5. 最小恢复入口
 
-## 5. 恢复工作所需信息
+- 先读 [AGENTS.md](../../AGENTS.md)，再按任务读 [README.md](../../README.md)、[路径配置](../../config/README.md) 和相关技能。
+- 版本检查：`git status --short --branch`、`git log -3 --oneline`、`git rev-parse HEAD`；需要远端最新状态时执行用户授权范围内的远端查询。
+- 代码基线：集成提交 `9d32fe0` 已验证。此后的交接文档提交不改变已测试代码；若后来代码变化，需重新选择相关验证。
+- 尚未核验：其他电脑的工作区、外部内容同步状态、外部服务状态及其他运行任务。不要把本机测试或 Git 同步推断为这些项目已完成。
 
-- 项目位置与必读文件：Git 根目录与本次工作目录均为 `llm-wiki` 仓库根目录；先读 [AGENTS.md](../../AGENTS.md)，再按任务查阅 [README.md](../../README.md) 和对应 `skills/<name>/SKILL.md`。跨电脑绝对路径映射未知；当前方案或主稿路径未核验。
-- 版本与交接状态：本轮基线 main 为 `3b248adf307c37cc16e1487d3f503ca476b31469`，开始时工作区干净。本轮改动限 `tools/batch_reocr.py`、`tests/test_batch_reocr.py`、`docs/batch-reocr.md` 和本文件；最终提交以 Git 历史为准。外部数据及其他电脑工作区未同步或核验。
-- 环境与执行入口：已验证项目 Python 3.11.14 可运行上述客户端测试；完整依赖与外部服务可用性未核验。工具入口规范仍为从根目录运行 `uv run python -X utf8 tools/<tool>.py ...`。来源：[AGENTS.md](../../AGENTS.md) Python execution。
-- 最小验证与结果位置：在根目录只读运行 `git status --short`、`git branch --show-current`、`git rev-parse HEAD`，检查 `AGENTS.md` 的引用与 `docs/templates/PROJECT_STATE.md` 是否一致，比较本快照；预期是明确实际版本和差异，不要求与旧快照一致。科研验证方法、预期结果及输出位置未知。
-- 恢复前确认：按任务核对文件和版本完整性、未提交/未跟踪内容、外部路径映射、数据与环境、仍在运行的任务；本状态文件不证明这些内容已同步，也不保证中断前状态已保存。
-
-维护：只在有实质变化且当前范围允许写入时更新，更新前重读目标；详细证据留在原文件，不积累聊天转录，不保存密码、密钥、令牌、受限个人数据或不必要的敏感路径。无法保存时如实报告，并提供简短交接摘要。
+维护：仅在当前授权范围内记录实际状态；更新前重读目标，保留并发编辑。不记录密钥、密码或不必要的敏感路径，不累积聊天转录。
