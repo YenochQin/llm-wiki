@@ -6,7 +6,7 @@ Read this reference before any manuscript workspace selection or write, includin
    ```shell
    uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@paper-root' --json
    ```
-   `paper_root` is configured per platform in `config/paths.json`, with optional `LLM_WIKI_PAPER_ROOT` override. It must be outside the code repository and separate from `wiki_root` and `raw_root`. Missing or invalid configuration is an error; never fall back to repository-local `paper/`, `papers/`, or `artifacts/`.
+   `paper_root` is derived from `[wiki].root_dir/paper_draft` when `paper_draft = true` in `config/paths.toml`, with optional `LLM_WIKI_PAPER_ROOT` override. It must be outside the code repository and separate from `wiki_root` and `raw_root`. Missing or invalid configuration is an error; never fall back to repository-local `paper/`, `papers/`, or `artifacts/`.
 2. Select the research topic and manuscript version:
    - `paper-id` is a stable, undated topic slug. Use the user-supplied id unchanged; otherwise reuse the topic of the selected manuscript or derive an undated lowercase ASCII slug from the research topic/title. For a plan filename, remove the `paper-plan-` prefix, extension, and date component before deriving a topic id. If the topic cannot be identified, ask for an id. Maximum length: 96 characters.
    - `draft-id` identifies one manuscript version. Its format is `YYYY-MM-DD-<purpose-slug>` with a valid calendar date and a lowercase ASCII slug (maximum 120 characters). Use the user-supplied id unchanged. For a new draft without an id, use the user's local calendar date plus a short name describing the draft; if it collides, add `-v2`, `-v3`, etc. rather than overwriting.

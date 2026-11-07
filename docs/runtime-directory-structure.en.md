@@ -2,7 +2,7 @@
 
 > On-demand reference for storage layout and runtime operations. `AGENTS.md` and `CLAUDE.md` keep the essential execution rules; page and support-file schemas live in their dedicated runtime documents.
 
-`wiki/`, `experiments/`, `outputs/`, `raw/`, and `papers/` below are external roots configured as
+`wiki/`, `experiment/`, `output/`, `raw/`, and `paper_draft/` below are external roots derived from `[wiki].root_dir` and enabled booleans, exposed internally as
 `wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root`. Generated research content does not
 belong in the code repository; tools, skills, maintained docs, and templates do.
 
@@ -29,15 +29,15 @@ wiki/
     ├── context_brief.md
     └── open_questions.md
 
-experiments/           ← experiment_root; experiment entities and supporting records
-outputs/               ← output_root; reports, saved answers, and paper plans
+experiment/            ← experiment_root; experiment entities and supporting records
+output/                ← output_root; reports, saved answers, and paper plans
 
 raw/
 ├── papers/            ← user-owned source PDFs and other original paper files
 ├── notes/             ← user-owned .md notes
 └── web/               ← user-owned HTML / Markdown
 
-papers/                ← paper_root; author manuscripts, not wiki literature summaries
+paper_draft/           ← paper_root; author manuscripts, not wiki literature summaries
 ├── rmcdhf-radial-research/  ← stable, undated research topic
 │   ├── 2026-10-06-rmcdhf-research/
 │   │   ├── paper.tex      ← or a split-file main.tex
@@ -60,8 +60,7 @@ tools/                 ← Python tooling (run via uv)
 
 config/
 ├── .env.example       ← template for ~/.config/llm-wiki/.env
-├── paths.json.example ← template for cross-platform wiki/raw/paper path config
-├── zotero-roots.json  ← Zotero data/profile directory candidates
+├── paths.toml.example ← machine-local [wiki] and [zotero] configuration
 └── settings.local.json.example
 
 AGENTS.md              ← maintained Codex runtime rules
@@ -77,8 +76,8 @@ docs/                  ← long-form runtime references (this file lives here)
 
 - `raw/papers/`, `raw/notes/`, and `raw/web/` are user-owned original inputs.
 - `wiki/sources/` is the vault-visible source layer: converted paper markdown, copied notes, and copied web clips.
-- Source PDFs stay outside the vault in `raw/papers/`; only their MinerU markdown goes under `wiki/sources/papers/`.
-- `config/paths.json` sets `wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root` to OS-specific external directories via `profiles.macos/windows/linux`; it is machine-local and ignored by git. Manuscripts have no in-repository fallback.
+- Source PDFs stay outside the knowledge directory in `raw/papers/`; only their MinerU markdown goes under `wiki/sources/papers/`.
+- `config/paths.toml` contains `[wiki]` (`root_dir` plus directory booleans) and `[zotero]` (`profile_dir`, `data_dir`). It is machine-local and ignored by git. Knowledge uses `root_dir/wiki`; enabled keys use `root_dir/<key>`. Manuscripts use `paper_draft = true` and have no in-repository fallback.
 - `@paper-root/<paper-id>/<draft-id>/` selects a version under a stable research topic. Routine revisions keep that directory; major structural changes or independent evaluations fork a sibling draft, preserving the original and recording its parent.
 - `docs/templates/` is the maintained template library; do not keep a root-level `templates/` directory.
 - `graph/` is derived and should be maintained only through `tools/research_wiki.py`.
@@ -86,16 +85,18 @@ docs/                  ← long-form runtime references (this file lives here)
 
 ## External Path Resolution
 
-- Path configuration uses `config/paths.json` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_EXPERIMENT_ROOT`, `LLM_WIKI_OUTPUT_ROOT`, `LLM_WIKI_RAW_ROOT`, `LLM_WIKI_PAPER_ROOT`) for external `wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root`; `active_profile: auto` selects the OS profile and `LLM_WIKI_PATH_PROFILE` can override it. `resolve_path_alias.py` strictly validates each requested content root: missing configuration and roots inside or containing the code repository are errors. Validate the aliases needed by the task before content reads/writes, including tool writes; an unused raw/manuscript root is not required. Roots may be absent on disk before initialization. Legacy low-level wiki/raw defaults remain for migration tools and test fixtures, not skill content operations.
+- Path configuration uses `config/paths.toml` (or `LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_EXPERIMENT_ROOT`, `LLM_WIKI_OUTPUT_ROOT`, `LLM_WIKI_RAW_ROOT`, `LLM_WIKI_PAPER_ROOT`) for external `wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root`; TOML uses explicit local paths without OS/profile selection. `resolve_path_alias.py` strictly validates each requested content root: missing configuration and roots inside or containing the code repository are errors. Validate the aliases needed by the task before content reads/writes, including tool writes; an unused raw/manuscript root is not required. Roots may be absent on disk before initialization. Legacy low-level wiki/raw defaults remain for migration tools and test fixtures, not skill content operations.
 - `@configured`, `@experiment-root`, `@output-root`, `@raw-root`, `@paper-root`, `@configured-sources-papers`, and alias-relative paths such as `@paper-root/<paper-id>/<draft-id>/paper.tex` are resolved only by Python tools supporting `tools/_paths.py`. For direct file operations, first run `uv run python -X utf8 tools/resolve_path_alias.py ...` and use the returned absolute paths; never create literal alias directories. `tools/paper_workspace.py create|resolve|fork|list` manages topics and draft versions; create/fork refuse existing destinations.
 
-See `config/README.md` for profile examples and manuscript workspace commands. `paper_root` is separate from wiki/raw storage; create/fork refuse existing destinations, and inherited evidence is not a newly executed experiment.
+See `config/README.md` for TOML examples and manuscript workspace commands. `paper_root` is separate from wiki/raw storage; create/fork refuse existing destinations, and inherited evidence is not a newly executed experiment.
 
 ## Independent Experiments and Outputs
 
-Configure `experiment_root` and `output_root` explicitly, normally as siblings of
-`wiki_root`. Each must be outside the repository and disjoint from every other
-content root. They have no implicit sibling or repository-local fallback. Resolve
+Enable `experiment = true` and `output = true` in `[wiki]` to derive
+`experiment_root = root_dir/experiment` and `output_root = root_dir/output`. Each must be outside the repository and disjoint from every other
+content root. Disabled or omitted switches have no fallback. Reading config is read-only;
+`resolve_path_alias.py --create-dirs` explicitly creates all enabled directories.
+Custom keys such as `beamer = true` resolve through `@directory/beamer`. Resolve
 `@experiment-root` and `@output-root` before accessing them; an unused root does
 not block a wiki-only operation. Retired `@configured/experiments/...` and
 `@configured/outputs/...` aliases fail with a migration hint.
@@ -132,9 +133,9 @@ Use the invocation policy in the active runtime entrypoint. `setup.sh` manages d
 
 ## Zotero and Literature Lookup
 
-- **Zotero integration**: `tools/find_zotero_pdf.py`, `tools/fetch_zotero_metadata.py`, and `tools/_zotero_snapshot.py` look up PDFs by `--title` or `--doi`, then use the selected candidate's internal `item_key` to read parent-item metadata. `--item-key` is not a user-facing paper selector for `/ingest` or `/reingest`. Zotero roots are configured via the selected profile's `zotero_roots` in `config/paths.json` or `--zotero-root`. `/ingest` can use this to auto-locate Zotero attachments and derive plain BibTeX from Zotero metadata; BibTeX is written to the body `## BibTeX` fenced code block, not YAML frontmatter. Raw local PDFs belong to `/ingest-local-pdf`.
+- **Zotero integration**: `tools/find_zotero_pdf.py`, `tools/fetch_zotero_metadata.py`, and `tools/_zotero_snapshot.py` look up PDFs by `--title` or `--doi`, then use the selected candidate's internal `item_key` to read parent-item metadata. `--item-key` is not a user-facing paper selector for `/ingest` or `/reingest`. Zotero roots are configured via explicit `[zotero].data_dir` and `profile_dir` in `config/paths.toml` or `--zotero-root`. `/ingest` can use this to auto-locate Zotero attachments and derive plain BibTeX from Zotero metadata; BibTeX is written to the body `## BibTeX` fenced code block, not YAML frontmatter. Raw local PDFs belong to `/ingest-local-pdf`.
 - **Literature lookup**: `tools/fetch_literature.py` uses no-key Crossref search and metadata. Citation graph coverage is best-effort because public sources expose fewer citation edges than key-gated services.
 
 ## Repository Migration and Cleanup
 
-- **Repository and wiki can be separated**: use `tools/separate_wiki_repository.py` to copy/move `wiki/` and `raw/` to external absolute paths and write `config/paths.json`; use `tools/clean_wiki_repository.py` to remove leftover in-repo `wiki/` and `raw/`. Cleanup is dry-run by default and deletes only with `--yes`.
+- **Repository and wiki can be separated**: use `tools/separate_wiki_repository.py` to copy/move `wiki/` and `raw/` to external absolute paths and write `config/paths.toml`; use `tools/clean_wiki_repository.py` to remove leftover in-repo `wiki/` and `raw/`. Cleanup is dry-run by default and deletes only with `--yes`.

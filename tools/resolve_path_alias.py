@@ -17,7 +17,7 @@ Inputs:
     content configuration. A root need not exist yet (for initialization).
 
 Writes:
-    Nothing. Results are printed as tab-separated text or JSON.
+    Nothing by default; --create-dirs creates configured directories. Results are printed as tab-separated text or JSON.
 
 Usage:
     uv run python -X utf8 tools/resolve_path_alias.py
@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 from _cli_io import configure_utf8_stdio
-from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
+from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path, initialize_directories
 
 DEFAULT_ALIASES = [
     "@project-root",
@@ -59,7 +59,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--paths-config",
         default=DEFAULT_CONFIG_PATH,
         type=Path,
-        help="Path config JSON (default: config/paths.json).",
+        help="Path config TOML (default: config/paths.toml).",
+    )
+    parser.add_argument(
+        "--create-dirs", action="store_true",
+        help="Explicitly create wiki/ and enabled [wiki] directories after validation.",
     )
     parser.add_argument(
         "--json",
@@ -76,7 +80,9 @@ def main() -> None:
     try:
         runtime_paths = load_paths(config_path=args.paths_config)
         requested = args.paths or [
-            *DEFAULT_ALIASES,
+            *(alias for alias in DEFAULT_ALIASES
+              if alias != "@raw-root" or runtime_paths.raw_root_configured),
+            *(f"@directory/{name}" for name in runtime_paths.directories if name != "wiki"),
             *(["@paper-root"] if runtime_paths.paper_root is not None else []),
             *(["@experiment-root"] if runtime_paths.experiment_root is not None else []),
             *(["@output-root"] if runtime_paths.output_root is not None else []),
@@ -87,6 +93,8 @@ def main() -> None:
             ))
             for value in requested
         }
+        if args.create_dirs:
+            initialize_directories(runtime_paths)
     except Exception as exc:
         if args.json:
             print(json.dumps({"status": "error", "message": str(exc)}, ensure_ascii=False))
@@ -98,7 +106,6 @@ def main() -> None:
         payload = {
             "status": "ok",
             "config_path": str(runtime_paths.config_path),
-            "profile": runtime_paths.profile,
             "used_config": runtime_paths.used_config,
             "paths": resolved,
         }

@@ -71,8 +71,8 @@ The specifications are English-only. Agent replies follow the language of the cu
 raw/           user-owned originals (PDFs, notes, web clips). Read-only to the LLM.
 wiki/sources/  vault-visible sources: MinerU-converted paper markdown, copied notes and web clips.
 wiki/          Knowledge pages: papers, concepts, topics, people, ideas, claims, Summary, foundations.
-experiments/   Experiment records (experiment_root); retain claim/idea evidence links.
-outputs/       Reports and plans (output_root); indexed from wiki/index.md.
+experiment/    Experiment records (experiment_root); retain claim/idea evidence links.
+output/        Reports and plans (output_root); indexed from wiki/index.md.
 wiki/graph/    auto-derived edges, citations, context_brief — never hand-edit.
 tools/         Python CLIs (run via uv).
 skills/        canonical English skill files; includes shared-references/.
@@ -81,13 +81,13 @@ CLAUDE.md      Claude Code runtime rules, maintained directly.
 docs/          pipeline docs, runtime references, page templates.
 ```
 
-`wiki/` renders as an Obsidian vault: internal links use `[[slug]]` wikilinks, and every forward link has a required reverse link (see [Cross-Reference Rules](docs/runtime-support-files.en.md#cross-reference-rules)).
+`root_dir` is the Obsidian vault, with knowledge under `wiki/`: internal links use `[[slug]]` wikilinks, and every forward link has a required reverse link (see [Cross-Reference Rules](docs/runtime-support-files.en.md#cross-reference-rules)).
 
 ### External content paths
 
 This repository stores skills, tools, configuration, and maintained runtime
-documentation. Generated research content lives outside it. Set OS-specific
-`wiki_root`, `experiment_root`, `output_root`, `raw_root`, and `paper_root` in `config/paths.json` (gitignored;
+documentation. Generated research content lives outside it. Set `[wiki].root_dir`
+and boolean directory switches in `config/paths.toml` (gitignored;
 see [`config/README.md`](config/README.md)). `paper_root` stores independent
 research topics in stable `<paper-id>/` directories, each containing multiple
 `YYYY-MM-DD-<purpose>/` manuscript versions; `wiki_root/papers/` continues
@@ -108,7 +108,7 @@ After verifying the external copy, optionally clean the in-repo `wiki/` and `raw
 uv run python -X utf8 tools/clean_wiki_repository.py --target all --yes
 ```
 
-`active_profile: "auto"` chooses `macos`, `windows`, or `linux` based on the current OS. Override with `LLM_WIKI_PATH_PROFILE`. Graph commands accept `@wiki` to resolve the configured vault:
+The machine-local TOML file has `[wiki]` and `[zotero]` tables, with no OS/profile selection. Knowledge lives in `root_dir/wiki`; enabled boolean keys add same-named sibling directories (for example `experiment` and `paper_draft`). Graph commands accept `@wiki` to resolve the configured vault:
 
 ```bash
 uv run python -X utf8 tools/research_wiki.py rebuild-index @wiki
@@ -174,7 +174,7 @@ uv run python -X utf8 tools/grounding_lint.py --wiki-dir @configured --only pape
 PDF → MinerU markdown adapter. See [`docs/mineru-pipeline.md`](docs/mineru-pipeline.md) for the full pipeline, cache layout, and adapter passes. Canonical ingest format is `mineru-md`.
 
 - **`/ingest-local-pdf`** — for raw PDFs or directory batches. Prepares `wiki/sources/papers/*.md` and hands off to `/ingest`.
-- **`/ingest`** — consumes prepared markdown or resolves a Zotero attachment via `--title` or `--doi`. Scans the selected profile's `zotero_roots` candidates in `config/paths.json`; override with `--zotero-root <Zotero data dir>`. The Zotero helper snapshots `zotero.sqlite` into `config/zotero-cache/` and queries it read-only. If Zotero Desktop's local API is running, metadata (title, DOI, year, venue, creators, abstract, tags, citation key, `bibtex`) is pulled from there and falls back to SQLite + Crossref. Zotero `--item-key` is not a user-facing `/ingest` selector; selected candidates may still use their internal `item_key` for metadata enrichment.
+- **`/ingest`** — consumes prepared markdown or resolves a Zotero attachment via `--title` or `--doi`. Reads explicit `[zotero].data_dir` and `profile_dir` paths in `config/paths.toml`; override with `--zotero-root <Zotero data dir>`. The Zotero helper snapshots `zotero.sqlite` into `config/zotero-cache/` and queries it read-only. If Zotero Desktop's local API is running, metadata (title, DOI, year, venue, creators, abstract, tags, citation key, `bibtex`) is pulled from there and falls back to SQLite + Crossref. Zotero `--item-key` is not a user-facing `/ingest` selector; selected candidates may still use their internal `item_key` for metadata enrichment.
 - **`/ingest-light`** — lightweight intake for dissertation-introduction or background papers. Creates a compact paper page, tags it for `thesis-introduction`, and links it to a target Summary without expanding the full concept/claim/people graph.
 - **`/promote-light-ingest`** — ranks light-ingested pages that are worth upgrading to full `/ingest` or `/reingest`.
 - **`/reingest`** — rerun the adapter and migrate linked entities after the PDF adapter, template, or analysis policy changes. `--paper-only` skips the entity audit.

@@ -15,11 +15,11 @@ from pathlib import Path
 from typing import Any
 
 from _page_scan import markdown_pages
+from _paths import DEFAULT_CONFIG_PATH, load_paths, resolve_runtime_path
 
 import requests
 import yaml
 
-DEFAULT_WIKI = Path("/home/yenoch/Projects/ObsidianFiles/ObsidianVaults/YenochWiki/wiki")
 DEFAULT_API = "http://127.0.0.1:23119"
 HEADERS = {"Zotero-Allowed-Request": "1", "User-Agent": "llm-wiki-zotero-read/0.1"}
 
@@ -201,11 +201,17 @@ def classify(text: str) -> list[tuple[str, int]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--wiki-root", type=Path, default=DEFAULT_WIKI)
+    parser.add_argument("--wiki-root", default="@configured")
+    parser.add_argument("--paths-config", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument("--api", default=DEFAULT_API)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
-    pages = parse_pages(args.wiki_root)
+    try:
+        paths = load_paths(config_path=args.paths_config)
+        wiki_root = resolve_runtime_path(args.wiki_root, paths, role="wiki-root", require_external=True)
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
+    pages = parse_pages(wiki_root)
     items = [item_record(item) for item in fetch_items(args.api)]
     by_doi: dict[str, list[dict[str, Any]]] = {}
     by_ck: dict[str, list[dict[str, Any]]] = {}

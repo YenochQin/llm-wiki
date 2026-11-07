@@ -59,9 +59,8 @@ class PrepareZoteroSourceTests(unittest.TestCase):
                 project_root=root,
                 wiki_root=root / "wiki",
                 raw_root=root / "raw",
-                config_path=root / "config" / "paths.json",
+                config_path=root / "config" / "paths.toml",
                 used_config=False,
-                profile="test",
             )
             args = Namespace(
                 item_key="ABC123",

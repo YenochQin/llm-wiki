@@ -22,13 +22,14 @@ class IndependentContentRootsTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.root = Path(tmp.name)
-        self.config = self.root / 'paths.json'
-        self.wiki = self.root / 'knowledge'
-        self.experiments = self.root / 'lab-records'
-        self.outputs = self.root / 'reading'
-        self.config.write_text(json.dumps(dict(wiki_root=str(self.wiki),
-            experiment_root=str(self.experiments), output_root=str(self.outputs))))
+        self.root = Path(tmp.name).resolve()
+        self.config = self.root / 'paths.toml'
+        self.wiki = self.root / 'wiki'
+        self.experiments = self.root / 'experiment'
+        self.outputs = self.root / 'output'
+        self.config.write_text(
+            f'[wiki]\nroot_dir = {json.dumps(str(self.root))}\n'
+            'experiment = true\noutput = true\n[zotero]\n')
         self.paths = load_paths(config_path=self.config)
         token = _content.configure_content_paths(self.paths)
         self.addCleanup(_content._runtime.reset, token)
@@ -93,8 +94,8 @@ tags: []
         self.assertEqual(wiki._validate_node_refs(self.wiki, 'experiments/measurement'), [])
         self.capture(wiki.rebuild_index, str(self.wiki))
         index = (self.wiki / 'index.md').read_text()
-        self.assertIn('../lab-records/measurement.md', index)
-        self.assertIn('../reading/report.md', index)
+        self.assertIn('../experiment/measurement.md', index)
+        self.assertIn('../output/report.md', index)
         self.assertEqual(yaml.safe_load(index)['outputs'][0]['title'], 'Reading report')
         self.assertEqual(self.capture(wiki.get_stats, str(self.wiki), as_json=True)['experiments'], 1)
         with contextlib.redirect_stdout(io.StringIO()):

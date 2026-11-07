@@ -19,7 +19,7 @@ Use this when the user says things like:
 - `<collection-path>`: collection hierarchy, accepted separators: `/`, `>`, or `::`.
   - Example: `2026/202605/0507`
   - Example: `2026 > 202605 > 0507`
-- `--zotero-root <dir>` optional: Zotero data directory or profile directory. If omitted, scan the selected profile's `zotero_roots` in `config/paths.json`.
+- `--zotero-root <dir>` optional: Zotero data directory or profile directory. If omitted, read explicit `[zotero].data_dir` and `profile_dir` in `config/paths.toml`.
 - `--no-recursive` optional: list only direct items in the collection, not items in nested subcollections.
 - `--output-md <path>` optional: write a Markdown table with `citationKey | title | doi`.
 
@@ -43,7 +43,7 @@ uv run python -X utf8 tools/list_zotero_collection.py "2026/202605/0507" --zoter
 
 The tool:
 
-1. Resolves Zotero root through `config/paths.json` unless `--zotero-root` is provided.
+1. Resolves Zotero root through `config/paths.toml` unless `--zotero-root` is provided.
 2. Creates/reuses a read-only snapshot under `config/zotero-cache/`.
 3. Resolves the exact collection path.
 4. Lists non-attachment bibliographic parent items.

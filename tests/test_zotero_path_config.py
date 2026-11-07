@@ -1,175 +1,71 @@
+"""Zotero and path writers share the single machine-local TOML contract."""
 import json
-import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
 import find_zotero_pdf
 import _paths
+from separate_wiki_repository import execute
 
 
 class ZoteroPathConfigTests(unittest.TestCase):
-    def test_profiled_paths_config_uses_selected_profile_zotero_roots(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            win_root = root / "win-zotero"
-            linux_root = root / "linux-zotero"
-            disabled_root = root / "disabled-zotero"
-            config_path = root / "paths.json"
-            config_path.write_text(
-                json.dumps(
-                    {
-                        "active_profile": "windows",
-                        "profiles": {
-                            "windows": {
-                                "wiki_root": "E:/wiki",
-                                "raw_root": "E:/raw",
-                                "zotero_roots": [
-                                    {"label": "win", "path": str(win_root), "enabled": True},
-                                    {"label": "disabled", "path": str(disabled_root), "enabled": False},
-                                ],
-                            },
-                            "linux": {
-                                "wiki_root": "~/wiki",
-                                "raw_root": "~/raw",
-                                "zotero_roots": [str(linux_root)],
-                            },
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name).resolve()
+        self.config = self.root / "paths.toml"
 
-            roots, notes = find_zotero_pdf._candidate_roots_from_config(config_path)
+    def test_identical_data_and_profile_paths_are_deduplicated(self):
+        value = json.dumps(str(self.root / 'zotero'))
+        self.config.write_text(f'[zotero]\ndata_dir = {value}\nprofile_dir = {value}')
+        roots, _ = find_zotero_pdf._candidate_roots_from_config(self.config)
+        self.assertEqual(roots, [self.root / 'zotero'])
 
-            self.assertEqual(roots, [win_root.resolve()])
-            self.assertTrue(any("profile windows" in note for note in notes))
+    def test_missing_config_has_actionable_diagnostic(self):
+        roots, notes = find_zotero_pdf._candidate_roots_from_config(self.config)
+        self.assertEqual(roots, [])
+        self.assertIn('not found', notes[0])
 
-    def test_path_profile_env_override_selects_another_profile(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            config_path = root / "paths.json"
-            config_path.write_text(
-                json.dumps(
-                    {
-                        "active_profile": "windows",
-                        "profiles": {
-                            "windows": {"zotero_roots": [str(root / "win")]},
-                            "linux": {"zotero_roots": [str(root / "linux")]},
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
-            old = os.environ.get("LLM_WIKI_PATH_PROFILE")
-            os.environ["LLM_WIKI_PATH_PROFILE"] = "linux"
-            try:
-                roots, _notes = find_zotero_pdf._candidate_roots_from_config(config_path)
-            finally:
-                if old is None:
-                    os.environ.pop("LLM_WIKI_PATH_PROFILE", None)
-                else:
-                    os.environ["LLM_WIKI_PATH_PROFILE"] = old
+    def test_invalid_toml_reports_error_without_candidates(self):
+        for content in ('[zotero', '[zotero]\ndata_dir = 12',
+                        '[zotero]\nroots = ["~/Zotero"]'):
+            self.config.write_text(content)
+            with self.subTest(content=content):
+                roots, notes = find_zotero_pdf._candidate_roots_from_config(self.config)
+                self.assertEqual(roots, [])
+                self.assertIn('failed to read path config', notes[0])
 
-            self.assertEqual(roots, [(root / "linux").resolve()])
+    def test_json_paths_are_rejected_by_readers_and_writer_without_mutation(self):
+        legacy = self.root / 'paths.json'
+        original = json.dumps({'profiles': {'macos': {'zotero_roots': ['~/Zotero']}}})
+        legacy.write_text(original)
+        with self.assertRaisesRegex(ValueError, 'must be a .toml file'):
+            _paths.load_paths(config_path=legacy)
+        roots, notes = find_zotero_pdf._candidate_roots_from_config(legacy)
+        self.assertEqual(roots, [])
+        self.assertIn('must be a .toml file', notes[0])
+        with self.assertRaisesRegex(ValueError, 'must be a .toml file'):
+            _paths.write_paths_config(legacy, self.root / 'wiki', self.root / 'raw')
+        self.assertEqual(legacy.read_text(), original)
+        # An obsolete destination must fail before the migration copies files.
+        project = self.root / 'code'
+        (project / 'wiki').mkdir(parents=True)
+        (project / 'wiki/existing.md').write_text('preserve')
+        target = self.root / 'vault'
+        with self.assertRaisesRegex(ValueError, 'must be a .toml file'):
+            execute(project, target / 'wiki', target / 'raw', legacy, 'copy', False)
+        self.assertFalse(target.exists())
 
-    def test_legacy_roots_config_is_still_accepted_when_explicitly_passed(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            config_path = root / "zotero-roots.json"
-            config_path.write_text(
-                json.dumps({"roots": [str(root / "legacy")]}),
-                encoding="utf-8",
-            )
-
-            roots, notes = find_zotero_pdf._candidate_roots_from_config(config_path)
-
-            self.assertEqual(roots, [(root / "legacy").resolve()])
-            self.assertTrue(any("legacy roots" in note for note in notes))
-
-class RuntimePathsConfigTests(unittest.TestCase):
-    def test_write_paths_config_preserves_profile_zotero_roots(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            config_path = root / "paths.json"
-            config_path.write_text(
-                json.dumps(
-                    {
-                        "active_profile": "auto",
-                        "profiles": {
-                            "windows": {
-                                "wiki_root": "old-wiki",
-                                "raw_root": "old-raw",
-                                "zotero_roots": [
-                                    {"label": "custom", "path": "E:/Literatures/Zotero/data", "enabled": True}
-                                ],
-                            },
-                            "linux": {
-                                "wiki_root": "~/wiki",
-                                "raw_root": "~/raw",
-                                "zotero_roots": ["~/Zotero"],
-                            },
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            _paths.write_paths_config(config_path, root / "new-wiki", root / "new-raw")
-            payload = json.loads(config_path.read_text(encoding="utf-8"))
-            profile = payload["profiles"][_paths.current_platform_profile()]
-
-            self.assertEqual(profile["wiki_root"], str((root / "new-wiki").resolve()))
-            self.assertEqual(profile["raw_root"], str((root / "new-raw").resolve()))
-            self.assertEqual(
-                profile["zotero_roots"],
-                [{"label": "custom", "path": "E:/Literatures/Zotero/data", "enabled": True}],
-            )
-            self.assertIn("linux", payload["profiles"])
-
-    def test_write_paths_config_keeps_current_profile_custom_zotero_roots(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            config_path = root / "paths.json"
-            current_profile = _paths.current_platform_profile()
-            config_path.write_text(
-                json.dumps(
-                    {
-                        "active_profile": "auto",
-                        "profiles": {
-                            current_profile: {
-                                "wiki_root": "~/wiki",
-                                "raw_root": "~/raw",
-                                "zotero_roots": [
-                                    {"label": "current-custom", "path": str(root / "current"), "enabled": True}
-                                ],
-                            },
-                            "windows": {
-                                "wiki_root": "old-wiki",
-                                "raw_root": "old-raw",
-                                "zotero_roots": [
-                                    {"label": "other-custom", "path": "E:/Literatures/Zotero/data", "enabled": True}
-                                ],
-                            },
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            _paths.write_paths_config(config_path, root / "new-wiki", root / "new-raw")
-            payload = json.loads(config_path.read_text(encoding="utf-8"))
-            profile = payload["profiles"][current_profile]
-
-            self.assertEqual(
-                profile["zotero_roots"],
-                [{"label": "current-custom", "path": str(root / "current"), "enabled": True}],
-            )
+    def test_profile_tables_in_toml_are_rejected(self):
+        self.config.write_text('[profiles.macos]\nwiki_root = "~/wiki"')
+        with self.assertRaisesRegex(ValueError, 'unknown path configuration tables'):
+            _paths.load_paths(config_path=self.config)
+        self.assertEqual(find_zotero_pdf._candidate_roots_from_config(self.config)[0], [])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

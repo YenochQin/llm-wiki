@@ -29,13 +29,14 @@ import _env  # noqa: F401  side-effect import: loads ~/.config/llm-wiki/.env fir
 import argparse
 import json
 import os
-import platform
 import re
 import sys
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 import requests
+
+from _paths import DEFAULT_CONFIG_PATH, read_toml_config, _absolute_config_path, expand_path, find_project_root
 
 PLUGIN_PREFIX = "/wiki-organizer/v1"
 DEFAULT_BASE_URL = "http://127.0.0.1:23119"
@@ -86,46 +87,26 @@ TOKEN_PREF_PATTERN = re.compile(
 )
 
 
-def _token_from_zotero_prefs(profile_root: Path | None = None) -> str | None:
-    """Read the token straight from the Zotero profile's prefs.js.
-
-    The preference is the authoritative token storage, so this fallback lets
-    the client work with zero configuration when the convenience token file
-    has not been written yet.
-    """
-    roots = [profile_root] if profile_root is not None else _zotero_profile_roots()
-    for root in roots:
-        token = _token_from_profile_root(root)
-        if token:
-            return token
-    return None
-
-
-def _zotero_profile_roots() -> list[Path]:
-    system = platform.system()
-    if system == "Darwin":
-        return [Path.home() / "Library" / "Application Support" / "Zotero" / "Profiles"]
-    if system == "Windows":
-        appdata = os.environ.get("APPDATA")
-        return [Path(appdata) / "Zotero" / "Zotero" / "Profiles"] if appdata else []
-    return [Path.home() / ".zotero" / "zotero"]
-
-
-def _token_from_profile_root(root: Path) -> str | None:
+def _token_from_zotero_prefs(
+    profile_dir: Path | None = None, *, config_path: Path | None = None,
+) -> str | None:
+    """Read only the configured Zotero profile's prefs.js; never scan OS defaults."""
+    if profile_dir is None:
+        path = expand_path(config_path or DEFAULT_CONFIG_PATH, find_project_root())
+        try:
+            cfg = read_toml_config(path)
+            configured = cfg.get("zotero", {}).get("profile_dir")
+            if not configured:
+                return None
+            profile_dir = _absolute_config_path(configured, "zotero.profile_dir")
+        except (OSError, ValueError) as exc:
+            raise ClientError(f"无法读取路径配置 {path}: {exc}") from exc
     try:
-        candidates = sorted(root.glob("*/prefs.js"))
+        text = (profile_dir / "prefs.js").read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
-    for prefs in candidates:
-        try:
-            match = TOKEN_PREF_PATTERN.search(
-                prefs.read_text(encoding="utf-8", errors="replace")
-            )
-        except OSError:
-            continue
-        if match:
-            return match.group(1)
-    return None
+    match = TOKEN_PREF_PATTERN.search(text)
+    return match.group(1) if match else None
 
 
 def _load_token(args: argparse.Namespace) -> str:
@@ -137,7 +118,7 @@ def _load_token(args: argparse.Namespace) -> str:
     ).strip()
     if token_file:
         return _read_token_file(token_file)
-    token = _token_from_zotero_prefs()
+    token = _token_from_zotero_prefs(config_path=getattr(args, "paths_config", None))
     if token:
         return token
     raise ClientError(
@@ -145,8 +126,8 @@ def _load_token(args: argparse.Namespace) -> str:
         f"  1. export {TOKEN_ENV}=<token>（token 位于 Zotero 数据目录的 wiki-organizer-token.txt）\n"
         f"  2. export {TOKEN_FILE_ENV}=/path/to/wiki-organizer-token.txt\n"
         "  3. 命令行参数 --token 或 --token-file\n"
-        "  4. 什么都不做：已自动尝试读取 ~/.zotero/zotero/*/prefs.js 中的"
-        " extensions.zotero.wikiOrganizer.token（读取失败，请确认 Zotero 已启动过插件）"
+        "  4. 在 config/paths.toml 的 [zotero] 中填写 profile_dir，客户端从该目录的 prefs.js"
+        " 读取 extensions.zotero.wikiOrganizer.token（请确认 Zotero 已启动过插件）"
     )
 
 
@@ -516,6 +497,10 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument(
         "--url",
         help=f"插件 endpoint 基地址（默认 {DEFAULT_BASE_URL}，或环境变量 {BASE_URL_ENV}）",
+    )
+    common.add_argument(
+        "--paths-config", type=Path, default=DEFAULT_CONFIG_PATH,
+        help="TOML 路径配置（默认 config/paths.toml；从 [zotero].profile_dir 读取 prefs.js）",
     )
     common.add_argument("--token", help=f"认证 token（默认取环境变量 {TOKEN_ENV}）")
     common.add_argument(

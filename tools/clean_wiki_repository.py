@@ -3,7 +3,7 @@
 
 This is a repository cleanup helper, not a wiki content reset. It removes the
 in-repo `wiki/` and/or `raw/` directories after you have configured external
-absolute paths in `config/paths.json`.
+absolute paths in `config/paths.toml`.
 
 Default mode is dry-run. Pass --yes to modify files.
 
@@ -13,7 +13,7 @@ Purpose:
 
 When to use:
     Use after `separate_wiki_repository.py` has written external absolute paths
-    to `config/paths.json` and you have confirmed the external vault works.
+    to `config/paths.toml` and you have confirmed the external vault works.
 
 Writes:
     Deletes only the selected in-repo `wiki/` and/or `raw/` directories when
@@ -73,7 +73,6 @@ def build_plan(paths, targets: list[str]) -> dict:
     return {
         "project_root": str(paths.project_root),
         "config_path": display_path(paths.config_path, paths.project_root),
-        "active_profile": paths.profile,
         "configured_wiki_root": str(paths.wiki_root),
         "configured_raw_root": str(paths.raw_root),
         "targets": targets,
@@ -100,11 +99,11 @@ def main() -> None:
     parser.add_argument("--target", choices=("wiki", "raw", "all"), default="all",
                         help="Which in-repo directories to remove after separation.")
     parser.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path,
-                        help="Path config JSON (default: config/paths.json).")
+                        help="Path config TOML (default: config/paths.toml).")
     parser.add_argument("--project-root", default=None, type=Path,
                         help="Code repository root (default: auto-detect).")
     parser.add_argument("--allow-missing-config", action="store_true",
-                        help="Permit cleanup even when config/paths.json is missing or still local.")
+                        help="Permit cleanup even when config/paths.toml is missing or still local.")
     parser.add_argument("--yes", action="store_true",
                         help="Apply the plan. Without this flag, only prints the plan.")
     args = parser.parse_args()

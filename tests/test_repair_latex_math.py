@@ -58,9 +58,8 @@ class RepairLatexMathTests(unittest.TestCase):
                 project_root=root,
                 wiki_root=wiki,
                 raw_root=root / "raw",
-                config_path=root / "config" / "paths.json",
+                config_path=root / "config" / "paths.toml",
                 used_config=False,
-                profile="test",
             )
 
             target = resolve_ingest_check_target("sample-paper", paths)
@@ -81,9 +80,8 @@ class RepairLatexMathTests(unittest.TestCase):
                 project_root=root,
                 wiki_root=wiki,
                 raw_root=root / "raw",
-                config_path=root / "config" / "paths.json",
+                config_path=root / "config" / "paths.toml",
                 used_config=False,
-                profile="test",
             )
             stdout = StringIO()
 
@@ -105,9 +103,8 @@ class RepairLatexMathTests(unittest.TestCase):
                 project_root=root,
                 wiki_root=root / "wiki",
                 raw_root=root / "raw",
-                config_path=root / "config" / "paths.json",
+                config_path=root / "config" / "paths.toml",
                 used_config=False,
-                profile="test",
             )
 
             with (

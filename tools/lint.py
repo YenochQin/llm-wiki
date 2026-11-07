@@ -1422,13 +1422,13 @@ def main():
     parser.add_argument(
         "--wiki-dir",
         default=None,
-        help="Path to wiki directory. Accepts @configured (default: config/paths.json or ./wiki)",
+        help="Path to wiki directory. Accepts @configured (default: config/paths.toml or ./wiki)",
     )
     parser.add_argument(
         "--paths-config",
         default=DEFAULT_CONFIG_PATH,
         type=Path,
-        help="Path config JSON (default: config/paths.json)",
+        help="Path config TOML (default: config/paths.toml)",
     )
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     parser.add_argument(

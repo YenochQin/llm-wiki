@@ -57,7 +57,7 @@ Turn one paper into a fully wired set of wiki pages. Execute Phases A–E in dep
 
 Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
-**Pre-condition**: working directory is the project root (`tools/`, `pyproject.toml`, `config/paths.json`). Path/environment discipline is in invariants §1.
+**Pre-condition**: working directory is the project root (`tools/`, `pyproject.toml`, `config/paths.toml`). Path/environment discipline is in invariants §1.
 
 ```shell
 uv run python -X utf8 tools/research_wiki.py stats '@configured' --json

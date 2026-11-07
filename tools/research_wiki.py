@@ -224,7 +224,7 @@ def _validate_cli_wiki_root(raw_wiki_root: str) -> str:
                     "status": "error",
                     "message": (
                         "Refusing to use the code repository's wiki/ directory as wiki_root "
-                        "while config/paths.json points at an external wiki root. "
+                        "while config/paths.toml points at an external wiki root. "
                         "Pass @configured or the external wiki root explicitly."
                     ),
                     "wiki_root": str(root),

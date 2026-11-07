@@ -21,12 +21,15 @@ class ResolvePathAliasTests(unittest.TestCase):
         self.project = self.root / "code"
         (self.project / "tools").mkdir(parents=True)
         (self.project / "pyproject.toml").write_text("", encoding="utf-8")
-        self.config = self.project / "paths.json"
+        self.config = self.project / "paths.toml"
         self.env = {key: value for key, value in os.environ.items()
                     if not key.startswith("LLM_WIKI_")}
 
-    def configure(self, **roots):
-        self.config.write_text(json.dumps({key: str(value) for key, value in roots.items()}))
+    def configure(self, root=None, **switches):
+        root = root or self.root / "vault"
+        lines = ["[wiki]", f"root_dir = {json.dumps(str(root))}"]
+        lines.extend(f"{key} = {str(value).lower()}" for key, value in switches.items())
+        self.config.write_text("\n".join([*lines, "[zotero]", ""]))
 
     def resolve(self, *aliases, env=None):
         result = subprocess.run(
@@ -50,23 +53,23 @@ class ResolvePathAliasTests(unittest.TestCase):
         self.assertFalse(self.config.exists())
 
     def test_unused_roots_do_not_block_wiki(self):
-        self.configure(wiki_root=self.root / "vault", paper_root=self.project / "invalid-papers")
+        self.configure(paper_draft=False)
         code, data = self.resolve("@configured/sources/new.md")
         self.assertEqual(code, 0)
-        self.assertEqual(data["paths"]["@configured/sources/new.md"], str(self.root / "vault/sources/new.md"))
+        self.assertEqual(data["paths"]["@configured/sources/new.md"], str(self.root / "vault/wiki/sources/new.md"))
         self.assertFalse((self.root / "vault").exists())
 
-    def test_raw_only_configuration_does_not_require_wiki_or_paper(self):
-        self.configure(raw_root=self.root / "inputs")
+    def test_raw_configuration_does_not_require_paper(self):
+        self.configure(raw=True)
         code, data = self.resolve("@raw-root")
         self.assertEqual(code, 0)
-        self.assertEqual(data["paths"]["@raw-root"], str(self.root / "inputs"))
+        self.assertEqual(data["paths"]["@raw-root"], str(self.root / "vault/raw"))
 
-    def test_paper_only_configuration_does_not_require_wiki_or_raw(self):
-        self.configure(paper_root=self.root / "manuscripts")
+    def test_paper_configuration_does_not_require_raw(self):
+        self.configure(paper_draft=True)
         code, data = self.resolve("@paper-root")
         self.assertEqual(code, 0)
-        self.assertEqual(data["paths"]["@paper-root"], str(self.root / "manuscripts"))
+        self.assertEqual(data["paths"]["@paper-root"], str(self.root / "vault/paper_draft"))
 
     def test_environment_override_counts_as_configuration(self):
         env = {**self.env, "LLM_WIKI_WIKI_ROOT": str(self.root / "environment-vault")}
@@ -76,23 +79,21 @@ class ResolvePathAliasTests(unittest.TestCase):
         self.assertEqual(data["paths"]["@configured"], str(self.root / "environment-vault"))
 
     def test_environment_override_takes_precedence_over_invalid_configured_root(self):
-        self.configure(wiki_root=self.project / "wiki")
+        self.configure(root=self.project)
         env = {**self.env, "LLM_WIKI_WIKI_ROOT": str(self.root / "vault")}
         self.assertEqual(self.resolve("@configured", env=env)[0], 0)
 
-    def test_selected_profile_must_configure_the_requested_root(self):
-        self.config.write_text(json.dumps({"active_profile": "missing", "profiles": {
-            "available": {"wiki_root": str(self.root / "vault")}
-        }}))
-        self.assertEqual(self.resolve("@configured")[0], 2)
-        env = {**self.env, "LLM_WIKI_PATH_PROFILE": "available"}
-        self.assertEqual(self.resolve("@configured", env=env)[0], 0)
+    def test_requested_directory_must_be_enabled(self):
+        self.configure(raw=False)
+        self.assertEqual(self.resolve("@raw-root")[0], 2)
+        self.configure(raw=True)
+        self.assertEqual(self.resolve("@raw-root")[0], 0)
 
     def test_configured_repository_root_descendant_and_parent_are_rejected(self):
-        for name, alias in (("wiki_root", "@configured"), ("raw_root", "@raw-root")):
-            for root in (self.project, self.project / "content", self.root):
-                with self.subTest(name=name, root=root):
-                    self.configure(**{name: root})
+        for root in (self.project, self.project / "content", self.root):
+            self.configure(root=root, raw=True)
+            for alias in ("@configured", "@raw-root"):
+                with self.subTest(alias=alias, root=root):
                     code, data = self.resolve(alias)
                     self.assertEqual(code, 2)
                     self.assertIn("outside the code repository", data["message"])
@@ -100,7 +101,7 @@ class ResolvePathAliasTests(unittest.TestCase):
     def test_symlinked_repository_root_is_rejected(self):
         link = self.root / "vault-link"
         link.symlink_to(self.project, target_is_directory=True)
-        self.configure(wiki_root=link)
+        self.configure(root=link)
         self.assertEqual(self.resolve("@configured")[0], 2)
 
     def test_symlinked_default_does_not_count_as_configuration(self):
@@ -111,9 +112,9 @@ class ResolvePathAliasTests(unittest.TestCase):
 
     def test_derived_source_alias_cannot_escape_through_symlink(self):
         vault = self.root / "vault"
-        vault.mkdir()
-        (vault / "sources").symlink_to(self.project, target_is_directory=True)
-        self.configure(wiki_root=vault)
+        (vault / "wiki").mkdir(parents=True)
+        (vault / "wiki/sources").symlink_to(self.project, target_is_directory=True)
+        self.configure(root=vault)
         self.assertEqual(self.resolve("@configured-sources-papers")[0], 2)
 
     def test_every_content_alias_validates_its_own_root(self):
@@ -124,7 +125,7 @@ class ResolvePathAliasTests(unittest.TestCase):
         for alias in (*wiki_aliases, *raw_aliases):
             with self.subTest(alias=alias):
                 self.assertEqual(self.resolve(alias)[0], 2)
-        self.configure(wiki_root=self.root / "vault", raw_root=self.root / "raw")
+        self.configure(raw=True)
         self.assertEqual(self.resolve(*wiki_aliases, *raw_aliases)[0], 0)
 
     def test_project_cache_and_explicit_paths_remain_available(self):
@@ -135,7 +136,7 @@ class ResolvePathAliasTests(unittest.TestCase):
         self.assertEqual(data["paths"][str(explicit)], str(explicit))
 
     def test_bad_aliases_and_traversal_fail(self):
-        self.configure(wiki_root=self.root / "vault")
+        self.configure()
         for alias in ("@unknown", "@configured/../code", "@configured//tmp"):
             with self.subTest(alias=alias):
                 self.assertEqual(self.resolve(alias)[0], 2)

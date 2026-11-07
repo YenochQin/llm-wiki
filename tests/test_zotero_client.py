@@ -46,24 +46,39 @@ class TokenFileTests(unittest.TestCase):
 
 
 class TokenFromPrefsTests(unittest.TestCase):
-    @mock.patch.object(zotero_client.platform, "system", return_value="Darwin")
-    def test_macos_profile_root(self, _system) -> None:
+    def test_reads_only_configured_profile_without_os_detection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp) / "Profiles"
-            profile = root / "abc.default"
-            profile.mkdir(parents=True)
+            root = Path(tmp)
+            profile = root / "selected"
+            profile.mkdir()
             (profile / "prefs.js").write_text(
-                'user_pref("extensions.zotero.wikiOrganizer.token", "MAC");\n', encoding="utf-8"
-            )
-            with mock.patch.object(zotero_client.Path, "home", return_value=Path(tmp)):
-                # The platform path includes the standard subdirectories.
-                app_root = Path(tmp) / "Library" / "Application Support" / "Zotero" / "Profiles"
-                app_profile = app_root / "abc.default"
-                app_profile.mkdir(parents=True)
-                (app_profile / "prefs.js").write_text(
-                    'user_pref("extensions.zotero.wikiOrganizer.token", "MAC");\n', encoding="utf-8"
-                )
-                self.assertEqual(zotero_client._token_from_zotero_prefs(), "MAC")
+                'user_pref("extensions.zotero.wikiOrganizer.token", "SELECTED");\n')
+            config = root / "paths.toml"
+            config.write_text(f'[zotero]\nprofile_dir = {json.dumps(str(profile))}')
+            with mock.patch("platform.system", side_effect=AssertionError("OS detection")):
+                self.assertEqual(zotero_client._token_from_zotero_prefs(config_path=config), "SELECTED")
+                with mock.patch.dict("os.environ", {
+                    zotero_client.TOKEN_ENV: "", zotero_client.TOKEN_FILE_ENV: "",
+                }):
+                    self.assertEqual(zotero_client._load_token(_args(paths_config=config)), "SELECTED")
+            # A parent directory must not cause scanning of unrelated profiles.
+            config.write_text(f'[zotero]\nprofile_dir = {json.dumps(str(root))}')
+            self.assertIsNone(zotero_client._token_from_zotero_prefs(config_path=config))
+
+    def test_unconfigured_profile_does_not_scan_home(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "paths.toml"
+            config.write_text('[zotero]\nprofile_dir = ""')
+            with mock.patch.object(zotero_client.Path, "home", side_effect=AssertionError("home scan")):
+                self.assertIsNone(zotero_client._token_from_zotero_prefs(config_path=config))
+
+    def test_invalid_config_raises_unless_explicit_token_is_provided(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "paths.toml"
+            config.write_text('[zotero]\nprofile_dir = false')
+            with self.assertRaises(zotero_client.ClientError):
+                zotero_client._token_from_zotero_prefs(config_path=config)
+            self.assertEqual(zotero_client._load_token(_args(token="EXPLICIT", paths_config=config)), "EXPLICIT")
 
     def test_reads_token_from_prefs_js(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -74,7 +89,7 @@ class TokenFromPrefsTests(unittest.TestCase):
                 'user_pref("extensions.zotero.wikiOrganizer.token", "PREFTOKEN");\n',
                 encoding="utf-8",
             )
-            self.assertEqual(zotero_client._token_from_zotero_prefs(Path(tmp)), "PREFTOKEN")
+            self.assertEqual(zotero_client._token_from_zotero_prefs(profile), "PREFTOKEN")
 
     def test_returns_none_when_no_profile_has_the_pref(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -83,7 +98,7 @@ class TokenFromPrefsTests(unittest.TestCase):
             (profile / "prefs.js").write_text(
                 'user_pref("extensions.zotero.dataDir", "/x");\n', encoding="utf-8"
             )
-            self.assertIsNone(zotero_client._token_from_zotero_prefs(Path(tmp)))
+            self.assertIsNone(zotero_client._token_from_zotero_prefs(profile))
 
     def test_returns_none_for_missing_root(self) -> None:
         self.assertIsNone(

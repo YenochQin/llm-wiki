@@ -132,11 +132,12 @@ timeouts, maps server errors to readable messages, and re-reads the tree
 after every create to verify the returned key.
 
 Token resolution order: `--token` → `ZOTERO_WIKI_ORGANIZER_TOKEN` →
-`--token-file` / `ZOTERO_WIKI_ORGANIZER_TOKEN_FILE` → **automatic fallback
-reading `extensions.zotero.wikiOrganizer.token` from
-  `~/.zotero/zotero/*/prefs.js`** on Linux, the standard Zotero Profiles path
-on macOS, or `%APPDATA%/Zotero/Zotero/Profiles/*/prefs.js` on Windows. In
-practice the client works with no configuration when the profile is found.
+`--token-file` / `ZOTERO_WIKI_ORGANIZER_TOKEN_FILE` →
+`extensions.zotero.wikiOrganizer.token` in the configured profile's `prefs.js`.
+Set `[zotero].profile_dir` in `config/paths.toml` to the actual profile directory
+containing `prefs.js`; the client does not scan OS-specific default directories
+or sibling profiles. Use `--paths-config <file.toml>` after the subcommand to
+select a different configuration file. Explicit token options take precedence.
 
 > Troubleshooting note (v0.1.0 → v0.1.10): the startup task that writes
 > `wiki-organizer-token.txt` and `wiki-organizer-audit.jsonl` into the data

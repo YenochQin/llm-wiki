@@ -20,7 +20,7 @@ These invariants always hold, in every phase, in every ingest-family skill. A ph
 - A Zotero Local API timeout, connection refusal, or any `fetch_zotero_metadata.py` result whose `status` is not `ok` is a **hard stop for `/ingest` Zotero lookup mode**. Do not follow the tool's SQLite/Crossref fallback hint, do not preprocess the PDF, and do not continue with partial metadata. Tell the user to open Zotero Desktop, ensure local API access is enabled, and rerun `/ingest` from the beginning.
 - Never pass DOI or title to `tools/fetch_zotero_metadata.py`; it accepts only `--item-key` (or `--ping`).
 - Metadata alone is **not** a content source. With no PDF / prepared markdown / notes / web content, do not create a paper page.
-- When `--zotero-root` is omitted, read the active profile's `zotero_roots` in `config/paths.json`.
+- When `--zotero-root` is omitted, read explicit `[zotero].data_dir` and `profile_dir` in `config/paths.toml`.
 
 ## 3. Slug derivation
 

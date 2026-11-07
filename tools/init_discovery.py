@@ -67,7 +67,7 @@ def _reject_repo_wiki_output(parser: argparse.ArgumentParser, output_dir: Path, 
     if configured_wiki != repo_wiki and _is_relative_to(output_dir, repo_wiki):
         parser.error(
             "--sources-output-dir resolved inside the code repository's wiki/ directory, "
-            "but config/paths.json points at an external wiki root. "
+            "but config/paths.toml points at an external wiki root. "
             "Pass @configured-sources or the external wiki/sources path."
         )
 

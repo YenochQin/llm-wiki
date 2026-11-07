@@ -2088,6 +2088,7 @@ dependencies = [
     { name = "httpx" },
     { name = "python-frontmatter" },
     { name = "requests" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
 
 [package.optional-dependencies]
@@ -2107,6 +2108,7 @@ requires-dist = [
     { name = "mineru", extras = ["all"], marker = "extra == 'local'", specifier = ">=4.0.12" },
     { name = "python-frontmatter", specifier = ">=1.1.0,<2.0" },
     { name = "requests", specifier = ">=2.31.0" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
 ]
 provides-extras = ["local"]
 

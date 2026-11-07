@@ -2,21 +2,21 @@
 """Separate the llm-wiki code repository from the user wiki vault.
 
 The script copies or moves the current in-repo `wiki/` and `raw/` directories to
-absolute external paths, then writes `config/paths.json` so tools can reconnect
+absolute external paths, then writes `config/paths.toml` so tools can reconnect
 the code repository to the external vault.
 
 Default mode is a dry-run plan. Pass --yes to modify files.
 
 Purpose:
     Split code and personal wiki data so the repository can stay lightweight
-    while tools continue to resolve the active vault through config/paths.json.
+    while tools continue to resolve the active vault through config/paths.toml.
 
 Inputs:
     Existing in-repo wiki/raw directories plus absolute destination paths.
 
 Writes:
     Only with --yes: copies or moves wiki/raw to the requested destinations and
-    writes config/paths.json.
+    writes config/paths.toml.
 
 Usage:
     uv run python -X utf8 tools/separate_wiki_repository.py --wiki-root /abs/wiki --raw-root /abs/raw
@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 from _cli_io import configure_utf8_stdio
-from _paths import DEFAULT_CONFIG_PATH, display_path, expand_path, find_project_root, write_paths_config
+from _paths import DEFAULT_CONFIG_PATH, display_path, expand_path, find_project_root, write_paths_config, toml_paths_payload
 
 
 def _nonempty(path: Path) -> bool:
@@ -91,6 +91,8 @@ def execute(project_root: Path, wiki_root: Path, raw_root: Path, config_path: Pa
     if wiki_root == raw_root or wiki_root in raw_root.parents or raw_root in wiki_root.parents:
         raise ValueError("wiki_root and raw_root must be separate directories, not nested inside each other")
 
+    toml_paths_payload(config_path, wiki_root, raw_root)
+
     changed: list[str] = []
     _copy_tree(local_wiki, wiki_root, merge=merge)
     changed.append(f"copied {display_path(local_wiki, project_root)} -> {wiki_root}")
@@ -121,7 +123,7 @@ def main() -> None:
     parser.add_argument("--raw-root", required=True, type=Path,
                         help="Absolute destination for raw source files.")
     parser.add_argument("--config", default=DEFAULT_CONFIG_PATH, type=Path,
-                        help="Path config to write (default: config/paths.json).")
+                        help="Path config to write (default: config/paths.toml).")
     parser.add_argument("--project-root", default=None, type=Path,
                         help="Code repository root (default: auto-detect).")
     parser.add_argument("--mode", choices=("copy", "move"), default="copy",

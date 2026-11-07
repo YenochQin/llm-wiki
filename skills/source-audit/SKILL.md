@@ -44,7 +44,7 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include
 - `wiki/concepts/*.md` - definitions, `## Source excerpts`, `key_papers`.
 - `wiki/claims/*.md` - claim text, confidence, evidence, source papers.
 - `wiki/index.md` - locate pages when needed.
-- `config/paths.json` or runtime aliases - resolve the configured wiki root.
+- `config/paths.toml` or runtime aliases - resolve the configured wiki root.
 - Existing preparation/handoff manifests and their metadata, only when needed to recover a page's source mapping.
 
 ### Writes
@@ -64,7 +64,7 @@ argument-hint: "[slug|path|--all] [--type papers|concepts|claims|all] [--include
 
 Resolve `@experiment-root` or `@output-root` with `tools/resolve_path_alias.py` before accessing that root; resolve only roots used by the selected mode. Use returned absolute paths for ordinary file operations.
 
-**Precondition**: run from the llm-wiki repository root. Resolve the configured wiki root; do not hard-code repository-local `wiki/` if `config/paths.json` points elsewhere.
+**Precondition**: run from the llm-wiki repository root. Resolve the configured wiki root; do not hard-code repository-local `wiki/` if `config/paths.toml` points elsewhere.
 
 ```shell
 uv run python -X utf8 tools/resolve_path_alias.py '@configured'

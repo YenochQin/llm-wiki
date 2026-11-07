@@ -968,7 +968,7 @@ def _reject_repo_wiki_output(
     if configured_wiki != repo_wiki and _is_relative_to(output_dir, repo_wiki):
         parser.error(
             "--output-dir resolved inside the code repository's wiki/ directory, "
-            "but config/paths.json points at an external wiki root. "
+            "but config/paths.toml points at an external wiki root. "
             "Pass @configured-sources-papers or the external wiki/sources/papers path."
         )
 
@@ -1279,7 +1279,7 @@ def main() -> None:
     parser.add_argument(
         "--raw-root",
         default=None,
-        help="Raw source root used for source resolution. Accepts @raw-root. Defaults to config/paths.json or ./raw.",
+        help="Raw source root used for source resolution. Accepts @raw-root. Defaults to config/paths.toml or ./raw.",
     )
     parser.add_argument(
         "--wiki-root",
@@ -1295,7 +1295,7 @@ def main() -> None:
         "--paths-config",
         default=DEFAULT_CONFIG_PATH,
         type=Path,
-        help="Path config JSON (default: config/paths.json).",
+        help="Path config TOML (default: config/paths.toml).",
     )
     parser.add_argument(
         "--source", required=True, type=Path, help="Path to a local PDF to prepare."

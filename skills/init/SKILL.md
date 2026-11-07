@@ -46,7 +46,7 @@ Use these local references on demand:
 
 ## Workflow
 
-**Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.json`. Run Python tools through `uv run python -X utf8`, matching `README.md`. Do not hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources`, `@configured-sources-papers`, and `@mineru-cache`. By default, `tools/_paths.py` loads `config/paths.json` and the documented `LLM_WIKI_*` overrides; only override these roots when the user explicitly requests it.
+**Pre-condition**: working directory is the project root containing `tools/`, `pyproject.toml`, and `config/paths.toml`. Run Python tools through `uv run python -X utf8`, matching `README.md`. Do not hard-code `wiki/` or `raw/`; use runtime path aliases such as `@configured`, `@raw-root`, `@configured-sources`, `@configured-sources-papers`, and `@mineru-cache`. By default, `tools/_paths.py` loads `config/paths.toml` and the documented `LLM_WIKI_*` overrides; only override these roots when the user explicitly requests it.
 
 Run commands from the repository root.
 

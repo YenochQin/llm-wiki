@@ -1,0 +1,17 @@
+# Copy to config/paths.toml and fill in paths for this machine.
+# Use absolute paths (or ~); Windows: use forward slashes, e.g. C:/Users/you/...
+[wiki]
+root_dir = "~/Documents/ResearchWiki"
+# Knowledge always lives in root_dir/wiki.
+# true enables root_dir/<key>; false or omission disables it.
+experiment = true
+paper_draft = true
+beamer = false
+raw = true
+output = true
+# Add any other directory, for example: reading_notes = true
+
+[zotero]
+# Empty or omitted values disable that lookup source. data_dir is tried first.
+profile_dir = ""
+data_dir = "~/Zotero"

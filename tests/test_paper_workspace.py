@@ -22,55 +22,55 @@ class PaperWorkspaceTests(unittest.TestCase):
         self.root = Path(self.tmp.name).resolve()
         self.project = self.root / "code"
         self.project.mkdir()
-        self.config = self.project / "config" / "paths.json"
+        self.config = self.project / "config" / "paths.toml"
         self.config.parent.mkdir()
         self.env = patch.dict(os.environ, {
-            "LLM_WIKI_PATH_PROFILE": "test",
             "LLM_WIKI_PAPER_ROOT": "",
             "LLM_WIKI_WIKI_ROOT": "",
             "LLM_WIKI_RAW_ROOT": "",
         })
         self.env.start()
         self.addCleanup(self.env.stop)
-        self.write_config(self.root / "papers")
+        self.vault = self.root / "vault"
+        self.write_config(True)
 
-    def write_config(self, paper_root: Path | None) -> None:
-        profile = {"wiki_root": str(self.root / "wiki"), "raw_root": str(self.root / "raw")}
-        if paper_root is not None:
-            profile["paper_root"] = str(paper_root)
-        self.config.write_text(json.dumps({"active_profile": "auto", "profiles": {"test": profile}}))
+    def write_config(self, paper_enabled: bool) -> None:
+        self.config.write_text(
+            f'[wiki]\nroot_dir = {json.dumps(str(self.vault))}\n'
+            f'raw = true\npaper_draft = {str(paper_enabled).lower()}\n[zotero]\n')
 
     def paths(self, **kwargs):
         return load_paths(config_path=self.config, project_root=self.project, **kwargs)
 
-    def test_profile_and_alias_subdirectory(self) -> None:
+    def test_configured_alias_subdirectory(self) -> None:
         paths = self.paths()
-        self.assertEqual(paths.profile, "test")
-        expected = self.root / "papers" / "atomic-radials" / DRAFT / "paper.tex"
+        self.assertEqual(paths.root_dir, self.vault)
+        expected = self.vault / "paper_draft" / "atomic-radials" / DRAFT / "paper.tex"
         self.assertEqual(resolve_runtime_path(f"@paper-root/atomic-radials/{DRAFT}/paper.tex", paths, role="paper"), expected)
-        self.assertEqual(resolve_runtime_path("@configured-papers", paths, role="paper"), self.root / "papers")
-        self.assertEqual(resolve_runtime_path("@configured/sources/report.md", paths, role="report"), self.root / "wiki" / "sources" / "report.md")
+        self.assertEqual(resolve_runtime_path("@configured-papers", paths, role="paper"), self.vault / "paper_draft")
+        self.assertEqual(resolve_runtime_path("@configured/sources/report.md", paths, role="report"), self.vault / "wiki" / "sources" / "report.md")
 
     def test_environment_and_explicit_argument_precedence(self) -> None:
         os.environ["LLM_WIKI_PAPER_ROOT"] = str(self.root / "env-papers")
         self.assertEqual(self.paths().paper_root, self.root / "env-papers")
         self.assertEqual(self.paths(paper_root=self.root / "argument-papers").paper_root, self.root / "argument-papers")
 
-    def test_legacy_flat_configuration(self) -> None:
-        self.config.write_text(json.dumps({"paper_root": str(self.root / "flat-papers")}))
-        self.assertEqual(self.paths().paper_root, self.root / "flat-papers")
+    def test_flat_configuration_is_rejected(self) -> None:
+        self.config.write_text(f'paper_root = {json.dumps(str(self.root / "flat-papers"))}')
+        with self.assertRaisesRegex(ValueError, "unknown path configuration"):
+            self.paths()
 
     def test_missing_root_does_not_break_legacy_wiki_tools_or_create_fallback(self) -> None:
-        self.write_config(None)
+        self.write_config(False)
         paths = self.paths()
         self.assertIsNone(paths.paper_root)
-        self.assertEqual(resolve_runtime_path("@configured", paths, role="wiki"), self.root / "wiki")
+        self.assertEqual(resolve_runtime_path("@configured", paths, role="wiki"), self.vault / "wiki")
         with self.assertRaisesRegex(ValueError, "not configured"):
             create_workspace(paths, "first-paper", DRAFT)
         self.assertFalse((self.project / "paper").exists())
 
     def test_no_in_repository_or_overlapping_roots(self) -> None:
-        for root in (self.project / "papers", self.project, self.root, self.root / "wiki" / "drafts", self.root / "raw"):
+        for root in (self.project / "papers", self.project, self.root, self.vault / "wiki" / "drafts", self.vault / "raw"):
             with self.subTest(root=root), self.assertRaises(ValueError):
                 require_paper_root(self.paths(paper_root=root))
 
@@ -89,7 +89,7 @@ class PaperWorkspaceTests(unittest.TestCase):
         for value in ("", "../escape", "a/b", "a\\b", "Upper", "a b", "a--b", "a" * 97, "rmcdhf-2026-10-06"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 create_workspace(self.paths(), value, DRAFT)
-        self.assertFalse((self.root / "papers").exists())
+        self.assertFalse((self.vault / "paper_draft").exists())
 
     def test_multiple_papers_and_resume_preserve_manuscript(self) -> None:
         paths = self.paths()
@@ -115,21 +115,21 @@ class PaperWorkspaceTests(unittest.TestCase):
     def test_resolve_is_read_only_for_missing_paper(self) -> None:
         with self.assertRaises(FileNotFoundError):
             resolve_workspace(self.paths(), "missing-paper", DRAFT)
-        self.assertFalse((self.root / "papers").exists())
+        self.assertFalse((self.vault / "paper_draft").exists())
         self.assertEqual(list_workspaces(self.paths()), [])
 
     def test_symlink_child_cannot_escape_root(self) -> None:
-        root = self.root / "papers"
-        root.mkdir()
+        root = self.vault / "paper_draft"
+        root.mkdir(parents=True)
         (root / "escaped-paper").symlink_to(self.project, target_is_directory=True)
         with self.assertRaises(ValueError):
             paper_directory(self.paths(), "escaped-paper")
         self.assertEqual(list_workspaces(self.paths()), [])
 
-    def test_wiki_path_reconfiguration_preserves_paper_root(self) -> None:
-        with patch("_paths.current_platform_profile", return_value="test"):
-            write_paths_config(self.config, self.root / "new-wiki", self.root / "new-raw")
-        self.assertEqual(self.paths().paper_root, self.root / "papers")
+    def test_root_reconfiguration_preserves_paper_switch(self) -> None:
+        new_vault = self.root / "new-vault"
+        write_paths_config(self.config, new_vault / "wiki", new_vault / "raw")
+        self.assertEqual(self.paths().paper_root, new_vault / "paper_draft")
 
     def test_cli_create_resolve_list_and_collision(self) -> None:
         script = Path(__file__).resolve().parents[1] / "tools" / "paper_workspace.py"
@@ -138,7 +138,7 @@ class PaperWorkspaceTests(unittest.TestCase):
             return result.returncode, json.loads(result.stdout)
         code, created = run("create", "cli-paper", DRAFT)
         self.assertEqual(code, 0)
-        self.assertEqual(created["draft_dir"], str(self.root / "papers" / "cli-paper" / DRAFT))
+        self.assertEqual(created["draft_dir"], str(self.vault / "paper_draft" / "cli-paper" / DRAFT))
         self.assertEqual(run("resolve", "cli-paper", DRAFT), (0, created))
         self.assertEqual(run("list")[1]["drafts"][0]["paper_id"], "cli-paper")
         self.assertEqual(run("create", "cli-paper", DRAFT)[0], 2)
@@ -153,7 +153,7 @@ class PaperWorkspaceTests(unittest.TestCase):
         for value in ("initial", "2026-02-29-initial", "2026-13-01-initial", "2026-10-06-../escape", "2026-10-06-Upper", "2026-10-06-a/b"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 create_workspace(self.paths(), "atomic-radials", value)
-        self.assertFalse((self.root / "papers").exists())
+        self.assertFalse((self.vault / "paper_draft").exists())
 
     def test_fork_preserves_original_and_keeps_versions_independent(self) -> None:
         paths = self.paths()

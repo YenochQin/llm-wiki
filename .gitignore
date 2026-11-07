@@ -17,7 +17,7 @@
 .codex/*
 
 
-config/paths.json
+config/paths.toml
 .venv/
 __pycache__/
 *.py[cod]

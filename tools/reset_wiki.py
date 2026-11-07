@@ -237,8 +237,8 @@ def main() -> None:
     p.add_argument("--scope", required=True,
                    help="Comma-separated list, or one of: wiki, raw, log, checkpoints, all")
     p.add_argument("--project-root", default=None, type=Path, help="Project root (default: auto-detect)")
-    p.add_argument("--wiki-root", default=None, type=Path, help="Wiki vault root (default: config/paths.json or ./wiki)")
-    p.add_argument("--raw-root", default=None, type=Path, help="Raw source root (default: config/paths.json or ./raw)")
+    p.add_argument("--wiki-root", default=None, type=Path, help="Wiki vault root (default: config/paths.toml or ./wiki)")
+    p.add_argument("--raw-root", default=None, type=Path, help="Raw source root (default: config/paths.toml or ./raw)")
     p.add_argument("--paths-config", default=DEFAULT_CONFIG_PATH, type=Path, help="Path config JSON")
     p.add_argument("--yes", action="store_true", help="Apply changes (default: dry-run plan only)")
     p.add_argument("--dry-run", action="store_true", help="Print plan and exit (default behavior)")

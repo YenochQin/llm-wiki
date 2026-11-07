@@ -40,97 +40,79 @@ These are the **minimum permissions** for LLM-Wiki skills to function. Claude Co
 
 **To customize:** You can add more permissions (e.g., `Bash(git add:*)` for auto-commit) or remove permissions if you want more manual control. See [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for the full permissions format.
 
-### `paths.json.example`
+### `paths.toml.example`
 
-Cross-platform paths that connect this code repository to an external wiki
-vault, independent experiment/output roots, raw source directory, manuscript root, and Zotero lookup candidates. Copy it to
-`config/paths.json` and fill in the profiles you use:
+Copy `config/paths.toml.example` to `config/paths.toml` and fill in this machine's
+paths. The local file is gitignored. There are exactly two configuration tables;
+no operating-system detection or profile selection is used for TOML.
+
+```toml
+[wiki]
+root_dir = "/Users/you/Documents/ResearchWiki"
+experiment = true
+paper_draft = true
+beamer = false
+raw = true
+output = true
+
+[zotero]
+profile_dir = "/Users/you/Library/Application Support/Zotero/Profiles/example.default"
+data_dir = "/Users/you/Zotero"
+```
+
+`root_dir` is the whole Obsidian vault. Knowledge always uses `root_dir/wiki`.
+Every other key in `[wiki]` must be a boolean: `true` enables `root_dir/<key>`;
+`false` or omission disables it. Add arbitrary lowercase directory names such as
+`reading_notes = true` without changing code. Names may contain letters, digits,
+underscores, and hyphens, starting with a letter; `wiki` is reserved. Paths must
+be absolute on the current machine after expanding `~` and environment variables.
+Use forward slashes for Windows paths, or TOML literal strings for backslashes.
+Changing a boolean never moves or deletes existing files.
+
+| Setting | Internal root / alias | Directory |
+|---|---|---|
+| `root_dir` | `wiki_root`, `@configured` | `<root_dir>/wiki` |
+| `experiment = true` | `experiment_root`, `@experiment-root` | `<root_dir>/experiment` |
+| `paper_draft = true` | `paper_root`, `@paper-root` | `<root_dir>/paper_draft` |
+| `raw = true` | `raw_root`, `@raw-root` | `<root_dir>/raw` |
+| `output = true` | `output_root`, `@output-root` | `<root_dir>/output` |
+| `beamer = true` (or another key) | `@directory/beamer` | `<root_dir>/beamer` |
+
+Reading configuration and resolving aliases do not create directories. Writers
+create their required directories when needed. To explicitly initialize all enabled
+directories, including arbitrary keys, run:
 
 ```bash
-cp config/paths.json.example config/paths.json
+uv run python -X utf8 tools/resolve_path_alias.py --create-dirs --json
 ```
 
-Then edit the profile values:
-
-```json
-{
-  "active_profile": "auto",
-  "profiles": {
-    "macos": {
-      "wiki_root": "/Users/you/Documents/ResearchWiki/wiki",
-      "experiment_root": "/Users/you/Documents/ResearchWiki/experiments",
-      "output_root": "/Users/you/Documents/ResearchWiki/outputs",
-      "raw_root": "/Users/you/Documents/ResearchWiki/raw",
-      "paper_root": "/Users/you/Documents/ResearchWiki/papers",
-      "zotero_roots": [
-        "~/Library/Application Support/Zotero/Profiles/*",
-        "~/Zotero"
-      ]
-    },
-    "windows": {
-      "wiki_root": "%USERPROFILE%/Documents/ResearchWiki/wiki",
-      "experiment_root": "%USERPROFILE%/Documents/ResearchWiki/experiments",
-      "output_root": "%USERPROFILE%/Documents/ResearchWiki/outputs",
-      "raw_root": "%USERPROFILE%/Documents/ResearchWiki/raw",
-      "paper_root": "%USERPROFILE%/Documents/ResearchWiki/papers",
-      "zotero_roots": [
-        "%APPDATA%/Zotero/Zotero/Profiles/*",
-        "%USERPROFILE%/Zotero"
-      ]
-    },
-    "linux": {
-      "wiki_root": "~/Documents/ResearchWiki/wiki",
-      "experiment_root": "~/Documents/ResearchWiki/experiments",
-      "output_root": "~/Documents/ResearchWiki/outputs",
-      "raw_root": "~/Documents/ResearchWiki/raw",
-      "paper_root": "~/Documents/ResearchWiki/papers",
-      "zotero_roots": [
-        "~/.zotero/zotero/*",
-        "~/Zotero"
-      ]
-    }
-  }
-}
-```
-
-With `"active_profile": "auto"`, tools choose `macos`, `windows`, or `linux`
-from the current OS. Set `active_profile` to a concrete profile name to force
-one, or set `LLM_WIKI_PATH_PROFILE` temporarily. Environment variables
-`LLM_WIKI_WIKI_ROOT`, `LLM_WIKI_EXPERIMENT_ROOT`, `LLM_WIKI_OUTPUT_ROOT`,
-`LLM_WIKI_RAW_ROOT`, and `LLM_WIKI_PAPER_ROOT` override the selected
-profile.
-
-The legacy flat format with top-level root keys (including `experiment_root` and `output_root`) is still
-accepted, but the profiled format is preferred for synced multi-platform use.
-Most tools read this file automatically; `tools/research_wiki.py` accepts
-`@wiki` as a shortcut for the configured wiki root.
-
-Before skill content operations, run `tools/resolve_path_alias.py` for the
-aliases needed by that task. For example, `@configured` validates only the wiki
-root; it does not require raw or manuscript configuration. Content aliases fail
-with exit code 2 if their root is unconfigured or overlaps the code repository,
-including through a symlink. Explicit environment overrides count as configuration.
-The root may be created later during initialization. Project/cache aliases and
-explicit file paths do not require content-root configuration; legacy low-level
-path defaults are retained for migration tools and disposable test fixtures.
-
-### Independent experiments and outputs
-
-Set `experiment_root` and `output_root` in each active platform profile (or use
-`LLM_WIKI_EXPERIMENT_ROOT` / `LLM_WIKI_OUTPUT_ROOT`). Normally both sit alongside
-`wiki_root`; arbitrary external names are supported. They must not overlap the
-repository, wiki, raw, manuscripts, or each other. Missing values are errors only
-for operations requiring that root. No directory is moved by changing config.
+For read-only resolution, omit `--create-dirs`:
 
 ```bash
-uv run python -X utf8 tools/resolve_path_alias.py '@experiment-root' '@output-root'
-uv run python -X utf8 tools/resolve_path_alias.py '@output-root/report.md'
+uv run python -X utf8 tools/resolve_path_alias.py @configured @experiment-root @paper-root
+uv run python -X utf8 tools/resolve_path_alias.py '@directory/beamer/talk.tex'
 ```
 
-Use resolved absolute paths for normal filesystem operations. The graph retains
-logical `experiments/<slug>` identities and the wiki catalog includes experiment
-and output paths. See `docs/runtime-directory-structure.en.md` for migration and
-legacy fixture behavior. Old wiki-subdirectory aliases are rejected.
+The second example requires `beamer = true`. Disabled directories produce an
+error when requested. Validate only aliases needed by the task before content
+I/O; unused disabled roots do not block work. Roots must be outside the code
+repository. Derived directories must remain inside `root_dir` after resolving
+symlinks and must not overlap one another. Use returned absolute paths for direct
+filesystem operations. No directory is moved by changing config: when replacing
+older `experiments/` or `papers/` locations, migrate their contents and references
+separately before expecting existing records in the new locations.
+
+Explicit tool arguments still override `LLM_WIKI_WIKI_ROOT`,
+`LLM_WIKI_EXPERIMENT_ROOT`, `LLM_WIKI_OUTPUT_ROOT`, `LLM_WIKI_RAW_ROOT`, and
+`LLM_WIKI_PAPER_ROOT`, which override TOML-derived roots. The `@directory/<name>`
+alias and `--create-dirs` always use the TOML directories, independent of these
+legacy root overrides. Overrides do not change the vault boundary for persisted
+links. Only `.toml` configuration files are accepted; JSON configurations and
+OS/profile selection are not supported.
+
+Logical graph identities such as `experiments/<slug>` and `outputs/<slug>` stay
+unchanged; content helpers map them to the configured physical roots. Old
+`@configured/experiments/...` and `@configured/outputs/...` aliases are rejected.
 
 ### Independent manuscripts
 
@@ -185,31 +167,15 @@ bibliography checks, reviews, and history. Copied results remain inherited
 evidence. `/paper-draft` accepts `--paper-id <topic-id>` and
 `--draft-id <YYYY-MM-DD-slug>`; omission behavior is defined in the skill.
 
-`zotero_roots` is used by `/ingest` when the user passes `--title` or `--doi`
-without an explicit `--zotero-root`. Put each platform's likely Zotero data
-directory or profile directory in that platform's profile; nonexistent paths
-are ignored. Entries support `~`, Unix environment variables such as
-`$HOME/Zotero`, Windows variables such as `%APPDATA%`, and glob patterns such
-as `~/Library/Application Support/Zotero/Profiles/*`.
+### Zotero directories
 
-Each entry may be either a string path or an object:
-
-```json
-{
-  "zotero_roots": [
-    "~/Zotero",
-    {
-      "label": "work laptop profile",
-      "path": "~/Library/Application Support/Zotero/Profiles/*",
-      "enabled": true
-    }
-  ]
-}
-```
-
-`tools/find_zotero_pdf.py` accepts both Zotero data directories containing
-`zotero.sqlite` and `storage/`, and profile directories containing `prefs.js`
-that points to the real data directory.
+`[zotero].data_dir` explicitly names the directory containing `zotero.sqlite`
+and `storage/`. `[zotero].profile_dir` explicitly names the profile containing
+`prefs.js`, which can point to a data directory. Fill in actual paths for this
+machine; no OS-specific search or glob expansion is performed for TOML. Empty
+or omitted values disable that lookup source. The data directory is tried first,
+then the profile; `--zotero-root` remains an explicit override. Zotero-only tools
+do not require a configured wiki root.
 
 Optional richer metadata comes from Zotero Desktop's local API. Keep Zotero
 Desktop open and enable local API access, then `tools/fetch_zotero_metadata.py`
@@ -226,7 +192,7 @@ uv run python tools/clean_wiki_repository.py --target all
 ## All Done by `setup.sh`
 
 `setup.sh` seeds API and agent settings. Configure your external content roots
-in `config/paths.json` separately; it is private and is not overwritten by setup.
+in `config/paths.toml` separately; it is private and is not overwritten by setup.
 Runtime specifications are maintained directly in `skills/`, `AGENTS.md`, and
 `CLAUDE.md`; edits take effect without a copy/sync step. Use `./setup.sh --sync-only`
 (or `./setup.fish --sync-only`, `pwsh -File .\setup.ps1 -SyncOnly`) to repair agent

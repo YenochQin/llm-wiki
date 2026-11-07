@@ -64,7 +64,7 @@ and run the default dry-run/plan mode first.
 
 | Tool | Use when |
 | --- | --- |
-| `separate_wiki_repository.py` | Copy or move in-repo `wiki/` and `raw/` to external absolute vault paths and write `config/paths.json`. |
+| `separate_wiki_repository.py` | Copy or move in-repo `wiki/` and `raw/` to external absolute vault paths and write `config/paths.toml`. |
 | `clean_wiki_repository.py` | Remove in-repo `wiki/` and/or `raw/` after external paths are configured. |
 | `reset_wiki.py` | Reset selected wiki/raw/log/checkpoint scopes to a clean scaffold. |
 | `migrate_log.py` | Move legacy `wiki/log.md` entries into weekly `wiki/log/*.md` files. |
