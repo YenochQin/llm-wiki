@@ -45,6 +45,7 @@ if [ ! -d "$PROJECT_ROOT/skills" ] || [ -L "$PROJECT_ROOT/skills" ]; then
 fi
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/llm-wiki"
 ENV_FILE="$CONFIG_DIR/.env"
+PATHS_FILE="$PROJECT_ROOT/config/paths.toml"
 cd "$PROJECT_ROOT"
 
 echo ""
@@ -110,6 +111,25 @@ ok "Using $VENV_PYTHON"
 
 echo ""
 info "Setting up configuration..."
+
+# Machine-local content and Zotero paths
+if [ -e "$PATHS_FILE" ] || [ -L "$PATHS_FILE" ]; then
+    if [ ! -f "$PATHS_FILE" ]; then
+        fail "$PATHS_FILE exists but is not a regular file; check it before retrying"
+        exit 1
+    fi
+    ok "$PATHS_FILE already exists, keeping your configuration"
+else
+    cp config/paths.toml.example "$PATHS_FILE"
+    ok "Created $PATHS_FILE from config/paths.toml.example"
+fi
+info "Review $PATHS_FILE and replace example values before using the wiki:"
+echo "  [wiki] root_dir: absolute path to your Obsidian vault; knowledge uses root_dir/wiki."
+echo "  [wiki] experiment, paper_draft, raw, output, beamer: set true/false as needed."
+echo "         Add other boolean keys to enable same-named directories under root_dir."
+echo "  [zotero] profile_dir: actual profile directory containing prefs.js."
+echo "  [zotero] data_dir: actual data directory containing zotero.sqlite and storage/."
+echo "           Leave unused Zotero paths empty. Setup does not create content directories."
 
 # llm-wiki user config
 mkdir -p "$CONFIG_DIR"
@@ -300,18 +320,22 @@ echo ""
 echo "  2. Set MINERU_API_TOKEN in $ENV_FILE (required for PDF ingest):"
 echo "     https://mineru.net/  →  create token  →  paste into .env"
 echo ""
-echo "  3. Run Python tools through uv (no need to activate the venv):"
+echo "  3. Fill in this machine's paths and directory switches:"
+echo "     $PATHS_FILE"
+echo "     See config/README.md for [wiki] and [zotero] parameters."
+echo ""
+echo "  4. Run Python tools through uv (no need to activate the venv):"
 echo "     uv run python -X utf8 tools/research_wiki.py --help"
 echo ""
-echo "  4. Start Claude Code:"
+echo "  5. Start Claude Code:"
 echo "     claude"
 echo ""
-echo "  5. Complete API key configuration (guided):"
+echo "  6. Complete API key configuration (guided):"
 echo "     /setup"
 echo "     Claude Code will walk you through llm-wiki API keys —"
 echo "     skip any you don't have yet."
 echo ""
-echo "  6. Then initialize your wiki:"
+echo "  7. Then initialize your wiki:"
 echo "     /init [your-research-topic]"
 echo ""
 echo "  For more, see README.md"

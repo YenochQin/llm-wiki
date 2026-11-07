@@ -42,8 +42,11 @@ These are the **minimum permissions** for LLM-Wiki skills to function. Claude Co
 
 ### `paths.toml.example`
 
-Copy `config/paths.toml.example` to `config/paths.toml` and fill in this machine's
-paths. The local file is gitignored. There are exactly two configuration tables;
+Normal `bash setup.sh` creates `config/paths.toml` from `config/paths.toml.example`
+if it is missing, preserves an existing file, and prints the parameters to fill in.
+You can also copy the example manually. Replace its example paths with this
+machine's paths and choose the directory switches before using the wiki.
+The local file is gitignored. There are exactly two configuration tables;
 no operating-system detection or profile selection is used for TOML.
 
 ```toml
@@ -191,8 +194,11 @@ uv run python tools/clean_wiki_repository.py --target all
 
 ## All Done by `setup.sh`
 
-`setup.sh` seeds API and agent settings. Configure your external content roots
-in `config/paths.toml` separately; it is private and is not overwritten by setup.
+`setup.sh` seeds API and agent settings and creates `config/paths.toml` from its
+example when missing. It prints guidance for `[wiki].root_dir`, directory
+switches, and `[zotero].profile_dir` / `data_dir`; fill these in for your machine.
+Existing path configuration is preserved, and setup does not create external
+content directories. `--sync-only` does not create or modify configuration files.
 Runtime specifications are maintained directly in `skills/`, `AGENTS.md`, and
 `CLAUDE.md`; edits take effect without a copy/sync step. Use `./setup.sh --sync-only`
 (or `./setup.fish --sync-only`, `pwsh -File .\setup.ps1 -SyncOnly`) to repair agent

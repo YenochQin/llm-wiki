@@ -24,6 +24,10 @@ bash setup.sh
 
 # 2. Put your MinerU token in ~/.config/llm-wiki/.env
 #    (setup.sh seeded the file from config/.env.example)
+
+# 3. Edit config/paths.toml: set [wiki].root_dir, directory switches,
+#    and [zotero].profile_dir / data_dir for this machine.
+#    setup.sh creates it from the example only when it is missing.
 ```
 
 On Windows, run the PowerShell setup. It creates symlinks from
