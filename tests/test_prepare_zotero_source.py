@@ -1,14 +1,17 @@
+import io
 import json
 import sys
 import tempfile
 import unittest
 from argparse import Namespace
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
+import prepare_paper_source
 import prepare_zotero_source
 from _paths import RuntimePaths
 
@@ -104,6 +107,72 @@ class PrepareZoteroSourceTests(unittest.TestCase):
             self.assertEqual(result["status"], "ok")
             self.assertEqual(prepare.call_args.args[0], pdf)
             self.assertEqual(prepare.call_args.kwargs["citation_key"], "doe2019paper")
+
+    def test_both_cli_entrypoints_use_the_configured_mineru_backend(self) -> None:
+        def write_ocr_fixture(pdf: Path, cache: Path, _language: str) -> None:
+            (cache / f"{pdf.stem}.md").write_text(
+                "# Fixture Paper\n\n## Abstract\n\nThis is a test.\n", encoding="utf-8"
+            )
+            (cache / f"{pdf.stem}.json").write_text("[]", encoding="utf-8")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdf = root / "paper.pdf"
+            pdf.write_bytes(b"%PDF-1.4\n")
+            paths = RuntimePaths(
+                project_root=root,
+                wiki_root=root / "wiki",
+                raw_root=root / "raw",
+                config_path=root / "paths.toml",
+                used_config=False,
+            )
+            cases = (
+                (prepare_paper_source, ["--source", str(pdf)]),
+                (
+                    prepare_zotero_source,
+                    ["--item-key", "ABC123", "--metadata-output", str(root / "metadata.json")],
+                ),
+            )
+            with (
+                patch.dict("os.environ", {"MINERU_BACKEND": "local"}),
+                patch.object(prepare_paper_source, "load_paths", return_value=paths),
+                patch.object(prepare_zotero_source, "load_paths", return_value=paths),
+                patch.object(
+                    prepare_zotero_source.find_zotero_pdf,
+                    "find",
+                    return_value={
+                        "status": "ok",
+                        "candidates": [{"item_key": "ABC123", "pdf_paths": [str(pdf)]}],
+                    },
+                ),
+                patch.object(
+                    prepare_zotero_source.fetch_zotero_metadata,
+                    "fetch_item",
+                    return_value={"title": "Fixture Paper"},
+                ),
+                patch("_mineru._extract_via_api", side_effect=RuntimeError("unexpected cloud OCR")) as api,
+                patch("_mineru._extract_via_local", side_effect=write_ocr_fixture) as local,
+            ):
+                for entrypoint, arguments in cases:
+                    with self.subTest(entrypoint=entrypoint.__name__):
+                        api.reset_mock()
+                        local.reset_mock()
+                        argv = [
+                            entrypoint.__name__, *arguments,
+                            "--output-dir", str(root / entrypoint.__name__ / "sources"),
+                            "--cache-root", str(root / entrypoint.__name__ / "cache"),
+                        ]
+                        stdout = io.StringIO()
+                        with (
+                            patch.object(sys, "argv", argv),
+                            redirect_stdout(stdout),
+                            redirect_stderr(io.StringIO()),
+                        ):
+                            entrypoint.main()
+                        api.assert_not_called()
+                        local.assert_called_once()
+                        result = json.loads(stdout.getvalue())
+                        self.assertTrue(result.get("prepared", result)["usable"])
 
 
 def json_load(path: Path) -> dict:

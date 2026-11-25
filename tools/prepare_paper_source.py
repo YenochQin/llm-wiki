@@ -40,7 +40,7 @@ build it is always a `.md` produced by MinerU + adapter (`ingest_format = "miner
 Inputs:
     - One local PDF from raw/papers/ or an explicit path.
     - Optional title, BibTeX, citation key, authors, and year metadata.
-    - MinerU API token for --backend api, or local MinerU install for --backend local.
+    - MinerU backend selected by MINERU_BACKEND in llm-wiki's .env (api by default).
 
 Writes:
     - Prepared markdown under --output-dir.
@@ -983,7 +983,7 @@ def prepare(
     year: str = "",
     cache_root: Path | None = None,
     language: str = "en",
-    backend: str = "api",
+    backend: str | None = None,
     overwrite: bool = False,
     wiki_root: Path | None = None,
     output_dir: Path | None = None,
@@ -1335,9 +1335,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--backend",
-        default="api",
         choices=("api", "local"),
-        help="MinerU backend: 'api' (cloud) or 'local' (mineru[all]).",
+        help="Override MINERU_BACKEND for this run. The default backend is 'api'.",
     )
     parser.add_argument(
         "--overwrite",

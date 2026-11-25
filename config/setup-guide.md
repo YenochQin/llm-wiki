@@ -25,7 +25,7 @@ directly into the user config file using available file-editing tools.
 | Field | Value |
 |-------|-------|
 | Config variable | `MINERU_API_TOKEN` in `~/.config/llm-wiki/.env` or `$XDG_CONFIG_HOME/llm-wiki/.env` |
-| Required? | **Yes** for any PDF ingest path |
+| Required? | For the `api` backend |
 | Free? | Yes (free tier on mineru.net) |
 
 **What it does**: MinerU is a vision-language PDF parser that extracts text + figure crops
@@ -36,9 +36,9 @@ structured markdown that `/ingest` consumes.
 - `/ingest` — every PDF source goes through MinerU before downstream extraction
 - `/init` — bulk PDF preparation routes through the same prep tool
 
-**Without this token**: PDF ingest fails. The escape hatch is the local MinerU backend
-(`uv sync --extra local`), which downloads several GB of models on first use and runs
-fully on-device — no token required, but heavy.
+For on-device OCR, install the local backend with `uv sync --extra local` and set
+`MINERU_BACKEND=local` in the llm-wiki `.env`. The local backend downloads its models
+on first use and runs without an API token.
 
 **How to get it**:
 1. Go to https://mineru.net/

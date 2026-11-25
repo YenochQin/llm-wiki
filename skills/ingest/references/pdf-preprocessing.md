@@ -17,7 +17,7 @@ PDF -> tools/_mineru.extract            (cloud API by default; local backend opt
     -> <explicit-output-dir>/<source-slug>.md       + <explicit-output-dir>/assets/<source-slug>/<hash>.jpg
 ```
 
-For full details (cache layout, adapter passes, troubleshooting) open `docs/mineru-pipeline.md`.
+For backend configuration via `.env`, cache layout, and adapter details, open `docs/mineru-pipeline.md`.
 
 ## Recovery order
 
@@ -122,7 +122,6 @@ Prepared markdown generated from Zotero attachments must be written under `wiki/
 
 ## Failure modes
 
-- **`MINERU_API_TOKEN is not set`**: surface this clearly to the user. Either ask them to add the token to `~/.config/llm-wiki/.env`, or fall back to the local MinerU backend if installed (`uv sync --extra local`).
-- **MinerU API outage / rate limit**: same fallback — try the local backend if available, otherwise hand off to the user with a clear message.
+- **Missing `MINERU_API_TOKEN`, MinerU API outage, or rate limit**: follow `references/error-handling.md` for environment configuration and retry.
 - **Manifest reports `usable: false`**: do not proceed. Surface the `warnings` array to the user; common causes are scanned PDFs without OCR, encrypted PDFs, or pages-only image dumps.
 - **No figures extracted on a paper that clearly has them**: not blocking. Note in the report; the user may want to switch to the local backend for that paper.

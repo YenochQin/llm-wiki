@@ -140,19 +140,23 @@ def extract(
     pdf: Path,
     cache_dir: Path,
     language: str,
-    backend: str,
+    backend: str | None = None,
 ) -> tuple[Path, Path]:
     """Populate ``cache_dir`` with ``<stem>.md`` and ``<stem>.json`` (+ images/).
 
     Returns the two paths so the caller can run its existing manifest
     synthesis step. If both files are already present, returns them without
-    calling either backend (cache hit).
+    calling either backend (cache hit). For a fresh extraction, an omitted
+    backend comes from MINERU_BACKEND, defaulting to api.
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
     cached = _existing_outputs(cache_dir)
     if cached is not None:
         print(f"cache hit: {cache_dir}", file=sys.stderr)
         return cached
+
+    if backend is None:
+        backend = _config("MINERU_BACKEND", "api")
 
     if backend == "api":
         _extract_via_api(pdf, cache_dir, language)

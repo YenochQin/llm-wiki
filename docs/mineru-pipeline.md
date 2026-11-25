@@ -34,6 +34,7 @@ raw/papers/<file>.pdf
 ## Prerequisites
 
 - Python 3.10+ (managed by uv via `.venv`).
+- Set `MINERU_BACKEND` in `~/.config/llm-wiki/.env` or `$XDG_CONFIG_HOME/llm-wiki/.env` to select `api` or `local` for both Zotero and direct PDF preprocessing. An unset value defaults to `api`. Existing per-PDF OCR results are reused before the backend is selected.
 - For `api` backend (default): `MINERU_API_TOKEN` set in `~/.config/llm-wiki/.env` or `$XDG_CONFIG_HOME/llm-wiki/.env`. Optional override: `MINERU_API_BASE` (default `https://mineru.net/api/v4`).
 - For `local` backend: `uv sync --extra local`. First run downloads several GB of model weights; afterward extraction runs offline. No token needed.
 
@@ -127,7 +128,7 @@ does not rewrite already-prepared sources.
 - **`MINERU_API_TOKEN is not set`**: the `api` backend couldn't find a token. Add `MINERU_API_TOKEN=...` to `~/.config/llm-wiki/.env`, or export it in the shell.
 - **`401`/`403` from the cloud API**: token invalid or expired. Regenerate at <https://mineru.net/apiManage/account/api>.
 - **`backend='local' requires the mineru library`**: install with `uv sync --extra local`. First run downloads several GB of model weights.
-- **MinerU API down / rate-limited**: switch to local backend by installing the `local` extra and re-running. The CLI accepts the same flags.
+- **MinerU API down / rate-limited**: to switch to local OCR, install the `local` extra, set `MINERU_BACKEND=local` in the llm-wiki `.env`, and rerun.
 - **Title is split or missing**: cover-block sequence broke normalization. Inspect `<explicit-cache-root>/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
 - **Administrative material leaks into body**: the skip heading didn't match any `SKIP_SECTION_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`). Do not add References/Bibliography/Literature Cited to the skip list.
 - **Stale output after editing the adapter**: re-run with `--overwrite` to regenerate an existing prepared source. The adapter rebuilds `manifest.json` on every run and reuses the cached `<stem>.md` / `<stem>.json` from MinerU. Delete the per-PDF cache only when a fresh OCR extraction is needed.

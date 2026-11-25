@@ -120,8 +120,8 @@ output pages in their configured roots; its dry-run lists their actual paths.
 ## Python Environment and Backends
 
 - Python tools load API keys through `tools/_env.py`: first process environment, then `~/.config/llm-wiki/.env` (or `$XDG_CONFIG_HOME/llm-wiki/.env`); project-root `.env` and `~/.env` are legacy fallbacks only
-- the optional MinerU local backend is opt-in: `uv sync --extra local` (downloads several GB of model weights)
-- **MinerU API token**: `MINERU_API_TOKEN` env variable powers the default cloud backend. Without it, PDF ingest fails; install the local backend (`uv sync --extra local`) for offline operation.
+- To enable local MinerU preprocessing, run `uv sync --extra local` and set `MINERU_BACKEND=local` in the llm-wiki `.env`.
+- The default `api` backend requires `MINERU_API_TOKEN`.
 
 Use the invocation policy in the active runtime entrypoint. `setup.sh` manages dependencies from `pyproject.toml` with `uv sync`. Repository tests live in `tests/`; inspect relevant tests when changing code. `tools/lint.py` validates wiki content.
 

@@ -4,7 +4,7 @@ Open this reference when a step fails. `/ingest` prefers to degrade gracefully e
 
 ## Source parsing
 
-- **MinerU API call fails (network, 4xx/5xx)**: if the local MinerU backend is installed (`uv sync --extra local`), retry once with `--backend local`. Otherwise stop and surface a clear message asking the user to either set `MINERU_API_TOKEN`, fix connectivity, or install the local backend.
+- **MinerU API call fails (network, 4xx/5xx)**: report the error. Explain the applicable recovery: fix connectivity or the token, or set `MINERU_BACKEND=local` in the llm-wiki `.env` after installing the local backend with `uv sync --extra local`. Retry the same preprocessing command once the selected backend is ready.
 - **MinerU returns an unusable manifest** (`usable: false` from `prepare_paper_source.py`): stop and report the `warnings` array verbatim. Common causes: scanned PDF without OCR, encrypted PDF, image-only pages. Do not paper over the failure by ingesting the raw PDF text — `mineru-md` is the contract.
 - **No readable source at all**: stop and report. Do not create a paper page from a title alone — a paper page without grounded content is noise.
 - **Prepared source handed off by `/init` is unreadable**: do not rescan or re-prepare it. Report the failed entry so `/init` can record it and continue with the remaining manifest entries.
