@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path, PureWindowsPath
+from unittest.mock import patch
 
 import frontmatter
 
@@ -98,12 +99,14 @@ Section content that must remain.
             (cache / "images" / "chart.jpg").write_bytes(b"chart fixture")
 
             result = prepare_paper_source.prepare(
-                pdf, root / "raw", cache_root=cache_root,
+                pdf, root / "raw", cache_root=cache_root, backend="api",
                 output_dir=root / "prepared", project_root=root,
             )
             post = frontmatter.load(root / result["prepared_path"])
 
             self.assertTrue(result["usable"])
+            self.assertEqual(result["mineru_backend"], "api")
+            self.assertEqual(result["mineru_extraction"], "cache")
             self.assertEqual(result["title"], "MinerU Integration Test")
             self.assertIn("# MinerU Integration Test", post.content)
             self.assertIn("Reference text.", post.content)
@@ -117,6 +120,50 @@ Section content that must remain.
             self.assertEqual(post["figures"][1]["caption"], "Figure 2: Test chart $x^{2}$.")
             self.assertTrue((root / "prepared" / post["figures"][0]["path"]).exists())
             self.assertTrue((root / "prepared" / post["figures"][1]["path"]).exists())
+
+    def test_local_backend_uses_only_its_own_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            pdf = root / "paper.pdf"
+            pdf.write_bytes(b"%PDF-1.7\n")
+            cache_root = root / "cache"
+            pdf_hash = prepare_paper_source._sha16_of_file(pdf)
+
+            def populate(path: Path, cache: Path, body: str) -> None:
+                cache.mkdir(parents=True, exist_ok=True)
+                (cache / f"{path.stem}.md").write_text(f"# Test paper\n\n## Abstract\n\n{body}\n", encoding="utf-8")
+                (cache / f"{path.stem}.json").write_text(json.dumps([
+                    {"type": "text", "text": "Test paper", "text_level": 1, "page_idx": 0},
+                    {"type": "text", "text": "Abstract", "text_level": 2, "page_idx": 0},
+                ]), encoding="utf-8")
+
+            populate(pdf, cache_root / pdf_hash, "Cloud extraction marker.")
+
+            def local(path: Path, cache: Path) -> None:
+                self.assertEqual(cache, cache_root / "local" / pdf_hash)
+                populate(path, cache, "Local extraction marker.")
+
+            options = {"cache_root": cache_root, "output_dir": root / "prepared", "project_root": root}
+            with (
+                patch.dict("os.environ", {"MINERU_BACKEND": "local"}),
+                patch.object(prepare_paper_source._mineru, "_extract_via_local", side_effect=local) as parser,
+                patch.object(prepare_paper_source._mineru, "_extract_via_api") as cloud,
+            ):
+                first = prepare_paper_source.prepare(pdf, root / "raw", **options)
+                again = prepare_paper_source.prepare(pdf, root / "raw", **options)
+                explicit_api = prepare_paper_source.prepare(pdf, root / "raw", backend="api", **options)
+
+            parser.assert_called_once()
+            cloud.assert_not_called()
+            self.assertTrue(first["usable"])
+            self.assertEqual(first["mineru_backend"], "local")
+            self.assertEqual(first["mineru_extraction"], "parsed")
+            self.assertEqual(again["mineru_extraction"], "cache")
+            self.assertTrue(again["prepared_source_reused"])
+            self.assertEqual(explicit_api["mineru_backend"], "api")
+            self.assertEqual(explicit_api["mineru_extraction"], "cache")
+            self.assertTrue(explicit_api["prepared_source_reused"])
+            self.assertIn("Local extraction marker.", (root / first["prepared_path"]).read_text(encoding="utf-8"))
 
     def test_abstract_excerpt_excludes_authors_and_following_sections(self) -> None:
         body = (

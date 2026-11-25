@@ -1,4 +1,4 @@
-"""MinerU extraction backends used by `process_pdf.py`.
+"""MinerU extraction backends used by `prepare_paper_source.py`.
 
 Two backends, both normalized to the same on-disk shape inside `cache_dir`:
 
@@ -7,9 +7,8 @@ Two backends, both normalized to the same on-disk shape inside `cache_dir`:
         <stem>.json   # MinerU content_list.json (renamed from <stem>_content_list.json)
         images/       # extracted figure/table crops referenced by the .md / .json
 
-`extract(pdf, cache_dir, language, backend)` returns `(<stem>.md, <stem>.json)`
-so the caller can hand the same paths it used to receive from the old
-`mineru-open-api` CLI to `process_pdf.normalize_cache(...)` unchanged.
+`extract(pdf, cache_dir, language, backend)` returns the Markdown path, the
+content list path, and whether it reused cached output.
 
 Backends:
 
@@ -19,8 +18,7 @@ Backends:
                 ``$XDG_CONFIG_HOME/llm-wiki/.env`` or
                 ``~/.config/llm-wiki/.env``. Endpoint base overridable via
                 ``MINERU_API_BASE`` in the same config file.
-- ``"local"`` — calls ``mineru.cli.common.do_parse`` directly. Imports happen
-                lazily so users on the api-only path don't need ``mineru[all]``.
+- ``"local"`` — uses the MinerU 4 SDK in the Basic tier. SDK imports are lazy.
 """
 
 from __future__ import annotations
@@ -43,6 +41,14 @@ POLL_INTERVAL_SEC = 3
 POLL_READ_TIMEOUT_SEC = 120
 POLL_TIMEOUT_SEC = 30 * 60  # 30 minutes per PDF
 DATA_ID_MAX_LENGTH = 128
+BACKENDS = ("api", "local")
+
+
+def resolve_backend(backend: str | None = None) -> str:
+    selected = backend if backend is not None else _config("MINERU_BACKEND", "api")
+    if selected not in BACKENDS:
+        raise ValueError(f"invalid MinerU backend {selected!r}; choose 'api' or 'local'")
+    return selected
 
 
 def _config(name: str, default: str = "") -> str:
@@ -141,36 +147,27 @@ def extract(
     cache_dir: Path,
     language: str,
     backend: str | None = None,
-) -> tuple[Path, Path]:
-    """Populate ``cache_dir`` with ``<stem>.md`` and ``<stem>.json`` (+ images/).
-
-    Returns the two paths so the caller can run its existing manifest
-    synthesis step. If both files are already present, returns them without
-    calling either backend (cache hit). For a fresh extraction, an omitted
-    backend comes from MINERU_BACKEND, defaulting to api.
-    """
+) -> tuple[Path, Path, bool]:
+    """Return the Markdown and content-list paths and the cache-hit status."""
+    backend = resolve_backend(backend)
     cache_dir.mkdir(parents=True, exist_ok=True)
     cached = _existing_outputs(cache_dir)
     if cached is not None:
-        print(f"cache hit: {cache_dir}", file=sys.stderr)
-        return cached
+        print(f"mineru backend={backend}: cache hit: {cache_dir}", file=sys.stderr)
+        return (*cached, True)
 
-    if backend is None:
-        backend = _config("MINERU_BACKEND", "api")
-
+    print(f"mineru backend={backend}: parsing {pdf.name}", file=sys.stderr)
     if backend == "api":
         _extract_via_api(pdf, cache_dir, language)
-    elif backend == "local":
-        _extract_via_local(pdf, cache_dir, language)
     else:
-        raise ValueError(f"unknown backend: {backend!r} (expected 'api' or 'local')")
+        _extract_via_local(pdf, cache_dir)
 
     found = _existing_outputs(cache_dir)
     if found is None:
         raise RuntimeError(
             f"backend={backend} produced no <stem>.md / <stem>.json in {cache_dir}"
         )
-    return found
+    return (*found, False)
 
 
 # ---------------------------------------------------------------------------
@@ -387,52 +384,33 @@ def _download_and_extract_zip(
 # local backend
 # ---------------------------------------------------------------------------
 
-def _extract_via_local(pdf: Path, cache_dir: Path, language: str) -> None:
+def _extract_via_local(pdf: Path, cache_dir: Path) -> None:
     try:
-        from mineru.cli.common import do_parse, read_fn
+        from mineru.parser import ParseResult, parse
+        from mineru.parser.writer import FileBasedDataWriter
+        from mineru.render.content_list import render_content_list
     except ImportError as exc:
         raise RuntimeError(
-            "backend='local' requires the mineru library. Install it with: "
-            "uv pip install -e \".[local]\""
+            "backend='local' requires the MinerU 4 SDK. Run uv sync --extra local."
         ) from exc
 
-    with tempfile.TemporaryDirectory(prefix="mineru-out-") as tmp_root:
-        tmp_dir = Path(tmp_root)
-        print(f"mineru local: parsing {pdf.name} (this may take a while)", file=sys.stderr)
-        do_parse(
-            output_dir=str(tmp_dir),
-            pdf_file_names=[pdf.stem],
-            pdf_bytes_list=[read_fn(pdf)],
-            p_lang_list=[language],
-            backend="pipeline",
-            parse_method="auto",
+    with tempfile.TemporaryDirectory(prefix=".mineru-out-", dir=cache_dir) as directory:
+        staging = Path(directory)
+        parse(pdf, tier="basic", ocr_mode="auto").save(FileBasedDataWriter(directory))
+        # Use the materialized result so Markdown and the block list refer to the same image files.
+        result = ParseResult.from_json((staging / "middle_json.json").read_text(encoding="utf-8"))
+        content_list = staging / "content_list.json"
+        content_list.write_text(
+            json.dumps(render_content_list(result.middle_json), ensure_ascii=False), encoding="utf-8",
         )
-        produced = _find_library_output(tmp_dir, pdf.stem)
-        for entry in produced.iterdir():
-            dest = cache_dir / entry.name
-            if dest.exists():
-                if dest.is_dir():
-                    shutil.rmtree(dest)
-                else:
-                    dest.unlink()
-            shutil.move(str(entry), dest)
-
-    _normalize_library_layout(cache_dir, pdf.stem)
-
-
-def _find_library_output(tmp_dir: Path, stem: str) -> Path:
-    """Locate the MinerU output subdirectory under <tmp>/<stem>/<method>/."""
-    stem_dir = tmp_dir / stem
-    if not stem_dir.is_dir():
-        raise RuntimeError(f"mineru produced no output for stem={stem!r} in {tmp_dir}")
-    for method in ("auto", "ocr", "txt"):
-        candidate = stem_dir / method
-        if candidate.is_dir():
-            return candidate
-    subdirs = [p for p in stem_dir.iterdir() if p.is_dir()]
-    if len(subdirs) == 1:
-        return subdirs[0]
-    raise RuntimeError(f"could not locate mineru output method dir under {stem_dir}")
+        images = staging / "images"
+        if images.is_dir():
+            destination = cache_dir / "images"
+            destination.mkdir(exist_ok=True)
+            for image in images.iterdir():
+                image.replace(destination / image.name)
+        (staging / "markdown.md").replace(cache_dir / f"{pdf.stem}.md")
+        content_list.replace(cache_dir / f"{pdf.stem}.json")
 
 
 def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
@@ -442,7 +420,6 @@ def _normalize_library_layout(cache_dir: Path, stem: str) -> None:
     plus one non-manifest ``.json``. The various MinerU sources name those
     files differently:
 
-- ``mineru.cli.common.do_parse`` (local)  → ``<stem>.md`` + ``<stem>_content_list.json``
 - ``mineru.net`` cloud ZIP                → ``full.md`` + ``<task-uuid>_content_list.json``
 - Newer MinerU pipeline output            → ``full.md`` + ``<task-uuid>_content_list_v2.json``
 

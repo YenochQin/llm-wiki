@@ -7,7 +7,7 @@ End-to-end pipeline for converting raw PDFs into the structured markdown that `/
 ```text
 raw/papers/<file>.pdf
     -> tools/_mineru.extract           (cloud API or local backend)
-    -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
+    -> per-backend extraction cache  (<stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source     (adapter: heading hierarchy, cover normalization, cutoffs, image relocation, LaTeX math repair)
     -> <explicit-output-dir>/<source-slug>.md        + <explicit-output-dir>/assets/<source-slug>/<hash>.jpg
     -> /ingest reads canonical_ingest_path = wiki/sources/papers/<source-slug>.md
@@ -20,6 +20,9 @@ raw/papers/<file>.pdf
 | `canonical_ingest_path` | the markdown file `/ingest` should read (always under `wiki/sources/papers/`) |
 | `prepared_path` | same as above; kept for parity with the LLMWiki contract |
 | `ingest_format` | `"mineru-md"` — flag to skills that this is structured MinerU output, not raw PDF or `.tex` |
+| `mineru_backend` | selected backend (`api` or `local`) |
+| `mineru_extraction` | `parsed`, `cache`, `failed`, or `not-run` |
+| `prepared_source_reused` | `true` when an existing prepared file is retained |
 | `title` | best-effort title detected from the cover or the first non-junk heading |
 | `abstract_excerpt` | up to 800 chars from an explicit abstract (ATX, bold, plain or letter-spaced label); empty when no abstract boundary is recognized |
 | `warnings` | non-fatal anomalies (missing abstract, no figures, LaTeX math repair counts, etc.) |
@@ -27,7 +30,7 @@ raw/papers/<file>.pdf
 
 ## Components
 
-- **`tools/_mineru.py`** — MinerU client. Two interchangeable backends (`api` cloud and `local` library) that both normalize their output into the cache layout below. Lifted verbatim from `pdf-source-scripts/mineru_backend.py`.
+- **`tools/_mineru.py`** — MinerU client. Cloud API and local SDK results both feed the existing Markdown and content-list adapter.
 - **`tools/prepare_paper_source.py`** — orchestrator + adapter. Hashes the PDF for a per-document cache, calls `_mineru.extract`, synthesizes a manifest from MinerU's block list, runs the adapter, applies the conservative LaTeX math repair pass, and writes the LLMWiki-style JSON manifest.
 - **`tools/repair_latex_math.py`** — reusable Markdown repair pass for OCR-spaced formulas. It only edits math spans/blocks, skips fenced and inline code, converts `\(...\)` / `\[...\]` to `$...$` / `$$...$$`, and fixes common spacing breaks such as `\ alpha`, `_ {i}`, `^ {2}`, `\left (`, and atomic term-symbol OCR such as `1 s ^ { 2 } ^ { 1 } S _ { 0 }` -> `1s^{2} \ ^{1}S_{0}`.
 
@@ -36,7 +39,11 @@ raw/papers/<file>.pdf
 - Python 3.10+ (managed by uv via `.venv`).
 - Set `MINERU_BACKEND` in `~/.config/llm-wiki/.env` or `$XDG_CONFIG_HOME/llm-wiki/.env` to select `api` or `local` for both Zotero and direct PDF preprocessing. An unset value defaults to `api`. Existing per-PDF OCR results are reused before the backend is selected.
 - For `api` backend (default): `MINERU_API_TOKEN` set in `~/.config/llm-wiki/.env` or `$XDG_CONFIG_HOME/llm-wiki/.env`. Optional override: `MINERU_API_BASE` (default `https://mineru.net/api/v4`).
-- For `local` backend: `uv sync --extra local`. First run downloads several GB of model weights; afterward extraction runs offline. No token needed.
+- For `local` backend: `uv sync --extra local`. MinerU 4 parses on-device in the Basic tier with automatic OCR mode. On first use MinerU may download model weights. The `--language` option supplies the language for the cloud API.
+
+Set `MINERU_BACKEND` once in the llm-wiki `.env`. If omitted, it defaults to `api`. Use
+`uv run python -X utf8 tools/prepare_paper_source.py --show-backend` to check the
+selection. Zotero and `/init` preparation use the same setting.
 
 ## Single-PDF usage (CLI)
 
@@ -45,13 +52,12 @@ uv run python -X utf8 tools/prepare_paper_source.py \
   --raw-root raw \
   --output-dir @configured-sources-papers \
   --cache-root @mineru-cache \
-  --source raw/papers/<file>.pdf \
-  [--title "Optional override"] \
+  --source raw/papers/<file>.pdf
 ```
 
 Output is a JSON manifest on stdout (consumed by `/ingest`). Side effects:
 
-- Populates the explicit cache root, e.g. `.checkpoints/mineru-cache/<sha16>/` (reused on subsequent runs).
+- Populates the cache for the selected backend. The API keeps `<cache-root>/<sha16>/` and local extraction uses `<cache-root>/local/<sha16>/`.
 - Writes to the explicit output directory, e.g. `@configured-sources-papers/<source-slug>.md` + `@configured-sources-papers/assets/<source-slug>/`.
 - Prepared source filenames prefer the sanitized Zotero citation key when `--citation-key` or a BibTeX entry key is available; otherwise they use `author_year_veryshorttitle`.
 
@@ -61,7 +67,7 @@ lookup helper can query a local SQLite snapshot even when Zotero is still open.
 ## Cache layout
 
 ```
-<explicit-cache-root>/<sha16>/
+<backend-cache-root>/<sha16>/
     <stem>.md                  # raw MinerU markdown (untouched)
     <stem>.json                # MinerU content_list block list
     full.md                    # adapter-canonical copy of the .md
@@ -69,7 +75,7 @@ lookup helper can query a local SQLite snapshot even when Zotero is still open.
     images/                    # extracted figure / table crops
 ```
 
-`<sha16>` is the first 16 hex chars of `sha256(first 4 MiB of pdf)`. Re-running on the same PDF reuses the explicit cache and only re-runs the cheap adapter step. To force a fresh extraction, delete the per-PDF cache directory.
+`<sha16>` is the first 16 hex chars of `sha256(first 4 MiB of pdf)`. Re-running on the same PDF and backend reuses the extraction cache. A separate `--cache-root` can force fresh extraction. Replacing a prepared source still requires the existing `--overwrite` option.
 
 ## Output layout
 
@@ -127,9 +133,9 @@ does not rewrite already-prepared sources.
 
 - **`MINERU_API_TOKEN is not set`**: the `api` backend couldn't find a token. Add `MINERU_API_TOKEN=...` to `~/.config/llm-wiki/.env`, or export it in the shell.
 - **`401`/`403` from the cloud API**: token invalid or expired. Regenerate at <https://mineru.net/apiManage/account/api>.
-- **`backend='local' requires the mineru library`**: install with `uv sync --extra local`. First run downloads several GB of model weights.
-- **MinerU API down / rate-limited**: to switch to local OCR, install the `local` extra, set `MINERU_BACKEND=local` in the llm-wiki `.env`, and rerun.
-- **Title is split or missing**: cover-block sequence broke normalization. Inspect `<explicit-cache-root>/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
+- **`backend='local' requires the MinerU 4 SDK`**: install with `uv sync --extra local`.
+- **MinerU API down or rate-limited**: to switch to local parsing, install the `local` extra, set `MINERU_BACKEND=local` in the llm-wiki `.env`, and rerun.
+- **Title is split or missing**: cover-block sequence broke normalization. Inspect `<backend-cache-root>/<sha16>/<stem>.json`, look at the leading `text_level: 1` blocks on `page_idx: 0`, and adjust the cover-normalization helpers in `prepare_paper_source.py`.
 - **Administrative material leaks into body**: the skip heading didn't match any `SKIP_SECTION_PATTERNS`. Add a pattern (use `\s*`, not `\s+`, to tolerate OCR-glued forms like `DISCLOSURESTATEMENT`). Do not add References/Bibliography/Literature Cited to the skip list.
 - **Stale output after editing the adapter**: re-run with `--overwrite` to regenerate an existing prepared source. The adapter rebuilds `manifest.json` on every run and reuses the cached `<stem>.md` / `<stem>.json` from MinerU. Delete the per-PDF cache only when a fresh OCR extraction is needed.
 

@@ -16,7 +16,7 @@ Run from the repository root with the project environment containing MinerU 4.
 The worker currently requires POSIX `fcntl` locks (Linux/macOS). Plan/status
 are separate from parsing. The tested inference mode is `basic/auto`, with
 local models only; this is not forced full-page image OCR. The runner invokes
-the MinerU 4 `mineru-kit` CLI, independent of the legacy 3.x ingestion wrapper.
+the MinerU 4 `mineru-kit` CLI. Its backend is always local.
 
 ```bash
 uv run python -X utf8 tools/resolve_path_alias.py '@configured' '@raw-root'

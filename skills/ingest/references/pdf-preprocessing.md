@@ -12,7 +12,7 @@ This mirrors the pipeline `tools/init_discovery.py prepare` runs internally when
 
 ```text
 PDF -> tools/_mineru.extract            (cloud API by default; local backend opt-in)
-    -> <explicit-cache-root>/<sha16>/  (per-PDF cache: <stem>.md, <stem>.json, manifest.json, images/)
+    -> per-backend extraction cache   (<stem>.md, <stem>.json, manifest.json, images/)
     -> tools/prepare_paper_source       (adapter: cover normalization, heading hierarchy, cutoffs, image relocation, LaTeX math repair)
     -> <explicit-output-dir>/<source-slug>.md       + <explicit-output-dir>/assets/<source-slug>/<hash>.jpg
 ```
@@ -31,6 +31,8 @@ Follow this exact order before invoking the prep tool. Stop at the first step th
    Prefer `tools/fetch_zotero_metadata.py --item-key <key>` for identity fields and the derived `bibtex` entry.
 
 ## Invocation
+
+The prep tool reads `MINERU_BACKEND` from the llm-wiki configuration and defaults to `api`.
 
 For Zotero lookup mode, prefer the deep orchestration seam, which resolves the item key, metadata, PDF path, and metadata handoff without requiring the agent to compose arguments:
 

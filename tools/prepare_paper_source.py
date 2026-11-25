@@ -993,6 +993,8 @@ def prepare(
 
     Returns the manifest `/ingest` consumes.
     """
+    backend = _mineru.resolve_backend(backend)
+    backend_info = {"mineru_backend": backend, "mineru_extraction": "not-run"}
     warnings: list[str] = []
     output_dir = _source_output_dir(
         raw_root, wiki_root=wiki_root, output_dir=output_dir
@@ -1002,6 +1004,7 @@ def prepare(
 
     if not pdf.exists():
         return {
+            **backend_info,
             "canonical_ingest_path": display_path(pdf, display_root),
             "prepared_path": None,
             "ingest_format": "pdf",
@@ -1014,12 +1017,16 @@ def prepare(
     if cache_root is None:
         raise ValueError("prepare_paper_source requires an explicit cache_root")
     cache_root = cache_root.resolve()
+    if backend == "local":
+        cache_root /= "local"
     cache_dir = cache_root / _sha16_of_file(pdf)
 
     try:
-        md_path, json_path = _mineru.extract(pdf, cache_dir, language, backend)
+        md_path, json_path, cache_hit = _mineru.extract(pdf, cache_dir, language, backend)
     except Exception as exc:
+        backend_info["mineru_extraction"] = "failed"
         return {
+            **backend_info,
             "canonical_ingest_path": display_path(pdf, display_root),
             "prepared_path": None,
             "ingest_format": "pdf",
@@ -1029,6 +1036,7 @@ def prepare(
             "usable": False,
         }
 
+    backend_info["mineru_extraction"] = "cache" if cache_hit else "parsed"
     _normalize_cache(cache_dir, md_path, json_path)
 
     full_md = (cache_dir / "full.md").read_text(encoding="utf-8")
@@ -1064,6 +1072,8 @@ def prepare(
                 out_path.write_text(existing_text, encoding="utf-8")
                 latex_warnings.append(_latex_warning(latex_report))
             return {
+                **backend_info,
+                "prepared_source_reused": True,
                 "canonical_ingest_path": display_path(out_path, display_root),
                 "prepared_path": display_path(out_path, display_root),
                 "ingest_format": "mineru-md",
@@ -1076,6 +1086,7 @@ def prepare(
                 "usable": True,
             }
         return {
+            **backend_info,
             "canonical_ingest_path": display_path(out_path, display_root),
             "prepared_path": display_path(out_path, display_root),
             "ingest_format": "mineru-md",
@@ -1098,6 +1109,7 @@ def prepare(
 
     if not body.strip():
         return {
+            **backend_info,
             "canonical_ingest_path": display_path(
                 output_dir / f"{slug}.md", display_root
             ),
@@ -1167,6 +1179,7 @@ def prepare(
     )
 
     return {
+        **backend_info,
         "canonical_ingest_path": display_path(out_path, display_root),
         "prepared_path": display_path(out_path, display_root),
         "ingest_format": "mineru-md",
@@ -1288,7 +1301,6 @@ def main() -> None:
     )
     parser.add_argument(
         "--output-dir",
-        required=True,
         help="Explicit directory for prepared paper markdown output, e.g. @configured-sources-papers.",
     )
     parser.add_argument(
@@ -1297,9 +1309,7 @@ def main() -> None:
         type=Path,
         help="Path config TOML (default: config/paths.toml).",
     )
-    parser.add_argument(
-        "--source", required=True, type=Path, help="Path to a local PDF to prepare."
-    )
+    parser.add_argument("--source", type=Path, help="Path to a local PDF to prepare.")
     parser.add_argument(
         "--title",
         default="",
@@ -1327,16 +1337,18 @@ def main() -> None:
     )
     parser.add_argument(
         "--cache-root",
-        required=True,
         help="Explicit MinerU cache root for OCR intermediate outputs. Accepts @mineru-cache.",
     )
     parser.add_argument(
-        "--language", default="en", help="Document language for MinerU."
+        "--language", default="en", help="Document language for the MinerU cloud API.",
     )
     parser.add_argument(
-        "--backend",
-        choices=("api", "local"),
-        help="Override MINERU_BACKEND for this run. The default backend is 'api'.",
+        "--backend", choices=_mineru.BACKENDS,
+        help="Override MINERU_BACKEND for this run (default: api when unset).",
+    )
+    parser.add_argument(
+        "--show-backend", action="store_true",
+        help="Print the selected backend and installed MinerU version without processing a PDF.",
     )
     parser.add_argument(
         "--overwrite",
@@ -1351,6 +1363,27 @@ def main() -> None:
             "and pass the selected PDF path to this tool with --source."
         )
     args = parser.parse_args()
+    try:
+        backend = _mineru.resolve_backend(args.backend)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if args.show_backend:
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            local_version = version("mineru")
+        except PackageNotFoundError:
+            local_version = None
+        print(json.dumps({"mineru_backend": backend, "local_mineru_version": local_version}))
+        return
+
+    required = [
+        name for name, value in (("--output-dir", args.output_dir),
+                                 ("--source", args.source), ("--cache-root", args.cache_root))
+        if value is None
+    ]
+    if required:
+        parser.error(f"the following arguments are required: {', '.join(required)}")
 
     base_paths = load_paths(config_path=args.paths_config)
     raw_root = (
@@ -1389,7 +1422,7 @@ def main() -> None:
         year=args.year,
         cache_root=cache_root,
         language=args.language,
-        backend=args.backend,
+        backend=backend,
         overwrite=args.overwrite,
         wiki_root=paths.wiki_root,
         output_dir=output_dir,

@@ -109,7 +109,7 @@ class PrepareZoteroSourceTests(unittest.TestCase):
             self.assertEqual(prepare.call_args.kwargs["citation_key"], "doe2019paper")
 
     def test_both_cli_entrypoints_use_the_configured_mineru_backend(self) -> None:
-        def write_ocr_fixture(pdf: Path, cache: Path, _language: str) -> None:
+        def write_ocr_fixture(pdf: Path, cache: Path) -> None:
             (cache / f"{pdf.stem}.md").write_text(
                 "# Fixture Paper\n\n## Abstract\n\nThis is a test.\n", encoding="utf-8"
             )
@@ -172,7 +172,10 @@ class PrepareZoteroSourceTests(unittest.TestCase):
                         api.assert_not_called()
                         local.assert_called_once()
                         result = json.loads(stdout.getvalue())
-                        self.assertTrue(result.get("prepared", result)["usable"])
+                        prepared = result.get("prepared", result)
+                        self.assertTrue(prepared["usable"])
+                        self.assertEqual(prepared["mineru_backend"], "local")
+                        self.assertEqual(prepared["mineru_extraction"], "parsed")
 
 
 def json_load(path: Path) -> dict:

@@ -18,7 +18,7 @@
 - Treat skills and runtime entrypoints as read-only while executing a skill. Report defects and continue within safely executable scope; edit specifications only when the user explicitly requests skill/runtime changes.
 - User-facing flags and values are user-owned. Never invent, flip, or drop them based on repository state. Use omission defaults/derivations only when the skill documents them; otherwise leave unset or ask. Internal settings may be inferred within scope.
 - `/ask` is strictly read-only: no saved answers, logs, initialization, catalog repairs, or graph rebuilds. Requested saves/changes belong to `/edit`. Default checks/audits and dry-run/no-write modes do not write or log; explicit repair/report modes follow their documented scope.
-- Reviews run in the current agent without another reviewer service. Use `/source-audit` for source fidelity and `/llm-review` for artifact critique; the user controls agent/model switching. Label self-review honestly and keep incomplete checks/blockers visible.
+- Use `/source-audit` for source fidelity and `/llm-review` for artifact critique in the current agent. Use `/api-review` when the user requests sending an artifact and relevant wiki context to the configured model API. The user controls agent/model switching. Label self-review honestly and keep incomplete checks/blockers visible.
 - Calculations/experiments are planned and assessed through conversation; the user executes them externally. Record findings when requested, using actual evidence. Do not execute new calculations/experiments or compile LaTeX unless separately requested.
 
 ## Explicit session-stage save

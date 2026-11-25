@@ -56,7 +56,7 @@ llm-wiki Configuration Status
 ✓  Agent authentication   — managed by the selected agent application
 
 Required for PDF ingest:
-✗  MinerU API token       — not set  (PDF ingest will fail — get free token)
+✗  MinerU API token       — not set  (required for cloud PDF parsing)
 
 Review:
 ✓  Current agent          — no additional API key required
@@ -91,16 +91,14 @@ PDF ingest fails. Free tier is generous; sign up at https://mineru.net/."
 - If `MINERU_API_TOKEN=` line exists (even empty), replace it
 - Otherwise append `MINERU_API_TOKEN=<value>`
 
-**Local-backend escape hatch**: If the user explicitly wants offline-only operation,
-mention that the local MinerU backend can be installed with
-`uv sync --extra local` (downloads several GB of models on first use).
-No token is required for the local backend.
+For local PDF parsing, install the MinerU 4 SDK with `uv sync --extra local` and
+set `MINERU_BACKEND=local` as described in `config/setup-guide.md`.
 
 ---
 
-#### 4b: Review Workflow (no API key)
+#### 4b: Review Workflow
 
-Reviews run in the current agent. No additional model API key or reviewer service is required. The user can run `/source-audit` in another agent/session to verify ingested pages against their canonical sources, or `/llm-review` to critique research artifacts. Agent/model selection is user-controlled; do not prompt for reviewer credentials or switch agents automatically.
+The user can run `/source-audit` to verify ingested pages against canonical sources or `/llm-review` to critique research artifacts in the current agent. If the user asks to configure `/api-review`, use the optional API review section of `config/setup-guide.md`. Agent/model selection is user-controlled.
 
 ### Step 5: Verify Configuration
 
@@ -122,7 +120,7 @@ Configuration done. Next:
 
 If `wiki/` already exists:
 ```
-Configuration updated. Reviews run in the current agent without additional setup.
+Configuration updated. /source-audit and /llm-review are available in the current agent.
 ```
 
 ## Constraints

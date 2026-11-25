@@ -36,9 +36,8 @@ structured markdown that `/ingest` consumes.
 - `/ingest` — every PDF source goes through MinerU before downstream extraction
 - `/init` — bulk PDF preparation routes through the same prep tool
 
-For on-device OCR, install the local backend with `uv sync --extra local` and set
-`MINERU_BACKEND=local` in the llm-wiki `.env`. The local backend downloads its models
-on first use and runs without an API token.
+Local parsing uses the MinerU 4 SDK installed with `uv sync --extra local`.
+MinerU may download model weights on first use.
 
 **How to get it**:
 1. Go to https://mineru.net/
@@ -51,13 +50,37 @@ needed). Leave commented unless MinerU publishes a new endpoint.
 
 **Format**: Bearer token string (alphanumeric).
 
+### Select the MinerU backend
+
+Set `MINERU_BACKEND=local` or `MINERU_BACKEND=api` in the same `.env` file.
+Single-PDF preparation, Zotero ingest, and `/init` all read this setting.
+If omitted, the default is `api`.
+
+```bash
+uv run python -X utf8 tools/prepare_paper_source.py --show-backend
+```
+
+The command reports the selected backend and installed MinerU package version
+without processing a PDF. Actual preparation reports if it parsed the PDF or
+reused extraction data from its cache.
+
 ---
 
 ## Review Workflow
 
-Reviews run in the current agent and require no additional API key or reviewer service. `/source-audit` checks ingested pages against their canonical prepared sources; `/llm-review` critiques research artifacts. The user can select another agent/model and run the same skill there when a separate assessment is wanted.
+`/source-audit` checks ingested pages against their canonical prepared sources and `/llm-review` critiques research artifacts in the current agent. The user can select another agent/model and run the same skill there for a separate assessment.
 
 Follow `skills/shared-references/review-protocol.md` for provenance and evidence requirements. A self-review remains a self-review; agreement between reports alone does not raise claim confidence. Existing unrelated values in the user's config file are preserved.
+
+### Optional API review
+
+Set `LLM_BASE_URL` to your provider's OpenAI-compatible API base (typically ending in `/v1`), `LLM_MODEL` to the model ID, and `LLM_API_KEY` if the provider requires bearer authentication. Add these values to your existing llm-wiki `.env` or export them in your shell. The tool accepts HTTPS or a loopback HTTP endpoint.
+
+`/api-review` sends the full artifact and selected wiki excerpts to that endpoint. Preview the file list and excerpt sizes locally with `--dry-run`.
+
+```bash
+uv run python -X utf8 tools/api_review.py claims/example-claim --context papers/example-paper --dry-run
+```
 
 ---
 

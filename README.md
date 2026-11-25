@@ -143,6 +143,7 @@ Choose a skill here, then read its `SKILL.md` and only the references relevant t
 | Explore & maintain | `/source-audit` | [SKILL.md](skills/source-audit/SKILL.md) | manual (audit wiki interpretations against original source text) |
 | Explore & maintain | `/novelty` | [SKILL.md](skills/novelty/SKILL.md) | manual |
 | Explore & maintain | `/llm-review` | [SKILL.md](skills/llm-review/SKILL.md) | manual |
+| Explore & maintain | `/api-review` | [SKILL.md](skills/api-review/SKILL.md) | manual (review an artifact and relevant wiki context via a configured model API) |
 | Research cycle | `/ideate` | [SKILL.md](skills/ideate/SKILL.md) | manual |
 | Research cycle | `/refine` | [SKILL.md](skills/refine/SKILL.md) | manual |
 | Produce | `/paper-plan` | [SKILL.md](skills/paper-plan/SKILL.md) | manual |
@@ -156,7 +157,7 @@ Choose a skill here, then read its `SKILL.md` and only the references relevant t
 
 ## Review workflow
 
-Reviews run in the current agent without an additional model API or reviewer service. Use `/source-audit` to verify ingested pages against canonical sources, and `/llm-review` to critique research artifacts. You can run the same skill in another agent/session for a separate assessment; agent/model switching is user-controlled. See [`review-protocol.md`](skills/shared-references/review-protocol.md) for review provenance and evidence rules.
+Use `/source-audit` to verify ingested pages against canonical sources and `/llm-review` to critique research artifacts in the current agent. Run `/api-review` to send the artifact and selected wiki excerpts to a configured model API. See [API review setup](config/setup-guide.md#optional-api-review) and the [review protocol](skills/shared-references/review-protocol.md) for provenance and evidence rules.
 
 Calculation and experiment plans are developed through conversation around your actual workflow and manual steps. You carry out calculations/experiments externally; results are assessed through iterative conversation using the data you provide. Findings and supported changes to experiment, claim, and idea pages are recorded when you request wiki updates.
 
@@ -222,3 +223,6 @@ Optional local MinerU backend (downloads several GB of models on first run):
 ```bash
 uv sync --extra local
 ```
+
+Choose `MINERU_BACKEND=local` or `MINERU_BACKEND=api` in the llm-wiki `.env`.
+Check the selected backend with `uv run python -X utf8 tools/prepare_paper_source.py --show-backend`.
